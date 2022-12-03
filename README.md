@@ -1,6 +1,6 @@
 # GVSOC
 
-GVSoC is the PULP chips simulator that is natively included in the SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166).
+GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166).
 
 ## Citing
 
@@ -31,7 +31,7 @@ sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl
 
 ## Python requirements
 
-Additional Python packages are needed and can be installed from the following commands from oot folder:
+Additional Python packages are needed and can be installed with the following commands from root folder:
 
 ```bash
 pip3 install -r core/requirements.txt
