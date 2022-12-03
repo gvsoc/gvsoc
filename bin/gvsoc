@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+if [  -n "${ZSH_VERSION:-}" ]; then
+        DIR="$(readlink -f -- "${(%):-%x}")"
+        DIRNAME="$(dirname $DIR)"
+        INSTALL_DIR=$(dirname $DIRNAME)
+else
+        INSTALL_DIR="$(dirname $(dirname "$(readlink -f "${BASH_SOURCE[0]}")"))"
+fi
+
+export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
+export PATH=$INSTALL_DIR/bin:$PATH
+
+echo gapy --platform=gvsoc --target-dir=$INSTALL_DIR/generators --model-dir=$INSTALL_DIR/models "$@"
+
+exec gapy --platform=gvsoc --target-dir=$INSTALL_DIR/generators --model-dir=$INSTALL_DIR/models "$@"
