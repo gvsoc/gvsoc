@@ -63,5 +63,5 @@ XX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
 The following example can be launched on pulp-open:
 
 ~~~~~shell
-./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello --flash-property=boot@flash:rom:boot --flash-property=examples/pulp-open/hello@flash:rom:binary image flash run
+./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
 ~~~~~
