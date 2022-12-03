@@ -15,7 +15,7 @@ build:
 		-DCMAKE_INSTALL_PREFIX=install \
 		-DGVSOC_MODULES="$(CURDIR)/core;$(CURDIR)/pulp" \
 		-DGVSOC_TARGETS="${TARGETS}" \
-		-DCMAKE_SKIP_INSTALL_RPATH=true
+		-DCMAKE_SKIP_INSTALL_RPATH=false
 
 	$(CMAKE) --build build $(CMAKE_FLAGS)
 	$(CMAKE) --install build
