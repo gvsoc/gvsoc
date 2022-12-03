@@ -83,7 +83,7 @@ try:
             options=args.config_opt + args.target_opt
         )
     else:
-        target = gapylib.target.Target()
+        target = gapylib.target.Target(parser)
 
     target.set_target_dirs(args.target_dirs)
     target.set_working_dir(args.work_dir)

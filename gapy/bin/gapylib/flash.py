@@ -749,6 +749,7 @@ class Flash():
         str
             The image file path.
         """
+
         return self.target.get_abspath(self.get_image_name())
 
 

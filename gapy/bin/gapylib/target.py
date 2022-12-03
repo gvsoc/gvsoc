@@ -51,7 +51,10 @@ def get_target(target: str) -> 'Target':
     except ModuleNotFoundError as exc:
         raise RuntimeError(f'Invalid target specified: {target}') from exc
 
-    return getattr(module, 'Target')
+    if not getattr(module, 'GAPY_TARGET', None):
+        raise RuntimeError(f'Invalid target specified: {target}')
+
+    return getattr(module, 'Target', None)
 
 
 class Target():
@@ -68,20 +71,22 @@ class Target():
 
     def __init__(self, parser, options: list=None):
 
-        parser.add_argument("--flash-property", dest="flash_properties", default=[],
-            action="append", help="specify the value of a flash property")
+        if parser is not None:
+            parser.add_argument("--flash-property", dest="flash_properties", default=[],
+                action="append", help="specify the value of a flash property")
 
-        parser.add_argument("--flash-content", dest="flash_contents", default=[], action="append",
-            help="specify the path to the JSON file describing the content of the flash")
+            parser.add_argument("--flash-content", dest="flash_contents", default=[],
+                action="append",
+                help="specify the path to the JSON file describing the content of the flash")
 
-        parser.add_argument("--flash-layout-level", dest="layout_level", type=int, default=2,
-            help="specify the level of the layout when dumping flash layout")
+            parser.add_argument("--flash-layout-level", dest="layout_level", type=int, default=2,
+                help="specify the level of the layout when dumping flash layout")
 
-        parser.add_argument("--flash-no-auto", dest="flash_auto", action="store_false",
-            help="Flash auto-mode, will force the flash content update only if needed")
+            parser.add_argument("--flash-no-auto", dest="flash_auto", action="store_false",
+                help="Flash auto-mode, will force the flash content update only if needed")
 
-        parser.add_argument("--binary", dest = "binary", default = None,
-            help = "Binary to execute on the target")
+            parser.add_argument("--binary", dest = "binary", default = None,
+                help = "Binary to execute on the target")
 
         self.commands = [
             ['commands'    , 'Show the list of available commands'],
@@ -323,25 +328,52 @@ class Target():
 
         return self.work_dir
 
-    def __display_targets(self):
-        print ('Available targets:')
 
-        targets = {}
+    def __get_target_files(self):
+
+        result = []
 
         for path in self.target_dirs:
             for root, __, files in os.walk(path):
 
                 for file in files:
                     if file.endswith('.py') and file != '__init__.py':
-                        rel_dir = os.path.relpath(root, path)
-                        file_path = os.path.join(rel_dir, file)
+                        if root == path:
+                            file_path = file
+                        else:
+                            rel_dir = os.path.relpath(root, path)
+                            file_path = os.path.join(rel_dir, file)
+
                         target_name = file_path.replace('/', '.').replace('.py', '')
-                        target = get_target(target_name)([])
 
-                        if targets.get(target_name) is None:
-                            targets[target_name] = True
+                        result.append(target_name)
 
-                            print(f'{target_name:16s} {target}')
+        return result
+
+
+    def __display_targets(self):
+        print ('Available targets:')
+
+        targets = {}
+
+        for target_name in self.__get_target_files():
+            try:
+                module = importlib.import_module(target_name)
+                if not getattr(module, 'GAPY_TARGET', None):
+                    continue
+            except ModuleNotFoundError:
+                continue
+
+            target_class = getattr(module, 'Target', None)
+
+            if target_class is not None:
+                target = target_class(None, [])
+
+                if targets.get(target_name) is None:
+                    targets[target_name] = True
+
+                    print(f'{target_name:16s} {target}')
+
 
     def __extract_flash_properties(self, args_properties: list):
         # Since they can be specified in any order on the command line, we first need to

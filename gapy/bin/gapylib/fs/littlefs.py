@@ -70,6 +70,7 @@ class LfsSection(FlashSection):
         self.size = 0
 
         self.img_path = None
+        self.ext_img = None
 
         self.declare_property(name='root_dir', value=None,
             description="Workstation directory content to be included in the LittleFS."
@@ -95,6 +96,8 @@ class LfsSection(FlashSection):
         self.img_path = content_dict.get('properties').get('img_path')
         if self.img_path is None:
             self.img_path = self.parent.get_image_path() + '.' + self.get_name()
+        else:
+            self.ext_img = True
 
         # Size is a string to be converted if it comes from command-line
         if isinstance(self.size, str):
@@ -129,11 +132,15 @@ class LfsSection(FlashSection):
                 with open(self.img_path, 'rb') as file_desc:
                     header.set_field('data', file_desc.read())
 
+            elif self.ext_img is True:
+                with open(self.img_path, 'rb') as file_desc:
+                    header.set_field('data', file_desc.read())
+
 
     def is_empty(self):
         # To avoid uploading flash content for nothing as soon as there is a lfs section in the
         # flash, we upload it only if it contains something
-        return self.root_dir is None
+        return self.root_dir is None and self.ext_img is None
 
     def get_partition_type(self) -> int:
         return 0x1
