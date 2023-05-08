@@ -16,3 +16,7 @@ install(
 
 add_subdirectory(core)
 add_subdirectory(gapy)
+
+if(IS_DIRECTORY gui)
+add_subdirectory(gui)
+endif()
