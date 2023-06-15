@@ -56,7 +56,7 @@ make all TARGETS=pulp-open
 On ETH network, please use this command to get the proper version of gcc and cmake:
 
 ~~~~~shell
-XX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
+CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
 ~~~~~
 
 ## Usage
