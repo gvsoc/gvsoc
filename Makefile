@@ -4,6 +4,7 @@ CMAKE ?= cmake
 TARGETS ?= rv32;rv64
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
+.ONESHELL:
 
 all: checkout build
 
@@ -11,6 +12,7 @@ checkout:
 	git submodule update --recursive --init
 
 build:
+	cd $(CURDIR)
 	$(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_INSTALL_PREFIX=install \
 		-DGVSOC_MODULES="$(CURDIR)/core;$(CURDIR)/pulp" \

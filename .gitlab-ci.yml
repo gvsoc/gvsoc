@@ -14,5 +14,5 @@ build:
     - source venv/bin/activate
     - pip3 install -r core/requirements.txt
     - pip3 install -r gapy/requirements.txt
-    - CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
+    - CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 MAGICK_ROOT=/usr/pack/graphicsmagick-1.3.36-kgf make all TARGETS=pulp-open
     - ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
