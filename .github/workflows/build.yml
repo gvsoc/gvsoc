@@ -1,0 +1,24 @@
+name: check_build_works
+on: [push, pull_request]
+
+jobs:
+  build_ubuntu:
+    name: Try build on ubuntu latest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Install system software requirements
+        run: |
+          sudo apt update
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+      - name: Install python requirements
+        run: |
+          pip3 install -r core/requirements.txt
+          pip3 install -r gapy/requirements.txt
+      - name: build all targets
+        run:
+          make all
+      - name: Run examples
+        run:
+          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
