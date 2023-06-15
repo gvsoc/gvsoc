@@ -26,3 +26,17 @@ jobs:
       - name: Run examples
         run:
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
+  build_eth:
+    name: Try to build on ETH internal servers
+    runs-on: ubuntu-latest
+    - name: Mirror and check
+        uses: pulp-platform/pulp-actions/gitlab-ci@v2
+        # Skip on forks or pull requests from forks due to missing secrets.
+        if: >
+          github.repository == 'gvsoc/gvsoc' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          domain: iis-git.ee.ethz.ch
+          repo: github-mirror/gvsoc
+          token: ${{ secrets.GITLAB_TOKEN }}

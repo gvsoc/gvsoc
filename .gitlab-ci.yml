@@ -1,0 +1,18 @@
+# Copyright 2023 ETH Zurich and University of Bologna.
+# Solderpad Hardware License, Version 0.51, see LICENSE for details.
+# SPDX-License-Identifier: SHL-0.51
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - python3.9 -m venv venv
+    - source venv/bin/activate
+    - pip3 install -r core/requirements.txt
+    - pip3 install -r gapy/requirements.txt
+    - CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
+    - ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
