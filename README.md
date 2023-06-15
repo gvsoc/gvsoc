@@ -34,6 +34,7 @@ sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl
 Additional Python packages are needed and can be installed with the following commands from root folder:
 
 ```bash
+git submodule update --init --recursive -j8
 pip3 install -r core/requirements.txt
 pip3 install -r gapy/requirements.txt
 ```
