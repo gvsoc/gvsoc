@@ -34,6 +34,7 @@ sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl
 Additional Python packages are needed and can be installed with the following commands from root folder:
 
 ```bash
+git submodule update --init --recursive -j8
 pip3 install -r core/requirements.txt
 pip3 install -r gapy/requirements.txt
 ```
@@ -55,7 +56,7 @@ make all TARGETS=pulp-open
 On ETH network, please use this command to get the proper version of gcc and cmake:
 
 ~~~~~shell
-XX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
+CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
 ~~~~~
 
 ## Usage

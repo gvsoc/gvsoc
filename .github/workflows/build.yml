@@ -1,0 +1,41 @@
+name: check_build_works
+on: [push, pull_request]
+
+jobs:
+  build_ubuntu:
+    name: Try build on ubuntu latest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install system software requirements
+        run: |
+          sudo apt update
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+      - name: Install python requirements
+        run: |
+          pwd
+          ls -la
+          sudo pip3 install -r core/requirements.txt
+          sudo pip3 install -r gapy/requirements.txt
+      - name: build all targets
+        run:
+          make all TARGETS=pulp-open
+      - name: Run examples
+        run: |
+          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
+
+  build_eth:
+    name: Try to build on ETH internal servers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror and check
+        uses: pulp-platform/pulp-actions/gitlab-ci@v2
+        # Skip on forks or pull requests from forks due to missing secrets.
+        if: github.repository == 'gvsoc/gvsoc' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          domain: iis-git.ee.ethz.ch
+          repo: github-mirror/gvsoc
+          token: ${{ secrets.GITLAB_TOKEN }}
