@@ -32,7 +32,6 @@ from typing import Any, Dict
 
 from prettytable import PrettyTable
 
-
 class FlashSectionProperty():
     """
     Placeholder for flash section properties.
@@ -624,7 +623,7 @@ class Flash():
 
         print (table)
 
-    def dump_sections(self):
+    def dump_sections(self, pem_path: str, sign_dgst: str):
         """Dump the sections images and a description of each section
 
         The description is a JSON file containing the description of each
@@ -634,15 +633,33 @@ class Flash():
 
         print(f'Dumping flash \"{self.name}\" section content.')
 
-        self.__dump_sections_description()
-        self.__dump_sections()
+        self.__dump_sections(is_app=False, pem_path=pem_path, dgst=sign_dgst)
+        self.__dump_sections_description(is_app=False, pem_path=pem_path)
 
-    def __dump_sections_description(self):
+    def dump_app_sections(self, pem_path: str, sign_dgst: str):
+        """Dump the sections images and a description of each section
+
+        The description is a JSON file containing the description of each
+        section.
+        """
+        self.__parse_content()
+
+        print(f'Dumping flash \"{self.name}\" section content.')
+
+        self.__dump_sections(is_app=True, pem_path=pem_path, dgst=sign_dgst)
+        self.__dump_sections_description(is_app=True, pem_path=pem_path)
+
+    def __dump_sections_description(self, is_app: bool, pem_path: str):
 
         section_descriptions = []
         for section in self.sections.values():
-            section_desc = section.dump_section_description()
-            section_descriptions.append(section_desc)
+            if not section.is_empty() and not (is_app and (section.get_partition_type() == 0x2)):
+                section_desc = section.dump_section_description()
+                if pem_path is not None:
+                    section_desc['signature'] = f'{section_desc["image_file"]}' + '.sig'
+                    signature_size = os.path.getsize(section_desc["image_file"]+'.sig')
+                    section_desc['signature_size'] = signature_size
+                section_descriptions.append(section_desc)
 
         image_path_base = os.path.splitext(self.get_image_path())[0]
         sections_description_path = image_path_base + '-description.json'
@@ -655,17 +672,26 @@ class Flash():
             raise RuntimeError('Unable to open flash section image for '
                                'writing ' + str(exc)) from exc
 
-    def __dump_sections(self):
+    def __dump_sections(self, is_app: bool, pem_path : str, dgst='sha256'):
         for section in self.sections.values():
-            image = section.get_image()
+            if not section.is_empty() and not (is_app and (section.get_partition_type() == 0x2)):
+                image = section.get_image()
 
-            section_path = section.get_image_path()
-            try:
-                with open(section_path, 'wb') as file_desc:
-                    file_desc.write(image)
-            except OSError as exc:
-                raise RuntimeError('Unable to open flash section image for '
-                                   'writing ' + str(exc)) from exc
+                section_path = section.get_image_path()
+                try:
+                    with open(section_path, 'wb') as file_desc:
+                        file_desc.write(image)
+                except OSError as exc:
+                    raise RuntimeError('Unable to open flash section image for '
+                                       'writing ' + str(exc)) from exc
+
+                if pem_path is not None:
+                    openssl_cmd = f'openssl dgst -{dgst} -sign "{pem_path}" '
+                    openssl_cmd += f'-out "{section_path}.sig" "{section_path}"'
+                    error = os.system(openssl_cmd)
+
+                    if error != 0:
+                        print(f'Failed to sign binary {section_path}')
 
     def dump_section_properties(self):
         """Dump the section properties of the flash.
@@ -684,7 +710,6 @@ class Flash():
             table.add_row(row)
 
         table.align = 'l'
-
         print (table)
 
 
@@ -717,7 +742,6 @@ class Flash():
             The index of the last section until which the image must be generated
         """
         result = bytearray()
-
         self.__parse_content()
 
         if first is None:
@@ -737,7 +761,6 @@ class Flash():
 
             result += section.get_image()
             prev_section = section
-
         return result
 
 
@@ -749,7 +772,6 @@ class Flash():
         str
             The image file path.
         """
-
         return self.target.get_abspath(self.get_image_name())
 
 
@@ -782,6 +804,26 @@ class Flash():
         """
         return self.flash_attributes.get(name)
 
+    def set_flash_attribute(self, name: str, value: any):
+        """Return the value of a flash property.
+
+        This can be called to get the value of a property converning the flash.
+
+        Parameters
+        ----------
+        name : str
+            Name of the property
+
+        value : any
+            Value to be set
+
+        Returns
+        -------
+        str
+            The property value.
+        """
+        self.flash_attributes[name] = value
+
 
     def get_size(self) -> int:
         """Get flash size.
@@ -803,7 +845,6 @@ class Flash():
             The flash sections.
         """
         self.__parse_content()
-
         return list(self.sections.values())
 
 
@@ -851,7 +892,6 @@ class Flash():
         for section in self.sections.values():
             if not section.is_empty():
                 return False
-
         return True
 
 
@@ -891,7 +931,6 @@ class Flash():
                         len(self.sections))
                     self.sections[content_section.get('name')] = section
 
-
             # And finally set the content of each section and give it its starting offset
             if self.content_dict.get('sections') is not None:
                 flash_offset = 0
@@ -911,9 +950,7 @@ class Flash():
                                 f'Section "{section.get_name()}" overflowed flash "{self.name}",'
                                 f' flash size is 0x{self.size:x}, current content size is'
                                 f' 0x{flash_offset:x}.')
-
                         break
-
 
             # And finally set the content of each section and give it its starting offset
             if self.content_dict.get('sections') is not None:
@@ -926,7 +963,6 @@ class Flash():
     def __handle_section_properties(self):
         property_sections = self.properties
         if property_sections is not None:
-
             for section_name, section_properties in property_sections.items():
                 self.__overwrite_section_properties(section_name, section_properties)
 
@@ -937,13 +973,11 @@ class Flash():
             for section in sections:
                 if section.get('name') == section_name:
                     return section
-
         return None
 
     def __overwrite_section_properties(self, section_name: str, section_properties: dict):
 
         section = self.__get_section_content(section_name)
-
         if section is None:
             raise RuntimeError(f'Found unknown section while handling command-line flash section'
                 f' properties: {section_name}')

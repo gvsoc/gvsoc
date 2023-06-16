@@ -98,6 +98,7 @@ try:
 
     args = parser.parse_args()
     target.parse_args(args)
+    target.check_args()
 
     # Finally ask the target to handle the commands
     for cmd in args.command:

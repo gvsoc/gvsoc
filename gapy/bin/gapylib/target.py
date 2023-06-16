@@ -21,6 +21,8 @@
 #
 
 
+
+import traceback
 import argparse
 import os
 import importlib
@@ -28,6 +30,7 @@ import json
 from collections import OrderedDict
 import sys
 import gapylib.flash
+from prettytable import PrettyTable
 
 
 def get_target(target: str) -> 'Target':
@@ -57,6 +60,46 @@ def get_target(target: str) -> 'Target':
     return getattr(module, 'Target', None)
 
 
+class Property():
+    """
+    Placeholder for target properties.
+
+    Attributes
+    ----------
+    name : str
+        Name of the property.
+    path : str
+        Path of the property in the target hierarchy.
+    value : any
+        Value of the property.
+    description : str
+        Description of the property.
+    path : str
+        Path in the target of the property.
+    cast : type
+        When the property is overwritten from command-line, cast it to the specified type.
+    dump_format : str
+        When the property is dumped, dump it wth the specified format
+    allowed_values : list
+        List of allowed values. If set to None, anything is allowed.
+    """
+
+    def __init__(self, name: str, value: any, description: str, path: str=None,
+            allowed_values: list=None, cast: type=None, dump_format: str=None):
+
+        self.name = name
+        self.path = path
+        if path is not None:
+            self.full_name = path + '/' + name
+        else:
+            self.full_name = name
+        self.description = description
+        self.value = value
+        self.allowed_values = allowed_values
+        self.cast = cast
+        self.format = dump_format
+
+
 class Target():
     """
     Parent class for all targets, which provides all common functions and commands.
@@ -72,12 +115,19 @@ class Target():
     def __init__(self, parser, options: list=None):
 
         if parser is not None:
+            parser.add_argument("--target-property", dest="target_properties", default=[],
+                action="append", help="specify the value of a target property")
+
             parser.add_argument("--flash-property", dest="flash_properties", default=[],
                 action="append", help="specify the value of a flash property")
 
             parser.add_argument("--flash-content", dest="flash_contents", default=[],
                 action="append",
                 help="specify the path to the JSON file describing the content of the flash")
+
+            parser.add_argument("--multi-flash-content", dest="multi_flash_content", default=[],
+                action="append",
+                help="specify the path to the JSON file describing the content multiple flashes")
 
             parser.add_argument("--flash-layout-level", dest="layout_level", type=int, default=2,
                 help="specify the level of the layout when dumping flash layout")
@@ -88,6 +138,16 @@ class Target():
             parser.add_argument("--binary", dest = "binary", default = None,
                 help = "Binary to execute on the target")
 
+            parser.add_argument("--flash-property-override", dest = "flash_override", default = [],
+                action="append",
+                help = "Handle to override flash property")
+
+            parser.add_argument("--ota-sign-key", dest = "pem_path", default = None,
+                help = "Specify a key to sign OTA payload")
+
+            parser.add_argument("--ota-sign-dgst", dest = "sign_dgst", default = 'sha256',
+                help = "Specify digest for OTA signing (see openssl doc for details)")
+
         self.commands = [
             ['commands'    , 'Show the list of available commands'],
             ['targets'     , 'Show the list of available targets'],
@@ -95,7 +155,9 @@ class Target():
             ['flash'       , 'Upload the flash contents to the target'],
             ['flash_layout', 'Dump the layout of the flashes'],
             ['flash_dump_sections', 'Dump each section of each flash memory'],
+            ['flash_dump_app_sections', 'Dump each section of each flash memory'],
             ['flash_properties', 'Dump the value of all flash section properties'],
+            ['target_properties', 'Dump the value of all target properties'],
             ['run'         , 'Start execution on the target'],
         ]
 
@@ -104,7 +166,14 @@ class Target():
         self.work_dir = None
         self.options = options
         self.layout_level = 0
+        self.pem_path = None
+        self.sign_dgst = None
         self.args = None
+        self.target_properties = {}
+        self.args_properties = {}
+        self.parser = parser
+        self.target_properties_parsed = False
+        self.command_handlers = []
 
 
     def get_abspath(self, relpath: str) -> str:
@@ -147,6 +216,7 @@ class Target():
         self.flashes[flash.get_name()] = flash
 
 
+
     def get_args(self) -> argparse.ArgumentParser:
         """Return the command-line arguments.
 
@@ -183,6 +253,14 @@ class Target():
 
         return None
 
+    def handle_command_image(self):
+        """Handle the image command.
+
+        This can be called if a class is overloading the image command, in order to still
+        execute the generic part of this command.
+        """
+        for flash in self.flashes.values():
+            flash.dump_image()
 
     def handle_command(self, cmd: str):
         """Handle a command.
@@ -195,6 +273,12 @@ class Target():
         cmd : str
             Command name to be handled.
         """
+
+        # First try to execute the command from registered handlers and leave if it handled
+        for handler in self.command_handlers:
+            if handler(cmd):
+                return
+
         if cmd == 'commands':
             self.__print_available_commands()
 
@@ -207,15 +291,21 @@ class Target():
 
         elif cmd == 'flash_dump_sections':
             for flash in self.flashes.values():
-                flash.dump_sections()
+                flash.dump_sections(pem_path = self.pem_path, sign_dgst=self.sign_dgst)
+
+        elif cmd == 'flash_dump_app_sections':
+            for flash in self.flashes.values():
+                flash.dump_app_sections(pem_path = self.pem_path, sign_dgst=self.sign_dgst)
 
         elif cmd == 'flash_properties':
             for flash in self.flashes.values():
                 flash.dump_section_properties()
 
+        elif cmd == 'target_properties':
+            self.dump_target_properties()
+
         elif cmd == 'image':
-            for flash in self.flashes.values():
-                flash.dump_image()
+            self.handle_command_image()
 
         elif cmd == 'flash':
             pass
@@ -243,6 +333,133 @@ class Target():
             The parser where to add arguments.
         """
 
+    def declare_target_property(self, descriptor: Property):
+        """Declare a target property.
+
+        Target properties are used to configure the behavior of the target. They must be
+        declared with this method before they can be overwritten from command-line target
+        properties.
+
+        Parameters
+        ----------
+        descriptor : Property
+            The descriptor of the property
+        """
+
+        self.parse_target_properties()
+
+        if self.target_properties.get(descriptor.full_name) is not None:
+            traceback.print_stack()
+            raise RuntimeError(f'Property {descriptor.full_name} already declared')
+
+        self.target_properties[descriptor.full_name] = descriptor
+
+        arg = self.args_properties.get(descriptor.full_name)
+        if arg is not None:
+            if descriptor.allowed_values is not None:
+                if arg not in descriptor.allowed_values:
+                    raise RuntimeError(f'Trying to set target property to invalid value '
+                        f'(name: {descriptor.full_name}, value: {arg}, '
+                        f'allowed_values: {", ".join(descriptor.allowed_values)})')
+
+            if descriptor.cast is not None:
+                if descriptor.cast == int:
+                    if isinstance(arg, str):
+                        arg = int(arg, 0)
+                    else:
+                        arg = int(arg)
+
+            descriptor.value = arg
+
+    def parse_target_properties(self):
+        """Parse target properties.
+
+        This can be called to parse the target properties given on the command line
+        so that the property declaration can already use them.
+
+        Parameters
+        ----------
+        properties : List
+            The list of properties
+        """
+        if not self.target_properties_parsed:
+            self.target_properties_parsed = True
+            [args, _] = self.parser.parse_known_args()
+            properties = args.target_properties
+
+            for property_desc in properties:
+                # Property format is name=value
+                try:
+                    name, value = property_desc.rsplit('=', 1)
+                except Exception as exc:
+                    raise RuntimeError('Invalid target property (must be of form '
+                        '<name>=<value>: ' + property_desc) from exc
+
+                self.args_properties[name] = value
+
+
+    def check_args(self):
+        """Check arguments.
+
+        This can be called to make the target check some arguments which were not yet checked
+        like target properties.
+        """
+        for name in self.args_properties:
+            if self.target_properties.get(name) is None:
+                raise RuntimeError(f'Trying to set undefined target property: {name}')
+
+
+
+    def get_target_property(self, name: str, path: str=None) -> any:
+        """Return the value of a target property.
+
+        This can be called to get the value of a target property.
+
+        Parameters
+        ----------
+        name : str
+            Name of the property
+
+        path : str
+            Give the path of the component owning the property. If it is not None, the path is
+            added as a prefix to the property name.
+
+        Returns
+        -------
+        str
+            The property value.
+        """
+        if path is not None:
+            name = path + '/' + name
+        if self.target_properties.get(name) is None:
+            raise RuntimeError(f'Trying to get undefined property: {name}')
+
+        prop = self.target_properties.get(name)
+        value = prop.value
+
+        return value
+
+    def dump_target_properties(self):
+        """Dump the properties of the target.
+        """
+        table = PrettyTable()
+        table.field_names = ["Property name", "Value", "Allowed values", "Description"]
+        for prop in self.target_properties.values():
+            if prop.allowed_values is None:
+                if prop.cast == int:
+                    allowed_values = 'any integer'
+                else:
+                    allowed_values = 'any string'
+            else:
+                allowed_values = ', '.join(prop.allowed_values)
+            value_str = prop.value
+            if prop.format is not None:
+                value_str = prop.format % prop.value
+            table.add_row([prop.full_name, value_str, allowed_values, prop.description])
+
+        table.align = 'l'
+        print (table)
+
 
     def parse_args(self, args: any):
         """Handle arguments.
@@ -258,32 +475,65 @@ class Target():
 
         self.args = args
         self.layout_level = args.layout_level
+        self.pem_path = args.pem_path
+        self.sign_dgst = args.sign_dgst
 
         # Parse the flash properties so that we can propagate to each flash only its properties
         if len(args.flash_properties) != 0:
             self.__extract_flash_properties(args.flash_properties)
 
-        # Now propagte the flash content to each flash
-        for content in args.flash_contents:
-            if content.find("@") == -1:
-                raise RuntimeError('Invalid flash content (must be of form '
-                    '<content path>@<flash name>): ' + content)
+        if len(args.flash_contents) > 0:
+            if len(args.multi_flash_content) > 0:
+                # ERROR
+                raise RuntimeError('Trying to set both a multi and single flash layout')
 
-            # Content is specified as content_file_path@flash_name
-            content_path, flash_name = content.rsplit('@', 1)
+            # Now propagte the flash content to each flash
+            for content in args.flash_contents:
+                if content.find("@") == -1:
+                    raise RuntimeError('Invalid flash content (must be of form '
+                        '<content path>@<flash name>): ' + content)
 
-            if self.flashes.get(flash_name) is None:
-                raise RuntimeError('Invalid flash content, flash is unknown: ' + content)
+                # Content is specified as content_file_path@flash_name
+                content_path, flash_name = content.rsplit('@', 1)
 
-            try:
-                with open(content_path, "rb") as file_desc:
-                    content_dict = json.load(file_desc, object_pairs_hook=OrderedDict)
+                if self.flashes.get(flash_name) is None:
+                    raise RuntimeError('Invalid flash content, flash is unknown: ' + content)
 
-                    self.flashes.get(flash_name).set_content(content_dict)
-            except OSError as exc:
-                raise RuntimeError('Invalid flash content, got error while opening content file: '
-                    + str(exc)) from exc
+                try:
+                    with open(content_path, "rb") as file_desc:
+                        content_dict = json.load(file_desc, object_pairs_hook=OrderedDict)
 
+                        self.flashes.get(flash_name).set_content(content_dict)
+                except OSError as exc:
+                    raise RuntimeError('Invalid flash content, got error while opening'
+                        'content file: '
+                        + str(exc)) from exc
+        else:
+            if len(args.multi_flash_content) > 0:
+                for content in args.multi_flash_content:
+                    try:
+                        with open(content, "rb") as file_desc:
+                            flash_dict = json.load(file_desc, object_pairs_hook=OrderedDict)
+                    except OSError as exc:
+                        raise RuntimeError('Invalid flash content, got error while opening'
+                                       ' content file: '
+                            + str(exc)) from exc
+                if flash_dict.get('flashes') is None:
+                    raise RuntimeError('No flashes dictionary in layout file')
+                for flash_content in flash_dict.get('flashes'):
+                    flash_name = flash_content.get('name')
+                    if flash_name is None or self.flashes.get(flash_name) is None:
+                        raise RuntimeError('Invalid flash name' +flash_name)
+                    self.flashes.get(flash_name).set_content(flash_content)
+
+        if len(args.flash_override) > 0:
+            for content in args.flash_override:
+                value, prop = content.rsplit('@', 1)
+                flash_name, prop_name = prop.rsplit(':', 1)
+                if self.flashes.get(flash_name) is None:
+                    raise RuntimeError('Invalid flash for flasher: ' + content)
+                flash = self.flashes.get(flash_name)
+                flash.set_flash_attribute(prop_name, value)
 
     def set_target_dirs(self, target_dirs: list):
         """Set the target directories.
@@ -407,3 +657,56 @@ class Target():
                 raise RuntimeError('Invalid flash property, flash is unknown: ' + flash_name)
 
             self.flashes.get(flash_name).set_properties(flash_properties)
+
+    def get_section_by_name(self, name):
+        """Get a section by its name from all underlying flashes
+        Parameters
+        ----------
+        name : str
+            Name to search for
+        Returns
+        -------
+        FlashSection
+            Flash section with name "name"
+        """
+        section = None
+        # go through all flashes
+        for _, flash in self.flashes.items():
+            section = flash.get_section_by_name(name)
+            if section is not None:
+                return section
+        return None
+
+    def get_section_index(self, name: str) -> int:
+        """Get a section index by its name from all underlying flashes
+        Parameters
+        ----------
+        name : str
+            Name to search for
+        Returns
+        -------
+        int
+            index of Flash section with name "name"
+        """
+        index = 0
+        # go through all flashes
+        for _, flash in self.flashes.items():
+            in_flash_index = flash.get_section_index(name)
+            if in_flash_index is not None:
+                index += in_flash_index
+                return index
+            index += len(flash.sections)
+        return None
+
+    def register_command_handler(self, handler):
+        """Register a command handler
+
+        The target will first try to make registered handlers execute the command and will execute
+        it only if no handler has handled it.
+
+        Parameters
+        ----------
+        handler : str
+            Command handler
+        """
+        self.command_handlers.append(handler)
