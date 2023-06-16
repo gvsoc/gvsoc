@@ -22,7 +22,7 @@ jobs:
           sudo pip3 install -r gapy/requirements.txt
       - name: build all targets
         run:
-          make all
+          make all TARGETS=pulp-open
       - name: Run examples
         run: |
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
