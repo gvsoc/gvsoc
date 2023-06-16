@@ -25,7 +25,7 @@ jobs:
           make all
       - name: Run examples
         run: |
-          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello run
+          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
 
   build_eth:
     name: Try to build on ETH internal servers
