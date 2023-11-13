@@ -14,7 +14,7 @@ build:
 	# Change directory to curdir to avoid issue with symbolic links
 	cd $(CURDIR) && $(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_INSTALL_PREFIX=install \
-		-DGVSOC_MODULES="$(CURDIR)/core;$(CURDIR)/pulp" \
+		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
