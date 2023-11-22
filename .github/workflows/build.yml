@@ -22,10 +22,12 @@ jobs:
           sudo pip3 install -r gapy/requirements.txt
       - name: build all targets
         run:
+          make all TARGETS=rv64
           make all TARGETS=pulp-open
       - name: Run examples
         run: |
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
+          ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
 
   # Removed due to no space left on eth machine
   # build_eth:
