@@ -21,7 +21,7 @@ jobs:
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
       - name: build all targets
-        run:
+        run: |
           make all TARGETS=rv64
           make all TARGETS=pulp-open
       - name: Run examples
