@@ -148,6 +148,7 @@ class Target():
             parser.add_argument("--ota-sign-dgst", dest = "sign_dgst", default = 'sha256',
                 help = "Specify digest for OTA signing (see openssl doc for details)")
 
+
         self.commands = [
             ['commands'    , 'Show the list of available commands'],
             ['targets'     , 'Show the list of available targets'],
@@ -161,9 +162,10 @@ class Target():
             ['run'         , 'Start execution on the target'],
         ]
 
+        [args, _] = parser.parse_known_args()
         self.target_dirs = []
         self.flashes = {}
-        self.work_dir = None
+        self.work_dir = args.work_dir
         self.options = options
         self.layout_level = 0
         self.pem_path = None
@@ -549,18 +551,6 @@ class Target():
 
         self.target_dirs = target_dirs
 
-
-    def set_working_dir(self, working_dir : str):
-        """Set the working directory.
-
-        All files produced by gapy will be dumped into this directory.
-
-        Parameters
-        ----------
-        working_dir : str
-            The working directory.
-        """
-        self.work_dir = working_dir
 
 
     def get_working_dir(self) -> str:

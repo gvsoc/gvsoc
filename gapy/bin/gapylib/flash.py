@@ -101,6 +101,7 @@ class FlashSection():
             Description of he property.
         """
 
+
         if self.properties.get(name) is not None:
             traceback.print_stack()
             raise RuntimeError(f'Property {name} already declared')
@@ -905,9 +906,6 @@ class Flash():
         if not self.content_parsed and self.content_dict is not None:
             self.content_parsed = True
 
-            # Take the properties set from command-line and overwrite the ones from
-            # the content
-            self.__handle_section_properties()
 
             # Now create all the sections
             if self.content_dict.get('sections') is not None:
@@ -930,6 +928,10 @@ class Flash():
                     section = section_template(self, content_section.get('name'),
                         len(self.sections))
                     self.sections[content_section.get('name')] = section
+
+            # Take the properties set from command-line and overwrite the ones from
+            # the content
+            self.__handle_section_properties()
 
             # And finally set the content of each section and give it its starting offset
             if self.content_dict.get('sections') is not None:
@@ -990,9 +992,25 @@ class Flash():
                 section['properties'] = OrderedDict()
 
             # If the property is a list, append the value to the list
-            if section['properties'].get(key) is not None and \
-                    isinstance(section['properties'].get(key), list):
+            if self.sections[section_name].properties.get(key) is not None and \
+                    isinstance(self.sections[section_name].properties.get(key).value, list):
+
+                # The json file may not define any default value for this property.
+                # If so, create an empty list so that we can append the value
+                if section['properties'].get(key) is None:
+                    section['properties'][key] = []
+
                 section['properties'].get(key).append(value)
+            # if the property is a bool, but the entry is a string
+            # (typically when setting from make or cmake)
+            elif self.sections[section_name].properties.get(key) and \
+                    isinstance(self.sections[section_name].properties.get(key).value, bool)\
+                    and isinstance(value, str):
+                # don't care about casing here
+                if value.lower() == "false".lower():
+                    section['properties'][key] = False
+                else:
+                    section['properties'][key] = True
             # Otherwise just set it
             else:
                 section['properties'][key] = value
