@@ -1,0 +1,2 @@
+RT_SRCS = ../utils/init.c ../utils/crt0.S ../utils/alloc.c ../utils/io.c ../utils/prf.c ../utils/string.c ../utils/fprintf.c
+RT_FLAGS = -march=rv64imafdc -O3 -fno-tree-loop-distribute-patterns -I../utils -T../utils/link.ld -nostartfiles -nostdlib -Wl,--no-warn-rwx-segments
