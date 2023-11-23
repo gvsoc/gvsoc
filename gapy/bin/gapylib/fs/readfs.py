@@ -138,6 +138,10 @@ class ReadfsSection(FlashSection):
             description="List of files to be included in the ReadFS."
         )
 
+        self.declare_property(name='dirs', value=[],
+            description="List of directories to be included in the ReadFS."
+        )
+
 
     def set_content(self, offset: int, content_dict: dict):
         """Set the content of the section.
@@ -151,10 +155,32 @@ class ReadfsSection(FlashSection):
         """
         super().set_content(offset, content_dict)
 
-        # Get the list of files from the properties and determine basenames from the path, which
-        # will be used as name in the readfs
+        # Get the list of files and directories from the properties and determine basenames from
+        # the path, which will be used as name in the readfs
         for file in content_dict.get('properties').get('files'):
-            self.file_paths.append([os.path.basename(file), file])
+            if file.find(':') != -1:
+                ws_path, target_path = file.split(':')
+                self.file_paths.append(
+                    [os.path.join(target_path, os.path.basename(ws_path)), ws_path])
+            else:
+                self.file_paths.append([os.path.basename(file), file])
+
+
+        if content_dict.get('properties').get('dirs') is not None:
+            for directory in content_dict.get('properties').get('dirs'):
+                # The path is of the form <host_path>:<target_path>
+                # The second part is optional
+                target_directory = None
+                if directory.find(':') != -1:
+                    directory, target_directory = directory.split(':')
+
+                for file in os.listdir(directory):
+                    file_path = os.path.join(directory, file)
+                    if target_directory is not None:
+                        self.file_paths.append(
+                            [os.path.join(target_directory, file), file_path])
+                    else:
+                        self.file_paths.append([file, file_path])
 
         # First declare the sub-sections so that the right offsets are computed
 

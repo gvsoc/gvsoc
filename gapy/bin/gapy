@@ -86,7 +86,6 @@ try:
         target = gapylib.target.Target(parser)
 
     target.set_target_dirs(args.target_dirs)
-    target.set_working_dir(args.work_dir)
 
     # Let the target add its options, and then reparse them
     target.append_args(parser)
