@@ -183,3 +183,168 @@ terminal with: ::
     Breakpoint 1, main () at main.c:5
     5	    printf("Hello\n");
     (gdb)
+
+
+1 - How to write a component from scratch
+.........................................
+
+The goal is this tutorial is to write a component from scratch, add it to our previous system,
+and access it from the simulated binary.
+
+For that, we modified the application and we now put in it an access to a dedicated region, that
+we want to redirect to our component:
+
+.. code-block:: cpp
+
+    int main()
+    {
+        printf("Hello, got 0x%x from my comp\n", *(uint32_t *)0x20000000);
+        return 0;
+    }
+
+First we need to create a python script called *my_comp.py* and declare our component in it:
+
+.. code-block:: python
+
+    import gvsoc.systree
+
+    class MyComp(gvsoc.systree.Component):
+
+        def __init__(self, parent: gvsoc.systree.Component, name: str, value: int):
+            super().__init__(parent, name)
+
+Python generators are always getting these *parent* and *name* options which needs to be given
+to the parent class. The first one is giving the parent which instantiated this component, and
+the second gives the name of the component within its parent scope.
+
+Additional options can then be added to let the parent parametrize the instance of this component,
+like previously the size of the memory. Here we add the *value* option to let the parent gives the
+value to be read by the simulated binary.
+
+Then we need to specify the source code of this component. Several sources can be given.
+That is all we need to trigger the compilation of this component, the framework will automically
+make sure a loadable library is produced for our component.
+
+.. code-block:: python
+
+    self.add_sources(['my_comp.cpp'])
+
+It is also possible to give cflags. Both cflags and sources can depend on the component parameters,
+the framework will make sure it compiles 2 differents libraries since the static code is different.
+
+Since we added an option, we need to declare it as a property, so that it is added into the JSON
+configuration of the component, and so that the code can retrieve it.
+
+.. code-block:: python
+
+    self.add_properties({
+        "value": value
+    })
+
+Our component will have an input port to receive incoming requests. It is good to declare a method
+for it so that it is easy for the upper component to know what needs to be bound:
+
+.. code-block:: python
+
+    def i_INPUT(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'input', signature='io')
+
+The name of the interface here should corresponds to the one in the C++ code to declare the port.
+The signature is just an information for the framework so that it can check that we are binding
+ports of the same kind.
+
+Now we need to write the C++ code. We have to first declare a class which inherits from
+*vp::Component*:
+
+.. code-block:: cpp
+
+    class MyComp : public vp::Component
+    {
+
+    public:
+        MyComp(vp::ComponentConf &config);
+
+    };
+
+    extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+    {
+        return new MyComp(config);
+    }
+
+The argument passed to our class is just here to propagate it to the parent class.
+
+A C wrapping function called *gv_new* is needed to let the framework instantiate our class when
+the shared library containing our component is loaded.
+
+Now we need to declare in our class an input port where the requests from the core will be received.
+This port will be associated a method which will get called everytime a request must be handled.
+This method must be static, and will receive the class instance as first argument and the request as
+second argument. We can also add in the class a variable which will hold the value to be returned.
+
+.. code-block:: cpp
+
+    private:
+        static vp::IoReqStatus handle_req(void *__this, vp::IoReq *req);
+
+        vp::IoSlave input_itf;
+
+        uint32_t value;
+
+Now we must write the constructor of our class. This one should contain the declaration of our input port.
+It is also the place where it can read the JSON configuration to get the parameters which were given to
+our Python instance:
+
+.. code-block:: cpp
+
+    MyComp::MyComp(vp::ComponentConf &config)
+        : vp::Component(config)
+    {
+        this->input_itf.set_req_meth(&MyComp::handle_req);
+        this->new_slave_port("input", &this->input_itf);
+
+        this->value = this->get_js_config()->get_child_int("value");
+    }
+
+Finally we can implement our port handler, whose role is to detect a read at offset 0 and returns
+the value specified in the Python instance:
+
+.. code-block:: cpp
+
+    vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        printf("Received request at offset 0x%lx, size 0x%lx, is_write %d\n",
+            req->get_addr(), req->get_size(), req->get_is_write());
+        if (!req->get_is_write() && req->get_addr() == 0 && req->get_size() == 4)
+        {
+            *(uint32_t *)req->get_data() = _this->value;
+        }
+        return vp::IO_REQ_OK;
+    }
+
+The cast is needed because this handler is static.
+
+The last step is to add our component in our previous system and connect it on the interconnect so
+that accesses at 0x20000000 are routed to it.
+
+For that it must first be imported:
+
+.. code-block:: python
+
+    import my_comp
+
+And then instantiated:
+
+.. code-block:: python
+
+    comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
+    ico.o_MAP(comp.i_INPUT(), 'comp', base=0x20000000, size=0x00001000, rm_base=True)
+
+We can now compile gvsoc. Since our component is included into the system, the framework will automatically
+compile it.
+
+We can compile and run the application, which should output: ::
+
+    Received request at offset 0x0, size 0x4, is_write 0
+    Hello, got 0x12345678 from my comp
