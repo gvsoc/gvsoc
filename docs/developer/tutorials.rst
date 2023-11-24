@@ -526,3 +526,50 @@ Now we can compile and run to get: ::
     Received value 1
     Received results 11111111 22222222
     Hello, got 0x12345678 from my comp
+
+
+3 - How to add system traces to a component
+...........................................
+
+The goal of this tutorial is to show how to add system traces into our components.
+
+The trace must first be declared into our component class:
+
+.. code-block:: c++
+
+    vp::Trace trace;
+
+Then, the trace must be activated, and given a name. This name is the one we will see in the path
+of the trace when it is dumped, and is also the one used for selecting the trace on the command line.
+
+.. code-block:: c++
+
+    this->traces.new_trace("trace", &this->trace);
+
+The trace can then be dumped from our model using this code that we put at the beginning of our request
+handler, in order to show information about the request:
+
+.. code-block:: c++
+
+    vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        _this->trace.msg(vp::TraceLevel::DEBUG, "Received request at offset 0x%lx, size 0x%lx, is_write %d\n",
+            req->get_addr(), req->get_size(), req->get_is_write());
+
+Once gvsoc has been recompiled, we can then activate all the traces of our component with this command: ::
+
+    make all run runner_args="--trace=my_comp"
+
+The value to the option *--trace* is a regular expression used to enable all traces whose path is matching this pattern.
+
+It is also possible to activate instruction traces at the same time to see where is done the access: ::
+
+    make all run runner_args="--trace=my_comp --trace=insn"
+
+This should dump: ::
+
+    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000 
+    32590000: 3259: [/soc/my_comp/trace             ] Received request at offset 0x0, size 0x4, is_write 0
+    32590000: 3259: [/soc/host/insn                 ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000 
