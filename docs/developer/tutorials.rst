@@ -72,6 +72,10 @@ Now we can instantiate a clock generator and give it the initial frequency:
 
 .. code-block:: python
 
+    import vp.clock_domain
+
+.. code-block:: python
+
     clock = vp.clock_domain.Clock_domain(self, 'clock', frequency=100000000)
 
 
@@ -110,10 +114,18 @@ it is passed to the C++ model through its JSON configuration.
 
 .. code-block:: python
 
+    import memory.memory
+
+.. code-block:: python
+
     mem = memory.memory.Memory(self, 'mem', size=0x00100000)
 
 Then the interconnect. We bind the interco to the memory with a special binding, since we route
 requests to the memory only for a certain range of the memory map.
+
+.. code-block:: python
+
+    import interco.router
 
 .. code-block:: python
 
@@ -125,6 +137,10 @@ to remap the base address of the requests, so that they arrive in the memory com
 a local offset.
 
 Now we can add and bind the core. We take a default riscv core:
+
+.. code-block:: python
+
+    import cpu.iss.riscv
 
 .. code-block:: python
 
@@ -142,6 +158,10 @@ simulated.
 
 .. code-block:: python
 
+    import utils.loader.loader
+
+.. code-block:: python
+
     loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
     loader.o_OUT     (ico.i_INPUT    ())
     loader.o_START   (host.i_FETCHEN ())
@@ -156,6 +176,14 @@ the binary.
 
 The last component, which is optional, is to put a GDB server so that we can connect GDB to debug
 our binary execution.
+
+.. code-block:: python
+
+    import gdbserver.gdbserver
+
+.. code-block:: python
+
+    gdbserver.gdbserver.Gdbserver(self, 'gdbserver')
 
 Now we can compile gvsoc with *make gvsoc*. Since it will execute our script to know which components
 should be built, it is possible that we get some Python errors at this point.
@@ -347,4 +375,154 @@ compile it.
 We can compile and run the application, which should output: ::
 
     Received request at offset 0x0, size 0x4, is_write 0
+    Hello, got 0x12345678 from my comp
+
+
+
+
+
+2 - How to make components communicate together
+...............................................
+
+The goal of this tutorial is to create a second component and connect it to our previous component
+so that they interact together.
+
+For that, our previous component, when it receives the read from the core, will now also notify
+the other component, through a wire interface. Then the new component will in turn reply to this
+component through a second binding.
+
+First, let's enrich our first component with 2 ports, one for sending the notification, and one for
+receiving the result:
+
+.. code-block:: python
+
+    def o_NOTIF(self, itf: gsystree.SlaveItf):
+        self.itf_bind('notif', itf, signature='wire<bool>')
+
+    def i_RESULT(self) -> gsystree.SlaveItf:
+        return gsystree.SlaveItf(self, 'result', signature='wire<MyResult>')
+
+Both are using the wire interface, which is an interface which can be used for sending values to
+another component. This interface is a template, so that the type of the value to be exchanged
+can be chosen.
+
+In our case, the notif interface with send a boolean, and the result will receive a custom class.
+
+In the same Python script we can then describe our second component:
+
+.. code-block:: python
+
+    class MyComp2(gsystree.Component):
+
+        def __init__(self, parent: gsystree.Component, name: str):
+
+            super().__init__(parent, name)
+
+            self.add_sources(['my_comp2.cpp'])
+
+        def i_NOTIF(self) -> gsystree.SlaveItf:
+            return gsystree.SlaveItf(self, 'notif', signature='wire<bool>')
+
+        def o_RESULT(self, itf: gsystree.SlaveItf):
+            self.itf_bind('result', itf, signature='wire<MyResult>')
+
+It has same interfaces but reversed in direction.
+
+Now we have to declare the two new interfaces in our first component:
+
+.. code-block:: cpp
+
+    this->new_master_port("notif", &this->notif_itf);
+
+    this->result_itf.set_sync_meth(&MyComp::handle_result);
+    this->new_slave_port("result", &this->result_itf);
+
+Since the second one is a slave interface and will receive values, it also needs to be
+associated a handler, which will get called when the other component is sending a value.
+
+We can then modify our previous handler to also send a notification to the second component:
+
+.. code-block:: cpp
+
+    _this->notif_itf.sync(true);
+
+The handler for the result port can then be declared and implemented:
+
+.. code-block:: cpp
+
+    static void handle_result(void *__this, MyClass *result);
+
+.. code-block:: cpp
+
+    void MyComp::handle_result(void *__this, MyClass *result)
+    {
+        printf("Received results %x %x\n", result->value0, result->value1);
+    }
+
+Note that the type of the value can be anything, including a custom class, like in our case.
+This allows exchanging complex data between components.
+
+The second component can then be implemented:
+
+.. code-block:: cpp
+
+    class MyComp : public vp::Component
+    {
+
+    public:
+        MyComp(vp::ComponentConf &config);
+
+    private:
+        static void handle_notif(void *__this, bool value);
+        vp::WireSlave<bool> notif_itf;
+        vp::WireMaster<MyClass *> result_itf;
+    };
+
+
+    MyComp::MyComp(vp::ComponentConf &config)
+        : vp::Component(config)
+    {
+        this->notif_itf.set_sync_meth(&MyComp::handle_notif);
+        this->new_slave_port("notif", &this->notif_itf);
+
+        this->new_master_port("result", &this->result_itf);
+    }
+
+
+
+    void MyComp::handle_notif(void *__this, bool value)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        printf("Received value %d\n", value);
+
+        MyClass result = { .value0=0x11111111, .value1=0x22222222 };
+        _this->result_itf.sync(&result);
+    }
+
+
+    extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+    {
+        return new MyComp(config);
+    }
+
+Note that it will send the result immediately when it receives the notification, which means the first
+component will receive a method call while it is calling another component.
+
+This is a case which often happens for simulation speed reason, so everytime we call an interface, we have
+to make sure that the internal state of the component is in a coherent state.
+
+The final step is to instantiate the second component and bind it with the first one:
+
+.. code-block:: python
+
+        comp2 = my_comp.MyComp2(self, 'my_comp2')
+        comp.o_NOTIF(comp2.i_NOTIF())
+        comp2.o_RESULT(comp.i_RESULT())
+
+Now we can compile and run to get: ::
+
+    Received request at offset 0x0, size 0x4, is_write 0
+    Received value 1
+    Received results 11111111 22222222
     Hello, got 0x12345678 from my comp
