@@ -573,3 +573,67 @@ This should dump: ::
     32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000 
     32590000: 3259: [/soc/my_comp/trace             ] Received request at offset 0x0, size 0x4, is_write 0
     32590000: 3259: [/soc/host/insn                 ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000 
+
+4 - How to add VCD traces to a component
+........................................
+
+The goal of this tutorial is to show how to add VCD traces to our component so that its activity
+can be monitored from a VCD viewer like GTKwave.
+
+The easiest way to dump a VCD trace is to declare a signal that we will use to set the value which
+will be displayed on the viewer.
+
+For that we first have to declare it in our component class:
+
+.. code-block:: c++
+
+    vp::Signal<uint32_t> vcd_value;
+
+The signal is a template. Its type is the one of the value which will store the value of the signal. This type should
+have at least the width of the signal.
+
+Then the signal must be declared, and given a name and a width. This name is the name we will see in
+the viewer and the one we can use on the command line to enable the VCD trace associated to
+this signal.
+
+.. code-block:: c++
+
+    MyComp::MyComp(vp::ComponentConf &config)
+        : vp::Component(config), vcd_value(*this, "status", 32)
+
+Then, the signal can be given a value with the *set* method. All the changes of values done through
+this method will be seen on the VCD viewer.
+
+One interesting feature is to call the *release* method on the signal in order to show it in high
+impedance. This can be useful to show some kind of idleness.
+
+In our example, our signal will just display the value written by the core, except for a certain value
+which will be showed as high impedance:
+
+.. code-block:: c++
+
+    if (!req->get_is_write())
+    {
+        *(uint32_t *)req->get_data() = _this->value;
+    }
+    else
+    {
+        uint32_t value = *(uint32_t *)req->get_data();
+        if (value == 5)
+        {
+            _this->vcd_value.release();
+        }
+        else
+        {
+            _this->vcd_value.set(value);
+        }
+    }
+
+Once GVSOC has been recompiled, we can activate VCD tracing and enable all events with this command: ::
+
+    make all run runner_args="--vcd --event=.*"
+
+This should suggest a GTKwave command to be launched.
+
+Once GTKwave is opened, on the SST view on the left, our signal can be seen under soc->my_comp. It
+can then be added to the view by clicking on "Append" on the bottom left.
