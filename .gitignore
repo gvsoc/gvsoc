@@ -1,3 +1,4 @@
-/build/
+docs/developer/_build/
+build/
 /install/
 __pycache__/

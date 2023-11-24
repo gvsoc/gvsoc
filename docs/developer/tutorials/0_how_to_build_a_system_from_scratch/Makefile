@@ -10,4 +10,4 @@ gvsoc:
 	make -C ../../../.. TARGETS=my_system MODULES=$(CURDIR) build
 
 run:
-	gvsoc --target-dir=$(CURDIR) --target=my_system --work-dir=$(BUILDDIR) --binary=$(BUILDDIR)/test run $(GV_FLAGS)
+	gvsoc --target-dir=$(CURDIR) --target=my_system --work-dir=$(BUILDDIR) --binary=$(BUILDDIR)/test run $(runner_args)

@@ -1,12 +1,12 @@
-import cpu.iss.riscv as iss
-import memory.memory as memory
-from vp.clock_domain import Clock_domain
-import interco.router as router
-import utils.loader.loader
 import gvsoc.systree
-from elftools.elf.elffile import *
 import gvsoc.runner
-from gdbserver.gdbserver import Gdbserver
+
+import cpu.iss.riscv
+import memory.memory
+import vp.clock_domain
+import interco.router
+import utils.loader.loader
+import gdbserver.gdbserver
 
 
 GAPY_TARGET = True
@@ -22,16 +22,16 @@ class Soc(gvsoc.systree.Component):
         binary = args.binary
 
         # Main memory
-        mem = memory.Memory(self, 'mem', size=0x00100000)
+        mem = memory.memory.Memory(self, 'mem', size=0x00100000)
 
         # Main interconnect
-        ico = router.Router(self, 'ico')
+        ico = interco.router.Router(self, 'ico')
         # Add a mapping to the memory and connect it. The remove offset is used to substract
         # the global address to the requests address so that the memory only gets a local offset.
         ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, remove_offset=0x00000000, size=0x00100000)
 
         # Instantiates the main core and connect fetch and data to the interconnect
-        host = iss.Riscv(self, 'host', isa='rv64imafdc')
+        host = cpu.iss.riscv.Riscv(self, 'host', isa='rv64imafdc')
         host.o_FETCH     (ico.i_INPUT    ())
         host.o_DATA      (ico.i_INPUT    ())
         host.o_DATA_DEBUG(ico.i_INPUT    ())
@@ -43,7 +43,7 @@ class Soc(gvsoc.systree.Component):
         loader.o_START   (host.i_FETCHEN ())
         loader.o_ENTRY   (host.i_ENTRY   ())
 
-        Gdbserver(self, 'gdbserver')
+        gdbserver.gdbserver.Gdbserver(self, 'gdbserver')
 
 
 # This is a wrapping component of the real one in order to connect a clock generator to it
@@ -54,7 +54,7 @@ class Rv64(gvsoc.systree.Component):
 
         super().__init__(parent, name, options=options)
 
-        clock = Clock_domain(self, 'clock', frequency=100000000)
+        clock = vp.clock_domain.Clock_domain(self, 'clock', frequency=100000000)
         soc = Soc(self, 'soc', parser)
         clock.o_CLOCK    (soc.i_CLOCK    ())
 

@@ -28,8 +28,8 @@ static void __init_do_dtors(void)
     }
 }
 
-extern unsigned char _bss_start;
-extern unsigned char _bss_end;
+extern unsigned int _bss_start;
+extern unsigned int _bss_end;
 
 static inline void *__init_bss_start() { return (void *)&_bss_start; }
 static inline void *__init_bss_end() { return (void *)&_bss_end; }
