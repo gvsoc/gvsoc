@@ -1286,3 +1286,66 @@ Then we can see the impact on traces: ::
 
 The core should normally be able to do one load of 4 bytes per cycle, since the default bandwidth is 4,
 but now, we see it is stalled starting on the second access.
+
+
+
+
+11 - How to add an ISS instruction
+..................................
+
+The goal of this tutorial is to show how to add an instruction to the core ISS.
+
+The ISS contains a script where the encoding of all instructions is described. This is used to generate
+the decoding tree, as well as information for dumping instruction traces.
+
+This script is *core/models/cpu/iss/isa_gen/isa_riscv_gen.py*. We need to modify it to insert our
+new instruction.
+
+To simplify, we will just add our instruction to an existing ISA, the RV32I:
+
+.. code-block:: python
+
+    R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011'),
+
+This gives the label of our instruction, the format of the instruction, which has in this case
+1 output and 2 input registers, and the encoding of the instruction. The - in it specifies the bits
+which do not impact the decoding, as they encode registers.
+
+Now we need to add the implementation of the instruction, in the rv32i.hpp file:
+
+.. code-block:: cpp
+
+    static inline iss_reg_t my_instr_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+    {
+        REG_SET(0, REG_GET(0) + 2*REG_GET(1));
+        return iss_insn_next(iss, insn, pc);
+    }
+
+The name of the function handler is <label>_exec. An instruction should always return the next
+PC, which can be computed by calling *iss_insn_next*.
+
+This instruction is reading the 2 input registers, multiply the second by 2 and add it to the first,
+then store the result into the output register.
+
+
+Once added, we can recompile GVSOC. This will automatically regenerate the decoding tree and our instruction
+should now be in there.
+
+To test the instruction, an assembly file with our instruction encoded by hands has been added:
+
+.. code-block:: cpp
+
+        .global my_instr
+    my_instr:
+        .word 0x04b56533       // 0000010 01011 01010 110 01010 0110011
+        jr ra
+
+We can execute the test with instruction traces to see our instruction: ::
+
+    31870000: 3187: [/soc/host/insn                 ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffdeec      ra=0000000000002c38 
+    31890000: 3189: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
+    31900000: 3190: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c38 
+
+
+
+
