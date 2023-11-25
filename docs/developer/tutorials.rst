@@ -882,3 +882,90 @@ Once GVSOC has been recompiled, and traces from our component has been enabled, 
     177840000: 17784: [/soc/my_comp/trace                    ] Received request at offset 0x104, size 0x4, is_write 1
     177840000: 17784: [/soc/my_comp/reg1/trace               ] Modified register (value: 0x12345678)
     177840000: 17784: [/soc/my_comp/reg1/trace               ] Register access (name: REG1, offset: 0x4, size: 0x4, is_write: 0x1, value: { FIELD0=0x78, FIELD1=0x56, FIELD2=0x34, FIELD3=0x12 })
+
+
+6 - How to add timing
+.....................
+
+The goal of this tutorial is show how add basic timing to a component.
+
+For that we will start from the 3rd tutorial where we made 2 components communicate together but
+this time, the second component which receives the notification will wait some cycles before
+sending back the result.
+
+Delaying actions in a clocked component can be done using clock events. These are callbacks which are
+registered to be executed after a certain amount of cycles has ellapsed.
+
+For that, we must first declare the event in our class:
+
+.. code-block:: cpp
+
+    vp::ClockEvent event;
+
+Then we have to configure it in the constructor:
+
+.. code-block:: cpp
+
+    MyComp::MyComp(vp::ComponentConf &config)
+        : vp::Component(config), event(this, MyComp::handle_event)
+    {
+
+The method that we specify when we configure it, is the event callback, which will get called everytime
+the event will get executed.
+
+The event must be enqueued with a certain number of cycles, which tells in how many cycles from the
+current cycle the event must be executed.
+
+In our case, we will enqueue the event when we receive the notification, and we want that it executes
+10 cycles after the access:
+
+.. code-block:: cpp
+
+    void MyComp::handle_notif(vp::Block *__this, bool value)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        _this->trace.msg(vp::TraceLevel::DEBUG, "Received notif\n");
+
+        if (!_this->event.is_enqueued())
+        {
+            _this->event.enqueue(10);
+        }
+    }
+
+It is important to enqueue it only if it is not already the case because we could receive another
+notification while the event is enqueued.
+
+Then we need to write the callback of the event, which will send the result to the other component:
+
+.. code-block:: cpp
+
+    void MyComp::handle_event(vp::Block *__this, vp::ClockEvent *event)
+    {
+        MyComp *_this = (MyComp *)__this;
+        _this->trace.msg(vp::TraceLevel::DEBUG, "Sending result\n");
+
+        MyClass result = { .value0=0x11111111, .value1=0x22222222 };
+        _this->result_itf.sync(&result);
+    }
+
+To see the effect, we can dump instruction traces and the ones from our component: ::
+
+    32470000: 3247: [/soc/host/insn                  ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000 
+    Received request at offset 0x0, size 0x4, is_write 0
+    32590000: 3259: [/soc/my_comp2/trace             ] Received notif
+    32590000: 3259: [/soc/host/insn                  ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000 
+    32600000: 3260: [/soc/host/insn                  ] main:0                           M 0000000000002c2c c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a70  sp:0000000000000a80 
+    32610000: 3261: [/soc/host/insn                  ] main:0                           M 0000000000002c2e addi                a0, 0, 260                a0=0000000000000260 
+    32620000: 3262: [/soc/host/insn                  ] main:0                           M 0000000000002c32 c.sdsp              ra, 8(sp)                 ra:0000000000000c0e  sp:0000000000000a70  PA:0000000000000a78 
+    32690000: 3269: [/soc/my_comp2/trace             ] Sending result
+    Received results 11111111 22222222
+    32750000: 3275: [/soc/host/insn                  ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffffb4      ra=0000000000002c38 
+    32770000: 3277: [/soc/host/insn                  ] printf:0                         M 0000000000002be8 c.addi16sp          sp, sp, ffffffffffffffa0  sp=0000000000000a10  sp:0000000000000a70 
+    32780000: 3278: [/soc/host/insn                  ] printf:0                         M 0000000000002bea addi                t1, sp, 28                t1=0000000000000a38  sp:0000000000000a10 
+
+As we can see on the traces, the results were indeed sent 10 cycles after we received the notification. We also
+see that the core is executing instructions in between, which is what we want.
+
+This way of executing callbacks at specific cycles may seem basic, but actually allow us to build
+complex pipelines by executing the right actions at the right cycles.
