@@ -1056,3 +1056,62 @@ To see the effect we can dump traces: ::
 This example is quite simple, but in practice, things are much more complex in case asynchronous replies
 are used. A succession of several callbacks from different components are executed, until finally
 the initiator receives the response.
+
+
+
+8 - How to add mutiple cores
+............................
+
+The goal of this tutorial is to show how to modify our system generator to include a second core.
+
+For that, we just need to instantiate a second time the same core and connect it the same way we did
+for the first core:
+
+.. code-block:: python
+
+        # Instantiates the main core and connect fetch and data to the interconnect
+        host2 = cpu.iss.riscv.Riscv(self, 'host2', isa='rv64imafdc', core_id=1)
+        host2.o_FETCH     ( ico.i_INPUT     ())
+        host2.o_DATA      ( ico.i_INPUT     ())
+        host2.o_DATA_DEBUG(ico.i_INPUT    ())
+
+We have to be carefull to give it a different name and a different core id, so that we can also
+see it in gdb.
+
+In order to make it execute the same binary, we also connect the loader to it:
+
+.. code-block:: python
+
+    loader.o_START   ( host2.i_FETCHEN  ())
+    loader.o_ENTRY   ( host2.i_ENTRY    ())
+
+Here we connect a single output of the loader to several inputs. In this case, any call made by the
+loader to this interface will be broadcasted to all slaves, which is what we want, so that the 2 cores
+get the binary entry point and start at the same time.
+
+To see if both cores are really executing, we can check instruction traces: ::
+
+    28420000: 2842: [/soc/host/insn                   ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12 
+    28420000: 2842: [/soc/host2/insn                  ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12 
+    28430000: 2843: [/soc/host/insn                   ] $x:0                             M 0000000000000c16 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a90  sp:0000000000000c12 
+    28440000: 2844: [/soc/host/insn                   ] $x:0                             M 0000000000000c1a auipc               t0, 0x0                   t0=0000000000000c1a 
+    28450000: 2845: [/soc/host/insn                   ] $x:0                             M 0000000000000c1e addi                t0, t0, 1a                t0=0000000000000c34  t0:0000000000000c1a 
+    28460000: 2846: [/soc/host/insn                   ] $x:0                             M 0000000000000c22 csrrw               0, t0, mtvec              t0:0000000000000c34 
+    28470000: 2847: [/soc/host/insn                   ] $x:0                             M 0000000000000c26 auipc               t0, 0x0                   t0=0000000000000c26 
+    28480000: 2848: [/soc/host/insn                   ] $x:0                             M 0000000000000c2a addi                t0, t0, ffffffffffffffc4  t0=0000000000000bea  t0:0000000000000c26 
+    28490000: 2849: [/soc/host/insn                   ] $x:0                             M 0000000000000c2e c.li                a0, 0, 0                  a0=0000000000000000 
+    28500000: 2850: [/soc/host/insn                   ] $x:0                             M 0000000000000c30 jalr                ra, t0, 0                 ra=0000000000000c34  t0:0000000000000bea 
+    28520000: 2852: [/soc/host/insn                   ] __init_start:0                   M 0000000000000bea c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a80  sp:0000000000000a90 
+    28590000: 2859: [/soc/host2/insn                  ] $x:0                             M 0000000000000c16 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a90  sp:0000000000000c12
+
+We see indeed that both cores are executing together. They don't execute exactly the same because of
+the default timing model of the memory, which create contentions between the 2 cores.
+
+We can also check in GTKwave the multi-core execution.
+
+GDB can also connected, and we'll see the 2 cores as 2 different threads: ::
+
+    (gdb) info threads
+    Id   Target Id         Frame 
+    * 1    Thread 1 (host)   main () at main.c:6
+    2    Thread 2 (host2)  0x0000000000000bfe in __init_do_ctors () at ../utils/init.c:16
