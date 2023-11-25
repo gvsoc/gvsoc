@@ -637,3 +637,248 @@ This should suggest a GTKwave command to be launched.
 
 Once GTKwave is opened, on the SST view on the left, our signal can be seen under soc->my_comp. It
 can then be added to the view by clicking on "Append" on the bottom left.
+
+In order to automatically put our signal into the cental view without having to pick the signal
+from the signal view, we can also modify our component generator to include these lines:
+
+.. code-block:: python
+
+    def gen_gtkw(self, tree, comp_traces):
+
+        if tree.get_view() == 'overview':
+            tree.add_trace(self, self.name, vcd_signal='status[31:0]', tag='overview')
+
+
+5 - How to add a register map in a component
+............................................
+
+The goal of this tutorial is to show how to implement a register map in a component.
+
+For that we will first show how to model the registers by hands, and in a second step how to use
+a script to generate the code to handle the register map from a markdown description of it.
+
+First let's add it by hands. This is pretty simple. Our component is getting a function call to his
+request handler everytime our component is accessed. The handler can get the offset of the access
+from the request and determine from that which register is being accessed.
+
+In our case, we will have 2 registers, one at offset 0x0 containing what we did before and a new one
+at offset 0x4, which is returning the double of the value coming from Python generators.
+
+.. code-block:: cpp
+
+    vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        _this->trace.msg(vp::TraceLevel::DEBUG, "Received request at offset 0x%lx, size 0x%lx, is_write %d\n",
+            req->get_addr(), req->get_size(), req->get_is_write());
+
+        if (req->get_size() == 4)
+        {
+            if (req->get_addr() == 0)
+            {
+                if (!req->get_is_write())
+                {
+                    *(uint32_t *)req->get_data() = _this->value;
+                }
+                else
+                {
+                    uint32_t value = *(uint32_t *)req->get_data();
+                    if (value == 5)
+                    {
+                        _this->vcd_value.release();
+                    }
+                    else
+                    {
+                        _this->vcd_value.set(value);
+                    }
+                }
+            }
+            else if (req->get_addr() == 4)
+            {
+                if (!req->get_is_write())
+                {
+                    *(uint32_t *)req->get_data() = _this->value * 2;
+                }
+            }
+        }
+    }
+
+Things are easy here because we only supports 32bits aligned accesses to our registers which is
+quite common. This requires more work if we want to support 8bits or 16bits unaligned accesses, like doing some
+memcopies.
+
+To simplify, the *Register* object can be used to update the value
+with a method, and then check his full value to impact the model. This will also provide at the same
+time support for system traces and VCD traces.
+
+For that it first need to be declared and configured, similarly to what we have done with the *Signal* object:
+
+.. code-block:: cpp
+
+    vp::Register<uint32_t> my_reg;
+
+.. code-block:: cpp
+
+    MyComp::MyComp(vp::ComponentConf &config)
+        : vp::Component(config), vcd_value(*this, "status", 32), my_reg(*this, "my_reg", 32)
+
+Then the following code can be added in the handler. It is checking that the beginning of the request falls
+into the register area, and if so update the register value using the method. Then it can check the full value
+of the register to take an action, just a printf in our example.
+
+.. code-block:: cpp
+
+    if (req->get_addr() >= 8 && req->get_addr() < 12)
+    {
+        _this->my_reg.update(req->get_addr() - 8, req->get_size(), req->get_data(),
+            req->get_is_write());
+
+        if (req->get_is_write() && _this->my_reg.get() == 0x11227744)
+        {
+            printf("Hit value\n");
+        }
+
+        return vp::IO_REQ_OK;
+    }
+
+The following code can be added into the simulated binary in order to access our new register:
+
+.. code-block:: cpp
+
+    *(uint32_t *)0x20000008 = 0x11223344;
+    *(uint8_t *)0x20000009 = 0x77;
+
+    printf("Hello, got 0x%x at 0x20000008\n", *(uint32_t *)0x20000008);
+
+Then after recompiling gvsoc, we can see the activity in the register with these options: ::
+
+    make all run runner_args="--trace=my_comp/my_reg --trace-level=trace"
+
+Which should displays: ::
+
+    128290000: 12829: [/soc/my_comp/my_reg/trace             ] Modified register (value: 0x11223344)
+    128310000: 12831: [/soc/my_comp/my_reg/trace             ] Modified register (value: 0x11227744)
+    Hit value
+    Hello, got 0x11227744 at 0x20000008
+
+
+Now let's have a look at a way of generating the register map. For that we will use the *regmap-gen*
+script which comes with gvsoc and allows geenrating the register map code from a register map described
+in a markdown file.
+
+Lets' first add this rule in the makefile to generate the register map: ::
+
+    regmap:
+        regmap-gen --input-md regmap.md --header headers/mycomp
+
+Now let's describe the register map. This file should first describe the set of registers of the
+regmap. Then for each register, it should describe all the fields of the register. This will be used
+to generate accessors for each field of each register, to make it easy for the mdoel to handle
+the registers, and also to generate detailed traces.
+
+.. code-block:: markdown
+
+    # MyComp
+
+    ## Description
+
+    ## Registers
+
+    | Register Name | Offset | Size | Default     | Description      |
+    | ---           | ---    | ---  | ---         | ---              |
+    | REG0          | 0x00   | 32   | 0x00000000  | Register 0       |
+    | REG1          | 0x04   | 32   | 0x00000000  | Register 1       |
+
+    ### REG0
+
+    #### Fields
+
+    | Field Name | Offset | Size  | Default | Description |
+    | ---        | ---    | ---   | ---     | ---         |
+    | FIELD0     | 0      | 8     | 0x00    | Field 0     |
+    | FIELD1     | 8      | 24    | 0x00    | Field 1     |
+
+
+    ### REG1
+
+    #### Fields
+
+    | Field Name | Offset | Size  | Default | Description |
+    | ---        | ---    | ---   | ---     | ---         |
+    | FIELD0     | 0      | 8     | 0x00    | Field 0     |
+    | FIELD1     | 8      | 8     | 0x00    | Field 1     |
+    | FIELD2     | 16     | 8     | 0x00    | Field 2     |
+    | FIELD3     | 24     | 8     | 0x00    | Field 3     |
+
+Once executed, the script should generate several files in the *header* directory, that we can include
+into our model to instantiate the register map.
+
+For that we must first include these two files:
+
+.. code-block:: cpp
+
+    #include "headers/mycomp_regfields.h"
+    #include "headers/mycomp_gvsoc.h"
+
+Then the register map must be declared into our component class:
+
+.. code-block:: cpp
+
+    vp_regmap_regmap regmap;
+
+It must then be configured in our class constructor. A trace must be given, which will be used to trace
+register accesses. We can use our class trace for that.
+
+.. code-block:: cpp
+
+    this->regmap.build(this, &this->trace);
+
+In case we need to catch accesses to some registers when they are accessed, in order to take some actions,
+we can attach a callback, which will get called everytime it is accessed:
+
+.. code-block:: cpp
+
+    this->regmap.reg0.register_callback(std::bind(
+        &MyComp::handle_reg0_access, this, std::placeholders::_1, std::placeholders::_2,
+        std::placeholders::_3, std::placeholders::_4), true);
+
+The callback needs to update the value of the register, and can do additional things:
+
+.. code-block:: cpp
+
+    void MyComp::handle_reg0_access(uint64_t reg_offset, int size, uint8_t *value, bool is_write)
+    {
+        printf("REG0 callback\n");
+
+        this->regmap.reg0.update(reg_offset, size, value, is_write);
+    }
+
+The last thing to do is to catch the accesses falling into the area managed by our new register map,
+to forward them to it:
+
+.. code-block:: cpp
+
+    else if (req->get_addr() >= 0x100 && req->get_addr() < 0x200)
+    {
+        _this->regmap.access(req->get_addr() - 0x100, req->get_size(), req->get_data(),
+            req->get_is_write());
+        return vp::IO_REQ_OK;
+    }
+
+We can then add some accesses to the new register map in the simulated binary:
+
+.. code-block:: cpp
+
+    *(volatile uint32_t *)0x20000100 = 0x12345678;
+    *(volatile uint32_t *)0x20000104 = 0x12345678;
+
+Once GVSOC has been recompiled, and traces from our component has been enabled, we should see: ::
+
+    177690000: 17769: [/soc/my_comp/trace                    ] Received request at offset 0x100, size 0x4, is_write 1
+    REG0 callback
+    177690000: 17769: [/soc/my_comp/reg0/trace               ] Modified register (value: 0x12345678)
+    177690000: 17769: [/soc/my_comp/reg0/trace               ] Register access (name: REG0, offset: 0x0, size: 0x4, is_write: 0x1, value: { FIELD0=0x78, FIELD1=0x123456 })
+    177840000: 17784: [/soc/my_comp/trace                    ] Received request at offset 0x104, size 0x4, is_write 1
+    177840000: 17784: [/soc/my_comp/reg1/trace               ] Modified register (value: 0x12345678)
+    177840000: 17784: [/soc/my_comp/reg1/trace               ] Register access (name: REG1, offset: 0x4, size: 0x4, is_write: 0x1, value: { FIELD0=0x78, FIELD1=0x56, FIELD2=0x34, FIELD3=0x12 })
