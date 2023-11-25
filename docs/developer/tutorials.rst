@@ -1218,3 +1218,71 @@ If we look the timestamp column, at the very left, we see that the duration of 1
 much longer after the frequency has changed.
 
 We can also have a look in GTKwave to see that the cycle duration is periodically changing.
+
+
+
+
+10 - How to customize an interconnect timing
+............................................
+
+The goal of this tutorial is to show how to customize the timing model of the interconnect.
+
+The router that we are using in these tutorials have two ways of specifying the timing.
+
+First, we can add a latency to all requests going through a mapping. This allows assigning
+a different cost to each path in the router.
+
+We add such a latency on the path from the core to the memory:
+
+.. code-block:: python
+
+    ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True, latency=100)
+
+This should increase the latency of any access to the memory by 100 cycles, which will stall the core
+during these cycles.
+
+We can see the impact by looking at the instruction traces, where we can see the latency on each memory
+access: ::
+
+    45180000: 4518: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a90  a3:0000000000000b00 
+    45210000: 4521: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a90  PA:0000000000000a90 
+    46220000: 4622: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4c c.addi              a5, a5, 8                 a5=0000000000000a98  a5:0000000000000a90 
+    46230000: 4623: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a98  a3:0000000000000b00 
+    46260000: 4626: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a98  PA:0000000000000a98 
+
+The second way to modify the timing is to change the bandwidth of the router.
+
+The bandwidth tells how many bytes per cycle can go through the router. To follow this rule, the
+router computes the duration of each request based on its size and the bandwidth,
+and sets the latencies of the requests so that in average the bandwidth is respected.
+
+To see how it works, let's change the bdnwidth to 1 in our system. We also remove the latency that
+we have put previously:
+
+.. code-block:: python
+
+    ico = interco.router.Router(self, 'ico', bandwidth=1)
+
+Then we modify the simulated binary so that it does accesses in a loop:
+
+.. code-block:: cpp
+
+    for (int i=0; i<20; i++)
+    {
+        *(volatile uint32_t *)0x00000004;
+        *(volatile uint32_t *)0x00000004;
+        *(volatile uint32_t *)0x00000004;
+        *(volatile uint32_t *)0x00000004;
+    }
+
+Then we can see the impact on traces: ::
+
+    124860000: 12486: [/soc/host/insn                 ] main:0                           M 0000000000002c1a c.bnez              a5, 0, ffffffffffffffee   a5:0000000000000012 
+    124890000: 12489: [/soc/host/insn                 ] main:0                           M 0000000000002c08 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
+    124900000: 12490: [/soc/host/insn                 ] main:0                           M 0000000000002c0c lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
+    124940000: 12494: [/soc/host/insn                 ] main:0                           M 0000000000002c10 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
+    124980000: 12498: [/soc/host/insn                 ] main:0                           M 0000000000002c14 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
+    125020000: 12502: [/soc/host/insn                 ] main:0                           M 0000000000002c18 c.addiw             a5, a5, ffffffffffffffff  a5=0000000000000011  a5:0000000000000012 
+
+The core should normally be able to do one load of 4 bytes per cycle, since the default bandwidth is 4,
+but now, we see it is stalled starting on the second access.
