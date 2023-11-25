@@ -911,7 +911,7 @@ Then we have to configure it in the constructor:
     {
 
 The method that we specify when we configure it, is the event callback, which will get called everytime
-the event will get executed.
+the event gets executed.
 
 The event must be enqueued with a certain number of cycles, which tells in how many cycles from the
 current cycle the event must be executed.
@@ -969,3 +969,90 @@ see that the core is executing instructions in between, which is what we want.
 
 This way of executing callbacks at specific cycles may seem basic, but actually allow us to build
 complex pipelines by executing the right actions at the right cycles.
+
+
+
+
+7 - How to use the IO request interface
+.......................................
+
+The goal of this tutorial is to give more details about the IO interface used for exchanging
+memory-mapped requests.
+
+We will start from the 4th tutorial where we added system traces to our component and we will now see
+different ways of handling the incoming requests.
+
+First let's just add simple timing to our response:
+
+.. code-block:: cpp
+
+    if (req->get_size() == 4)
+    {
+        if (req->get_addr() == 0)
+        {
+            *(uint32_t *)req->get_data() = _this->value;
+            req->inc_latency(1000);
+            return vp::IO_REQ_OK;
+        }
+    }
+
+This way of replying immediately to the request in the same function call is called a synchronous
+reply. The master calls its IO interface and receives immediately the response.
+
+In this case, we can add timing just by increasing the latency of the request. Even though the master
+receives immediately the response, the number of cycles will tell him that the response actually took
+the specified cycles, and it can take it into account into his pipeline. In our case the core will just
+be stalled during the same number of cycles. The number of latency cycles that we set here will cumulate
+with others added by other components on the same path from the initiator to the target.
+
+To see the impact we can dump traces and get: ::
+
+    32790000: 3279: [/soc/host/insn                 ] main:0                           M 0000000000002c2a lui                 s1, 0x20000000            s1=0000000020000000 
+    32800000: 3280: [/soc/my_comp/trace             ] Received request at offset 0x0, size 0x4, is_write 0
+    32800000: 3280: [/soc/host/insn                 ] main:0                           M 0000000000002c2e c.lw                a1, 0(s1)                 a1=0000000000000024  s1:0000000020000000  PA:0000000020000000 
+    42810000: 4281: [/soc/host/insn                 ] main:0                           M 0000000000002c30 c.sdsp              s0, 10(sp)                s0:0000000000000010  sp:0000000000000a60  PA:0000000000000a70 
+    42820000: 4282: [/soc/host/insn                 ] main:0                           M 0000000000002c32 addi                a0, 0, 260                a0=0000000000000260 
+
+Now we are going to use an asynchronous reply, which allows modeling more complex handling of requests.
+In particular this allows handling requests where the response time is unknown and depend on external factors,
+like waiting for a cache refill.
+
+We will add a second register where we handle the requests asynchronously. For that, instead of replying,
+we store the requests, enqueue a clock event and return a different status, *vp::IO_REQ_PENDING*, which will
+tell to the initiator of the request that the request is pending and that we will reply later:
+
+.. code-block:: cpp
+
+    else if (req->get_addr() == 4)
+    {
+        _this->pending_req = req;
+        _this->event.enqueue(2000);
+        return vp::IO_REQ_PENDING;
+    }
+
+The clock event is used to schedule a function call, which will reply to the request, by calling the
+response method on the slave port where we received the request. We can do that with the following code:
+
+.. code-block:: cpp
+
+    void MyComp::handle_event(vp::Block *__this, vp::ClockEvent *event)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        *(uint32_t *)_this->pending_req->get_data() = _this->value;
+        _this->pending_req->get_resp_port()->resp(_this->pending_req);
+    }
+
+This will tell to the initiator that the response is ready. In our case, this will unstall the core
+when it receives this call.
+
+To see the effect we can dump traces: ::
+
+    95000000: 9500: [/soc/host/insn                 ] printf:0                         M 0000000000002c14 c.jr                0, ra, 0, 0               ra:0000000000002c3c 
+    95020000: 9502: [/soc/my_comp/trace             ] Received request at offset 0x4, size 0x4, is_write 0
+    115020000: 11502: [/soc/host/insn                 ] main:0                           M 0000000000002c3c c.lw                a1, 4(s1)                 a1=0000000012345678  s1:0000000020000000  PA:0000000020000004 
+    115030000: 11503: [/soc/host/insn                 ] main:0                           M 0000000000002c3e addi                a0, 0, 260                a0=0000000000000260 
+
+This example is quite simple, but in practice, things are much more complex in case asynchronous replies
+are used. A succession of several callbacks from different components are executed, until finally
+the initiator receives the response.
