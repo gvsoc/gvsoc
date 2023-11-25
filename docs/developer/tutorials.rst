@@ -1349,3 +1349,72 @@ We can execute the test with instruction traces to see our instruction: ::
 
 
 
+
+12 - How to time an ISS instruction
+...................................
+
+The goal of this tutorial is to show how to add timing for an ISS instruction.
+
+We will continue on the previous tutorial to add timing on our new instruction.
+
+There are several possibilities to add timing, we will show 2 of them. Note that the core timing also
+depends on the type of core. We assume here we are using the timing model which was developped for
+ri5cy core.
+
+The first one is to assign a latency to an instruction output register. This means the final latency will
+depend on the next instruction. If there is a direct dependency between the output register of the first instruction
+and an input register of the next instruction, any latency will immediately stall the core. If there
+is no dependency, only a latency greater than 2 will stall the pipeline.
+
+Such latencies must be assigned in the ISA, so that the decoder is aware of it. For that we must first customize
+the core that we are using. We can do it simply by copying the core description from the riscv.py script into 
+our system script and make our system use it:
+
+.. code-block:: python
+
+    class MyRiscv(cpu.iss.riscv.RiscvCommon):
+        def __init__(self,
+                parent: gvsoc.systree.Component, name: str, isa: str='rv64imafdc', binaries: list=[],
+                fetch_enable: bool=False, boot_addr: int=0, timed: bool=True,
+                core_id: int=0):
+
+            # Instantiates the ISA from the provided string.
+            isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
+
+            # And instantiate common class with default parameters
+            super().__init__(parent, name, isa=isa_instance, misa=0,
+                riscv_exceptions=True, riscv_dbg_unit=True, binaries=binaries, mmu=True, pmp=True,
+                fetch_enable=fetch_enable, boot_addr=boot_addr, internal_atomics=True,
+                supervisor=True, user=True, timed=timed, prefetcher_size=64, core_id=core_id)
+
+            self.add_c_flags([
+                "-DPIPELINE_STAGES=2",
+                "-DCONFIG_ISS_CORE=riscv",
+            ])
+
+Then we can modify the isa to include a latency on our instruction:
+
+.. code-block:: python
+
+    for insn in isa_instance.get_insns():
+        if insn.label == "my_instr":
+            insn.get_out_reg(0).set_latency(100)
+
+We can see the impact on the traces: ::
+
+    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c3e jal                 ra, ffffffffffffdee2      ra=0000000000002c42 
+    32650000: 3265: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
+    32800000: 3280: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c42 
+    33800000: 3380: [/soc/host/insn                 ] main:0                           M 0000000000002c42 c.mv                a2, 0, s0                 a2=000000000000000a  s0:000000000000000a 
+    33810000: 3381: [/soc/host/insn                 ] main:0                           M 0000000000002c44 addiw               a3, a0, 0                 a3=0000000000000019  a0:0000000000000019 
+
+The second way to customize timing is to directly add it in the model of the instruction. This has
+the advantage of allowing a dynamic timing, since it can now depend on the value of the input registers.
+
+We can in our case add this into our instruction handler:
+
+.. code-block:: cpp
+
+    iss->timing.stall_cycles_account(REG_GET(1));
+
+Everytime the instruction is executed, this will add a latency equal to the value of the second input register.
