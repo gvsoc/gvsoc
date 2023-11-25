@@ -1115,3 +1115,106 @@ GDB can also connected, and we'll see the 2 cores as 2 different threads: ::
     Id   Target Id         Frame 
     * 1    Thread 1 (host)   main () at main.c:6
     2    Thread 2 (host2)  0x0000000000000bfe in __init_do_ctors () at ../utils/init.c:16
+
+
+
+9 - How to handle clock domains and frequency scaling
+.....................................................
+
+The goal of this tutorial is show how to modify our system to now have several clock domains.
+
+We will create one clock domain containing the core, and another one containing the rest of the
+components.
+
+First we remove our top component containing our only clock domain and we replace
+it with a top component containing everything. Then we create our 2 clock domains in it:
+
+.. code-block:: python
+
+    class Rv64(gsystree.Component):
+
+        def __init__(self, parent, name, parser, options):
+
+            super().__init__(parent, name, options=options)
+
+            # Parse the arguments to get the path to the binary to be loaded
+            [args, __] = parser.parse_known_args()
+
+            binary = args.binary
+
+            clock1 = Clock_domain(self, 'clock1', frequency=100000000)
+            clock2 = Clock_domain(self, 'clock2', frequency=100000000)
+
+Since the clock domains are now at the same level than the other components, we need to connect
+their clock one by one:
+
+.. code-block:: python
+
+    clock1.o_CLOCK    ( host.i_CLOCK     ())
+    clock2.o_CLOCK    ( ico.i_CLOCK     ())
+    clock2.o_CLOCK    ( mem.i_CLOCK     ())
+    clock2.o_CLOCK    ( comp.i_CLOCK     ())
+    clock2.o_CLOCK    ( loader.i_CLOCK     ())
+
+Note that the core is connected to a different clock domain compared to other components.
+This will allows us to make it run at a different frequency.
+
+The clock generators also have an input port for dynamically controlling their frequency.
+We will connect our component to the control port of the first clock generator, so that it
+can change its frequency:
+
+.. code-block:: cpp
+
+    comp.o_CLK_CTRL   (clock1.i_CTRL())
+
+Now let's modify our component. We will use an event that we will periodically enqueue and change
+the frequency everytime the event gets executed. To initiate that, we first enqueue it during
+the reset, when it is deasserted:
+
+.. code-block:: cpp
+
+    void MyComp::reset(bool active)
+    {
+        if (!active)
+        {
+            this->frequency = 10000000;
+            this->event.enqueue(100);
+        }
+    }
+
+Then we use the handler to switch between 2 frequencies:
+
+.. code-block:: cpp
+
+    void MyComp::handle_event(vp::Block *__this, vp::ClockEvent *event)
+    {
+        MyComp *_this = (MyComp *)__this;
+
+        _this->trace.msg(vp::TraceLevel::DEBUG, "Set frequency to %d\n", _this->frequency);
+        _this->clk_ctrl_itf.set_frequency(_this->frequency);
+
+        if (_this->frequency == 10000000)
+        {
+            _this->frequency = 1000000000;
+            _this->event.enqueue(1000);
+        }
+        else
+        {
+            _this->frequency = 10000000;
+            _this->event.enqueue(100);
+        }
+    }
+
+Now we can see the effect by looking at the traces: ::
+
+    66936000: 4566: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001074 c.mv                a1, 0, s10                a1=0000000000000002 s10:0000000000000002 
+    66937000: 4567: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001076 c.jalr              ra, s9, 0, 0              ra=0000000000001078  s9:0000000000000e46 
+    66939000: 4569: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e46 c.lui               a3, 0x1000                a3=0000000000001000 
+    67000000: 6700: [/my_comp/trace                ] Set frequency to 10000000
+    69800000: 4658: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e48 lw                  a4, fffffffffffffb18(a3)  a4=0000000000000006  a3:0000000000001000  PA:0000000000000b18 
+    69900000: 4659: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e4c c.lui               a5, 0x1000                a5=0000000000001000 
+
+If we look the timestamp column, at the very left, we see that the duration of 1 clock cycle becomes
+much longer after the frequency has changed.
+
+We can also have a look in GTKwave to see that the cycle duration is periodically changing.
