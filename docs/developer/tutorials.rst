@@ -1713,6 +1713,10 @@ we exercise the various states and voltages:
         printf("\n\n");
     }
 
+The simulation must be launcher with option *--vcd*:
+
+    make all run runner_args="--vcd"
+
 This should dump the average power in the terminal: ::
 
     Voltage 600
@@ -1753,3 +1757,57 @@ GTKwave can also be used to visualize the power consumption. Each level in our s
 a power VCD trace which can be displayed with analog step data format:
 
 .. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd.png
+
+
+15 - How to build a multi-chip system
+.....................................
+
+The goal of this tutorial is to show how to build a multi-chip system, reusing
+existing chips.
+
+For that we will start from our first tutorial where we built a simple system.
+
+Since the python generators are fully recursive, we can instantiate a multi-chip
+system by just adding one more level and instantiating several times our previous
+system:
+
+.. code-block:: python
+
+    class MultiChip(gvsoc.systree.Component):
+        def __init__(self, parent, name, parser, options):
+            super().__init__(parent, name, options=options)
+
+            chip0 = Rv64(self, 'chip0', parser, options)
+
+            chip1 = Rv64(self, 'chip1', parser, options)
+
+
+    # This is the top target that gapy will instantiate
+    class Target(gvsoc.runner.Target):
+
+        def __init__(self, parser, options):
+            super(Target, self).__init__(parser, options,
+                model=MultiChip, description="RV64 virtual board")
+
+Since our chip are independent, as each one has its own memory, the runtime
+is replicated twice in memory, and we see both executing at the same time: ::
+
+    Launching GVSOC with command:
+    gvsoc_launcher --config=gvsoc_config.json
+    Hello
+    Hello
+
+We can also have a look at traces to see how their execution is interleaved: ::
+
+    28340000: 2834: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
+    28340000: 2834: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
+    28350000: 2835: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
+    28350000: 2835: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
+
+This time, they execute exactly the same, because there is no contention at all between them.
+
+GTKwave can also be used to see what is going on. We will see in it our 2 chips with one more level
+in the hierarchy compared to before.
+
+This is also possible to connect our 2 chips together, through a wire, uart and so, but
+this requires a more sophisticated runtime to do so.
