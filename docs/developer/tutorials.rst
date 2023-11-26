@@ -1890,3 +1890,154 @@ on script side.
 On script side, we have to make sure *gv/gvsoc_control.py* is in PYTHONPATH. Then we can launch it with: ::
 
     ./gvcontrol --host=localhost --port=42951
+
+
+17 - How to control GVSOC from an external simulator
+....................................................
+
+The goal how this tutorial is to show how to control GVSOC from an external simulator or tool through
+its C++ API.
+
+For that we will write a C++ application which is using GVSOC C++ API to instantiate it and interact with it.
+
+The GVSOC API is available using this include:
+
+.. code-block:: cpp
+
+    #include <gv/gvsoc.hpp>
+
+It must first be instantiated:
+
+.. code-block:: cpp
+
+    gv::GvsocConf conf = { .config_path=config_path, .api_mode=gv::Api_mode::Api_mode_sync };
+    gv::Gvsoc *gvsoc = gv::gvsoc_new(&conf);
+    gvsoc->open();
+
+The configuration should contain the path to the system configuration, which can be generated
+by launching the simulation once in normal mode. The configuration should also indicate
+the mode in which GVSOC is launched. Here we launch in synchronous mode, which means GVSOC engine
+will run from the thread calling the GVSOC API.
+
+Since we will also interact with GVSOC by exchanging some memory requests, we need to
+be bound to a router proxy.
+
+The proxy must first be added into our system:
+
+.. code-block:: Python
+
+    import interco.router_proxy
+
+.. code-block:: Python
+
+    axi_proxy = interco.router_proxy.Router_proxy(self, 'axi_proxy')
+    self.bind(axi_proxy, 'out', ico, 'input')
+
+Since the external code may also receive requests from GVSOC side, we need to instantiate a class
+which inherits from *gv::Io_user* and must overload a few methods to handle the accesses:
+
+.. code-block:: cpp
+
+    class MyLauncher : public gv::Io_user
+    {
+    public:
+        int run(std::string config_path);
+
+        // This gets called when an access from gvsoc side is reaching us
+        void access(gv::Io_request *req);
+        // This gets called when one of our access gets granted
+        void grant(gv::Io_request *req);
+        // This gets called when one of our access gets its response
+        void reply(gv::Io_request *req);
+
+    private:
+        gv::Io_binding *axi;
+    };
+
+Then we can finish the initializations:
+
+.. code-block:: cpp
+
+    // Get a connection to the main soc AXI. This will allow us to inject accesses
+    // and could also be used to received accesses from simulated test
+    // to a certain mapping corresponding to the external devices.
+    this->axi = gvsoc->io_bind(this, "/soc/axi_proxy", "");
+    if (this->axi == NULL)
+    {
+        fprintf(stderr, "Couldn't find AXI proxy\n");
+        return -1;
+    }
+
+    gvsoc->start();
+
+At this point, all the system to be simulated should be instantiated. Now we can interact with
+memory accesses, and step the simulation:
+
+.. code-block:: cpp
+
+    // Run for 1ms to let the chip boot as it is not accessible before it is powered-up
+    gvsoc->step(10000000000);
+
+    // Writes few values to specific address, test will exit when it reads the last one
+    for (int i=0; i<10; i++)
+    {
+        uint32_t value = 0x12345678 + i;
+
+        gv::Io_request req;
+        req.data = (uint8_t *)&value;
+        req.size = 4;
+        req.type = gv::Io_request_write;
+        req.addr = 0x00010000;
+
+        // The response is received through a function call to our access method.
+        // This is done either directly from our function call to the axi access
+        // method for simple accesses or asynchronously for complex accesses which
+        // cannot be replied immediately (e.g. due to cache miss).
+        this->axi->access(&req);
+
+        // Wait for a while so that the simulated test sees the value and prints it
+        gvsoc->step(1000000000);
+    }
+
+In the simulated binary, we just loop reading the values that the external launcher
+is writing:
+
+.. code-block:: cpp
+
+    uint32_t last_value = *(volatile int *)0x00010000;
+
+    while(1)
+    {
+        uint32_t value;
+        while(1)
+        {
+            value = *(volatile int *)0x00010000;
+            if (value != last_value)
+            {
+                break;
+            }
+        }
+
+        printf("Read value %x\n", value);
+        last_value = value;
+
+        if (value == 0x12345678 + 9)
+        {
+            break;
+        }
+    }
+
+In the makefile, we now need to compile the launcher together with gvsoc:
+
+.. code-block:: makefile
+
+    gvsoc:
+        make -C ../../../.. TARGETS=my_system MODULES=$(CURDIR) build
+        g++ -o launcher launcher.cpp -I../../../../core/engine/include -L../../../../install/lib -lpulpvp
+
+Running is now done through the launcher:
+
+.. code-block:: makefile
+
+    run_launcher:
+        LD_LIBRARY_PATH=$(CURDIR)/../../../../install/lib:$(LD_LIBRARY_PATH) ./launcher --config=build/gvsoc_config.json
