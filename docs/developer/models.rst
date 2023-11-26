@@ -16,19 +16,19 @@ The ISS is made of the following modules interacting together:
 - **insn_cache**: it provides a cache of decoded instruction to the decode module so that decoded instructions
   can be found from their PC.
 - **exec**: it is controlling the execution of instructions.
-- **lsu**: 
-- **irq**: 
-- **exception**: 
-- **core:**: 
-- **csr:**: 
-- **gdbserver**: 
-- **mmu**: 
-- **pmp**: 
-- **regfile**: 
-- **resource**: 
-- **syscalls**: 
-- **timing**: 
-- **trace**: 
+- **lsu**: it is in charge of generating memory requests. It handles misaligned accesses and asynchronous replies.
+- **irq**: checking and handling of interrupts.
+- **exception**: handling of exceptions,
+- **core:**: manages reset, mstatus, and return from interrupt.
+- **csr:**: manages CSR registers.
+- **gdbserver**: manages core commands from GDB like breakpoints and step mode.
+- **mmu**: MMU model.
+- **pmp**: PMP model.
+- **regfile**: register file.
+- **resource**: implement a model of shared resource for timing purpose, base on bandwidth and latency, used for shared FPU.
+- **syscalls**: OpenOCD semi-hosting plus additional semihosting for traces and VCD traces configuration.
+- **timing**: set of functions for managing time modeling, like accounting stalls.
+- **trace**: ISS instruction traces.
 
 Core implementation
 -------------------
@@ -290,19 +290,19 @@ L1 interconnect
 
     vp::IoReqStatus interleaver::req(vp::Block *__this, vp::IoReq *req)
     {
-    interleaver *_this = (interleaver *)__this;
-    uint64_t offset = req->get_addr();
-    bool is_write = req->get_is_write();
-    uint64_t size = req->get_size();
-    uint8_t *data = req->get_data();
+        interleaver *_this = (interleaver *)__this;
+        uint64_t offset = req->get_addr();
+        bool is_write = req->get_is_write();
+        uint64_t size = req->get_size();
+        uint8_t *data = req->get_data();
 
-    _this->trace.msg("Received IO req (offset: 0x%llx, size: 0x%llx, is_write: %d)\n", offset, size, is_write);
+        _this->trace.msg("Received IO req (offset: 0x%llx, size: 0x%llx, is_write: %d)\n", offset, size, is_write);
 
-    int bank_id = (offset >> 2) & _this->bank_mask;
-    uint64_t bank_offset = ((offset >> (_this->stage_bits + 2)) << 2) + (offset & 0x3);
+        int bank_id = (offset >> 2) & _this->bank_mask;
+        uint64_t bank_offset = ((offset >> (_this->stage_bits + 2)) << 2) + (offset & 0x3);
 
-    req->set_addr(bank_offset);
-    return _this->out[bank_id]->req_forward(req);
+        req->set_addr(bank_offset);
+        return _this->out[bank_id]->req_forward(req);
     }
 
 Converter
@@ -312,126 +312,134 @@ Converter
 
     void converter::event_handler(vp::Block *__this, vp::ClockEvent *event)
     {
-    converter *_this = (converter *)__this;
-    vp::IoReq *req = _this->pending_req;
-    _this->pending_req = req->get_next();
+        converter *_this = (converter *)__this;
+        vp::IoReq *req = _this->pending_req;
+        _this->pending_req = req->get_next();
 
-    _this->trace.msg("Sending partial packet (req: %p, offset: 0x%llx, size: 0x%llx, is_write: %d)\n",
-        req, req->get_addr(), req->get_size(), req->get_is_write());
+        _this->trace.msg("Sending partial packet (req: %p, offset: 0x%llx, size: 0x%llx, is_write: %d)\n",
+            req, req->get_addr(), req->get_size(), req->get_is_write());
 
-    vp::IoReqStatus err = _this->out.req(req);
-    if (err == vp::IO_REQ_OK)
-    {
-        _this->ready_cycle = _this->clock.get_cycles() + req->get_latency() + 1;
-        _this->ongoing_size -= req->get_size();
-        if (_this->ongoing_size == 0)
+        vp::IoReqStatus err = _this->out.req(req);
+        if (err == vp::IO_REQ_OK)
         {
-        vp::IoReq *req = _this->ongoing_req;
-        _this->trace.msg("Finished handling request (req: %p)\n", req);
-        _this->ongoing_req = NULL;
-        req->set_latency(req->get_latency() + 1);
-        req->get_resp_port()->resp(req);
+            _this->ready_cycle = _this->clock.get_cycles() + req->get_latency() + 1;
+            _this->ongoing_size -= req->get_size();
+            if (_this->ongoing_size == 0)
+            {
+            vp::IoReq *req = _this->ongoing_req;
+            _this->trace.msg("Finished handling request (req: %p)\n", req);
+            _this->ongoing_req = NULL;
+            req->set_latency(req->get_latency() + 1);
+            req->get_resp_port()->resp(req);
 
-        if (_this->stalled_req)
+            if (_this->stalled_req)
+            {
+                req = _this->stalled_req;
+                _this->trace.msg("Unstalling request (req: %p)\n", req);
+                _this->stalled_req = req->get_next();
+                req->get_resp_port()->grant(req);
+
+                _this->process_pending_req(req);
+            }
+            }
+        }
+        else
         {
-            req = _this->stalled_req;
-            _this->trace.msg("Unstalling request (req: %p)\n", req);
-            _this->stalled_req = req->get_next();
-            req->get_resp_port()->grant(req);
-
-            _this->process_pending_req(req);
+            _this->ready_cycle = INT32_MAX;
         }
+
+        _this->check_state();
         }
-    }
-    else
-    {
-        _this->ready_cycle = INT32_MAX;
-    }
 
-    _this->check_state();
-    }
-
-    void converter::check_state()
-    {
-    if (pending_req)
-    {
-        int64_t cycle = clock.get_cycles();
-        int64_t latency = 1;
-        if (ready_cycle > cycle) latency = ready_cycle - cycle;
-        if (!event->is_enqueued()) event_enqueue(event, latency);
-    }
+        void converter::check_state()
+        {
+        if (pending_req)
+        {
+            int64_t cycle = clock.get_cycles();
+            int64_t latency = 1;
+            if (ready_cycle > cycle) latency = ready_cycle - cycle;
+            if (!event->is_enqueued()) event_enqueue(event, latency);
+        }
     }
 
     vp::IoReqStatus converter::process_pending_req(vp::IoReq *req)
     {
-    uint64_t offset = req->get_addr();
-    uint64_t size = req->get_size();
-    uint8_t *data = req->get_data();
-    bool is_write = req->get_is_write();
+        uint64_t offset = req->get_addr();
+        uint64_t size = req->get_size();
+        uint8_t *data = req->get_data();
+        bool is_write = req->get_is_write();
 
-    int mask = output_align - 1;
+        int mask = output_align - 1;
 
-    ongoing_req = req;
-    ongoing_size = size;
+        ongoing_req = req;
+        ongoing_size = size;
 
-    while (size)
-    {
-        int iter_size = output_width;
-        if (offset & mask) iter_size -= offset & mask;
-        if (iter_size > size) iter_size = size;
+        while (size)
+        {
+            int iter_size = output_width;
+            if (offset & mask) iter_size -= offset & mask;
+            if (iter_size > size) iter_size = size;
 
-        vp::IoReq *req = out.req_new(offset, data, iter_size, is_write);
-        req->set_next(pending_req);
-        pending_req = req;
+            vp::IoReq *req = out.req_new(offset, data, iter_size, is_write);
+            req->set_next(pending_req);
+            pending_req = req;
 
 
-        size -= iter_size;
-        offset += iter_size;
-        data += iter_size;
-    }
+            size -= iter_size;
+            offset += iter_size;
+            data += iter_size;
+        }
 
-    return vp::IO_REQ_PENDING;
+        return vp::IO_REQ_PENDING;
     }
 
     vp::IoReqStatus converter::process_req(vp::IoReq *req)
     {
-    uint64_t offset = req->get_addr();
-    uint64_t size = req->get_size();
-    uint8_t *data = req->get_data();
-    bool is_write = req->get_is_write();
+        uint64_t offset = req->get_addr();
+        uint64_t size = req->get_size();
+        uint8_t *data = req->get_data();
+        bool is_write = req->get_is_write();
 
-    int mask = output_align - 1;
+        int mask = output_align - 1;
 
-    // Simple case where the request fit, just forward it
-    if ((offset & ~mask) == ((offset + size - 1) & ~mask))
-    {
-        trace.msg("No conversion applied, forwarding request (req: %p)\n", req);
-        return out.req_forward(req);
-    }
+        // Simple case where the request fit, just forward it
+        if ((offset & ~mask) == ((offset + size - 1) & ~mask))
+        {
+            trace.msg("No conversion applied, forwarding request (req: %p)\n", req);
+            return out.req_forward(req);
+        }
 
-    return this->process_pending_req(req);
+        return this->process_pending_req(req);
     }
 
     vp::IoReqStatus converter::req(vp::Block *__this, vp::IoReq *req)
     {
-    converter *_this = (converter *)__this;
-    uint64_t offset = req->get_addr();
-    bool is_write = req->get_is_write();
-    uint64_t size = req->get_size();
-    uint8_t *data = req->get_data();
+        converter *_this = (converter *)__this;
+        uint64_t offset = req->get_addr();
+        bool is_write = req->get_is_write();
+        uint64_t size = req->get_size();
+        uint8_t *data = req->get_data();
 
-    _this->trace.msg("Received IO req (req: %p, offset: 0x%llx, size: 0x%llx, is_write: %d)\n", req, offset, size, is_write);
+        _this->trace.msg("Received IO req (req: %p, offset: 0x%llx, size: 0x%llx, is_write: %d)\n", req, offset, size, is_write);
 
-    if (_this->ongoing_req)
-    {
-        _this->trace.msg("Stalling request (req: %p)\n", req);
+        if (_this->ongoing_req)
+        {
+            _this->trace.msg("Stalling request (req: %p)\n", req);
 
-        if (_this->stalled_req)
-        _this->last_stalled_req->set_next(req);
-        else
-        _this->stalled_req = req;
-        req->set_next(NULL);
-        _this->last_stalled_req = req;
+            if (_this->stalled_req)
+            _this->last_stalled_req->set_next(req);
+            else
+            _this->stalled_req = req;
+            req->set_next(NULL);
+            _this->last_stalled_req = req;
 
-        return vp::IO_REQ_DENIED;
+            return vp::IO_REQ_DENIED;
+        }
+
+        if (_this->process_req(req) == vp::IO_REQ_OK)
+            return vp::IO_REQ_OK;
+
+        _this->check_state();
+
+        return vp::IO_REQ_PENDING;
     }
