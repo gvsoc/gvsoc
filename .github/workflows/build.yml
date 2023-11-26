@@ -24,6 +24,7 @@ jobs:
         run: |
           make all TARGETS=rv64
           make all TARGETS=pulp-open
+          make all TARGETS=pulp.spatz.spatz
       - name: Run examples
         run: |
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run

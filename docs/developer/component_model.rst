@@ -318,6 +318,7 @@ Master ports can sometime also have callbacks, to make the binding bidirectional
         this->new_master_port("notif", &this->notif_itf);
     }
 
+Here is the list of available port signatures.
 
 .. list-table:: Available port signature
    :header-rows: 1
@@ -363,9 +364,15 @@ Master ports can sometime also have callbacks, to make the binding bidirectional
 Port method implementation
 ##########################
 
+As seen earlier, ports methods must be implemented with class methods, which will get
+called when the remote port is called.
+
+They must be static methods, as we can see on this example:
 .. code-block:: cpp
 
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
+
+The class instance is always passed as first argument and can be casted to the component class:
 
 .. code-block:: cpp
 
@@ -376,6 +383,9 @@ Port method implementation
 
 Port method call
 ################
+
+On the caller side, the port is called simply by calling the right method on the port.
+Each port has his own set of methods coming from the signature.
 
 .. code-block:: cpp
 
@@ -389,6 +399,11 @@ Port method call
 
 Component JSON configuration
 ############################
+
+Each Python component has a set of properties which are passed to the C++ model through
+a JSON configuration.
+
+They usualy come from the Python wrapper parameters and needs to be propagated as properties:
 
 .. code-block:: python
 
@@ -406,6 +421,9 @@ Component JSON configuration
             'align': align
         })
 
+
+This is the JSON file generated:
+
 .. code-block:: json
 
     "mem": {
@@ -419,6 +437,9 @@ Component JSON configuration
           "input"
         ]
     }
+
+The properties can then be retrieved from C++ using the js::Config class which provides
+a set of methods for accessing the properties according to their type:
 
 .. code-block:: cpp
 
