@@ -204,7 +204,7 @@ C++ component model
 Module constructor
 ##################
 
-A C++ code of a primitive component must have a special function which will be called
+The C++ code of a component must have a special function which will be called
 by the upper-level component to instantiate this one.
 
 This function must return a new instance of the C++ class of the component and pass it the configuration
@@ -223,6 +223,9 @@ Here you can see an example.
 Class declaration
 #################
 
+The class of a primitive component must inherit from *vp::Component*, as seen on this example:
+
+
 .. code-block:: cpp
 
     #include <vp/vp.hpp>
@@ -233,6 +236,9 @@ Class declaration
     public:
         Memory(vp::ComponentConf &config);
     };
+
+In case a composite needs to include some C++, it must then inherit from *vp::Composite*, like in
+this example:
 
 .. code-block:: cpp
 
@@ -248,6 +254,8 @@ Class declaration
 
 Class constructor
 #################
+
+Here are examples of constructors for both primitives and composites:
 
 .. code-block:: cpp
 
@@ -267,6 +275,13 @@ Class constructor
 Port declaration
 ################
 
+The ports of the component must be first declared in the component class.
+
+For each signature, there is a pair of C++ classes, one for master port and one
+for slave port, which can be used to declare the port with the right signature.
+
+Some signature like the wire interface, are templates.
+
 .. code-block:: cpp
 
     class Memory : public vp::Component
@@ -283,6 +298,14 @@ Port declaration
         vp::WireMaster<bool> notif_itf;
     };
 
+Then the ports must be configured. The name given here is the one that the Python generator
+should return.
+
+All the slave interfaces must be associated callbacks, which are methods which will
+get called, when the port on the other side is called. The slave is supposed
+to implement the associated activity in this callback.
+
+Master ports can sometime also have callbacks, to make the binding bidirectional.
 
 .. code-block:: cpp
 
@@ -290,7 +313,6 @@ Port declaration
         : vp::Component(config)
     {
         this->request_itf.set_req_meth(&Memory::request_handler);
-
         this->new_slave_port("input", &this->request_itf);
 
         this->new_master_port("notif", &this->notif_itf);
@@ -336,6 +358,20 @@ Port declaration
    * - UART
      - engine/include/vp/itf/uart.hpp
      - UartMaster -> UartSlave
+
+
+Port method implementation
+##########################
+
+.. code-block:: cpp
+
+    static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
+
+.. code-block:: cpp
+
+    vp::IoReqStatus Memory::req(vp::Block *__this, vp::IoReq *req)
+    {
+        Memory *_this = (Memory *)__this;
 
 
 Port method call
