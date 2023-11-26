@@ -1418,3 +1418,338 @@ We can in our case add this into our instruction handler:
     iss->timing.stall_cycles_account(REG_GET(1));
 
 Everytime the instruction is executed, this will add a latency equal to the value of the second input register.
+
+
+13 - How to add an ISS isa
+..........................
+
+The goal of this tutorial is to show how to add isa to the ISS.
+
+An ISA must be declared in the script *core/models/cpu/iss/isa_gen/isa_riscv_gen.py*. A class for this isa must
+be created and inherited from *IsaSubset*:
+
+.. code-block:: python
+
+    class MyIsa(IsaSubset):
+
+        def __init__(self):
+            super().__init__(name='my_isa', instrs=[
+                R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011')
+            ])
+
+It must also be given a name, and the list of instructions of this isa must be given.
+
+Then the new isa must be included in the isa generator of the core. In our case, we can include it in the core
+generator that we did in a previous tutorial:
+
+.. code-block:: python
+
+    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
+
+    isa_instance.add_tree(IsaDecodeTree('my_isa', [MyIsa()]))
+
+
+14 - How to add power traces to a component
+...........................................
+
+The goal of this tutorial is to show how to extend our component with power modeling.
+
+Power modeling is based on power sources, which can be instantiated in models, to model the fact
+there is something burning power in the model. A model can have any number of power surces, to model
+the fact that there is several concurrent activities going-on and burning power.
+
+In our tutorial, we extend our component with 2 power sources. We will also add another component which
+will be there to control the power state of our component, so that we can see the effect on
+power consumption.
+
+Let's first add this new component. The power state of a component is controlled through 2 ports, one for
+the power state itself (off, on or on with clock-gating), and another one for controlling the voltage.
+Let's add these 2 ports to our new component:
+
+.. code-block:: cpp
+
+    vp::WireMaster<int> power_ctrl_itf;
+    vp::WireMaster<int> voltage_ctrl_itf;
+
+.. code-block:: cpp
+
+    this->new_master_port("power_ctrl", &this->power_ctrl_itf);
+    this->new_master_port("voltage_ctrl", &this->voltage_ctrl_itf);
+
+Now the control of these 2 ports will be done through registers exposed to the core. We will use
+one for the power state, first bit telling if the component should be on, second bit if its clock
+should be on, another register for the voltage.
+
+.. code-block:: cpp
+
+    if (req->get_size() == 4)
+    {
+        if (req->get_addr() == 0)
+        {
+            if (req->get_is_write())
+            {
+                int power = (*(uint32_t *)req->get_data()) & 1;
+                int clock = ((*(uint32_t *)req->get_data()) >> 1) & 1;
+
+                int power_state;
+                if (power)
+                {
+                    if (clock)
+                    {
+                        power_state = vp::PowerSupplyState::ON;
+                     }
+                    else
+                    {
+                        power_state = vp::PowerSupplyState::ON_CLOCK_GATED;
+                    }
+                }
+                else
+                {
+                    power_state = vp::PowerSupplyState::OFF;
+
+                }
+
+                _this->power_ctrl_itf.sync(power_state);
+            }
+        }
+        else if (req->get_addr() == 4)
+        {
+            if (req->get_is_write())
+            {
+                int voltage = *(uint32_t *)req->get_data();
+                _this->voltage_ctrl_itf.sync(voltage);
+            }
+        }
+    }
+
+The control of the power state and the voltage is done by calling the 2 ports that we created.
+
+Now let's see how to handle that on the side of the component where we want to influence the power.
+We will use 2 power sources. The first one will be used to control the leakage, and the dynamic
+background power, which is the dynamic power burnt when the component is in idle and has a clock toggling.
+The second source will be used to model the dynamic power burnt when an access is done to the component.
+
+Let's first declare our 2 power sources:
+
+.. code-block:: cpp
+
+    vp::PowerSource access_power;
+    vp::PowerSource background_power;
+
+.. code-block:: cpp
+
+    this->power.new_power_source("leakage", &background_power, this->get_js_config()->get("**/background_power"));
+    this->power.new_power_source("access", &access_power, this->get_js_config()->get("**/access_power"));
+    this->background_power.leakage_power_start();
+
+Leakage is started immediately since it is automatically managed by the framework.
+
+A power source needs to be fed with power values by the Python generator. These power values are power consumptions
+measured at different voltages, temperatures and frequencies that the framework will use to compute the current
+power value, depending on the current voltage, temperature and frequency.
+
+In our case, we will add values for a single temperature and 2 voltages and consider that this does not
+depend on frequency:
+
+.. code-block:: python
+
+    self.add_properties({
+        "background_power": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "W",
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 0.00020
+                        },
+                        "1200.0": {
+                            "any": 0.00050
+                        }
+                    }
+                }
+            },
+            "leakage": {
+                "type": "linear",
+                "unit": "W",
+
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 0.00005
+                        },
+                        "1200.0": {
+                            "any": 0.00010
+                        }
+                    }
+                }
+            },
+        },
+        "access_power": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "pJ",
+
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 5.00000
+                        },
+                        "1200.0": {
+                            "any": 10.00000
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+The handling of the voltage is automatic, the framework will just interpolate the power values based
+our 2 values. The 2 states OFF and ON are also automatic, this will just impact if the leakage must
+be applied or not. Then we need to take care of the clock-gating. This can be done by overloading
+the *power_supply_set* method. The only thing we have to is to activate the dynamic power of our
+background source as soon as power is on:
+
+.. code-block:: cpp
+
+    void MyComp::power_supply_set(vp::PowerSupplyState state)
+    {
+        if (state == vp::PowerSupplyState::ON)
+        {
+            this->background_power.dynamic_power_start();
+
+        }
+        else
+        {
+            this->background_power.dynamic_power_stop();
+        }
+    }
+
+Now we have to take care of the power burnt by the accesses. Such consumption is based on enery quantum
+that we can account where an event happens, like an access or an instruction. The quantum has already been
+interpolated depending on the voltage, so we just need to assign it when we receive the access:
+
+.. code-block:: cpp
+
+    _this->access_power.account_energy_quantum();
+
+The last thing to do is to update our generators.
+
+Our power controller needs 2 power ports:
+
+.. code-block:: python
+
+    def o_POWER_CTRL(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('power_ctrl', itf, signature='wire<int>')
+
+    def o_VOLTAGE_CTRL(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('voltage_ctrl', itf, signature='wire<int>')
+
+And it needs to be instantiated and bound. Each component has a power and voltage port where we can connect
+our controller.
+
+.. code-block:: python
+
+    comp2 = my_comp.MyComp2(self, 'my_comp2')
+    ico.o_MAP(comp2.i_INPUT(), 'comp2', base=0x30000000, size=0x00001000, rm_base=True)
+    comp2.o_POWER_CTRL( comp.i_POWER  ())
+    comp2.o_VOLTAGE_CTRL( comp.i_VOLTAGE())
+
+One last thing is that we can use the memory model as a trigger to generate a power report. Writing
+value 0xabbaabba at its offset 0 will start capturing power, and writing 0xdeadcaca will stop it and generate
+a report. We instantiate a second one for this purpose:
+
+.. code-block:: python
+
+    mem2 = memory.memory.Memory(self, 'mem2', size=0x00100000, power_trigger=True)
+    ico.o_MAP(mem2.i_INPUT(), 'mem2', base=0x10000000, size=0x00100000, rm_base=True)
+
+
+Now we need to test that. Our simulated binary can be modified with the following code, so that
+we exercise the various states and voltages:
+
+.. code-block:: cpp
+
+    int voltages[] = { 600, 800, 1200};
+
+    for (int i=0; i<sizeof(voltages)/sizeof(int); i++)
+    {
+        printf("Voltage %d\n", voltages[i]);
+
+        *(volatile uint32_t *)0x30000004 = voltages[i];
+
+        // Mesure power when off and no clock
+        printf("OFF\n");
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power when on and no clock
+        printf("ON clock-gated\n");
+        *(volatile uint32_t *)0x30000000 = 1;
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power when on and clock
+        printf("ON\n");
+        *(volatile uint32_t *)0x30000000 = 0x3;
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power with accesses
+        printf("ON with accesses\n");
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        for (int i=0; i<20; i++)
+        {
+            *(volatile uint32_t *)0x20000000 = i;
+        }
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        *(volatile uint32_t *)0x30000000 = 0;
+
+        printf("\n\n");
+    }
+
+This should dump the average power in the terminal: ::
+
+    Voltage 600
+    OFF
+    @power.measure_0@0.000000@
+    ON clock-gated
+    @power.measure_1@0.000050@
+    ON
+    @power.measure_2@0.000250@
+    ON with accesses
+    @power.measure_3@0.000333@
+
+
+    Voltage 800
+    OFF
+    @power.measure_4@-0.000000@
+    ON clock-gated
+    @power.measure_5@0.000067@
+    ON
+    @power.measure_6@0.000367@
+    ON with accesses
+    @power.measure_7@0.000478@
+
+
+    Voltage 1200
+    OFF
+    @power.measure_8@0.000000@
+    ON clock-gated
+    @power.measure_9@0.000100@
+    ON
+    @power.measure_10@0.000600@
+    ON with accesses
+    @power.measure_11@0.000767@
+
+A more detailed power report has also been generated in *build/power_report.csv*.
+
+GTKwave can also be used to visualize the power consumption. Each level in our system architecture has
+a power VCD trace which can be displayed with analog step data format:
+
+.. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd.png
