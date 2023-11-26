@@ -1286,3 +1286,758 @@ Then we can see the impact on traces: ::
 
 The core should normally be able to do one load of 4 bytes per cycle, since the default bandwidth is 4,
 but now, we see it is stalled starting on the second access.
+
+
+
+
+11 - How to add an ISS instruction
+..................................
+
+The goal of this tutorial is to show how to add an instruction to the core ISS.
+
+The ISS contains a script where the encoding of all instructions is described. This is used to generate
+the decoding tree, as well as information for dumping instruction traces.
+
+This script is *core/models/cpu/iss/isa_gen/isa_riscv_gen.py*. We need to modify it to insert our
+new instruction.
+
+To simplify, we will just add our instruction to an existing ISA, the RV32I:
+
+.. code-block:: python
+
+    R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011'),
+
+This gives the label of our instruction, the format of the instruction, which has in this case
+1 output and 2 input registers, and the encoding of the instruction. The - in it specifies the bits
+which do not impact the decoding, as they encode registers.
+
+Now we need to add the implementation of the instruction, in the rv32i.hpp file:
+
+.. code-block:: cpp
+
+    static inline iss_reg_t my_instr_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+    {
+        REG_SET(0, REG_GET(0) + 2*REG_GET(1));
+        return iss_insn_next(iss, insn, pc);
+    }
+
+The name of the function handler is <label>_exec. An instruction should always return the next
+PC, which can be computed by calling *iss_insn_next*.
+
+This instruction is reading the 2 input registers, multiply the second by 2 and add it to the first,
+then store the result into the output register.
+
+
+Once added, we can recompile GVSOC. This will automatically regenerate the decoding tree and our instruction
+should now be in there.
+
+To test the instruction, an assembly file with our instruction encoded by hands has been added:
+
+.. code-block:: cpp
+
+        .global my_instr
+    my_instr:
+        .word 0x04b56533       // 0000010 01011 01010 110 01010 0110011
+        jr ra
+
+We can execute the test with instruction traces to see our instruction: ::
+
+    31870000: 3187: [/soc/host/insn                 ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffdeec      ra=0000000000002c38 
+    31890000: 3189: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
+    31900000: 3190: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c38 
+
+
+
+
+
+12 - How to time an ISS instruction
+...................................
+
+The goal of this tutorial is to show how to add timing for an ISS instruction.
+
+We will continue on the previous tutorial to add timing on our new instruction.
+
+There are several possibilities to add timing, we will show 2 of them. Note that the core timing also
+depends on the type of core. We assume here we are using the timing model which was developped for
+ri5cy core.
+
+The first one is to assign a latency to an instruction output register. This means the final latency will
+depend on the next instruction. If there is a direct dependency between the output register of the first instruction
+and an input register of the next instruction, any latency will immediately stall the core. If there
+is no dependency, only a latency greater than 2 will stall the pipeline.
+
+Such latencies must be assigned in the ISA, so that the decoder is aware of it. For that we must first customize
+the core that we are using. We can do it simply by copying the core description from the riscv.py script into 
+our system script and make our system use it:
+
+.. code-block:: python
+
+    class MyRiscv(cpu.iss.riscv.RiscvCommon):
+        def __init__(self,
+                parent: gvsoc.systree.Component, name: str, isa: str='rv64imafdc', binaries: list=[],
+                fetch_enable: bool=False, boot_addr: int=0, timed: bool=True,
+                core_id: int=0):
+
+            # Instantiates the ISA from the provided string.
+            isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
+
+            # And instantiate common class with default parameters
+            super().__init__(parent, name, isa=isa_instance, misa=0,
+                riscv_exceptions=True, riscv_dbg_unit=True, binaries=binaries, mmu=True, pmp=True,
+                fetch_enable=fetch_enable, boot_addr=boot_addr, internal_atomics=True,
+                supervisor=True, user=True, timed=timed, prefetcher_size=64, core_id=core_id)
+
+            self.add_c_flags([
+                "-DPIPELINE_STAGES=2",
+                "-DCONFIG_ISS_CORE=riscv",
+            ])
+
+Then we can modify the isa to include a latency on our instruction:
+
+.. code-block:: python
+
+    for insn in isa_instance.get_insns():
+        if insn.label == "my_instr":
+            insn.get_out_reg(0).set_latency(100)
+
+We can see the impact on the traces: ::
+
+    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c3e jal                 ra, ffffffffffffdee2      ra=0000000000002c42 
+    32650000: 3265: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
+    32800000: 3280: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c42 
+    33800000: 3380: [/soc/host/insn                 ] main:0                           M 0000000000002c42 c.mv                a2, 0, s0                 a2=000000000000000a  s0:000000000000000a 
+    33810000: 3381: [/soc/host/insn                 ] main:0                           M 0000000000002c44 addiw               a3, a0, 0                 a3=0000000000000019  a0:0000000000000019 
+
+The second way to customize timing is to directly add it in the model of the instruction. This has
+the advantage of allowing a dynamic timing, since it can now depend on the value of the input registers.
+
+We can in our case add this into our instruction handler:
+
+.. code-block:: cpp
+
+    iss->timing.stall_cycles_account(REG_GET(1));
+
+Everytime the instruction is executed, this will add a latency equal to the value of the second input register.
+
+
+13 - How to add an ISS isa
+..........................
+
+The goal of this tutorial is to show how to add isa to the ISS.
+
+An ISA must be declared in the script *core/models/cpu/iss/isa_gen/isa_riscv_gen.py*. A class for this isa must
+be created and inherited from *IsaSubset*:
+
+.. code-block:: python
+
+    class MyIsa(IsaSubset):
+
+        def __init__(self):
+            super().__init__(name='my_isa', instrs=[
+                R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011')
+            ])
+
+It must also be given a name, and the list of instructions of this isa must be given.
+
+Then the new isa must be included in the isa generator of the core. In our case, we can include it in the core
+generator that we did in a previous tutorial:
+
+.. code-block:: python
+
+    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
+
+    isa_instance.add_tree(IsaDecodeTree('my_isa', [MyIsa()]))
+
+
+14 - How to add power traces to a component
+...........................................
+
+The goal of this tutorial is to show how to extend our component with power modeling.
+
+Power modeling is based on power sources, which can be instantiated in models, to model the fact
+there is something burning power in the model. A model can have any number of power surces, to model
+the fact that there is several concurrent activities going-on and burning power.
+
+In our tutorial, we extend our component with 2 power sources. We will also add another component which
+will be there to control the power state of our component, so that we can see the effect on
+power consumption.
+
+Let's first add this new component. The power state of a component is controlled through 2 ports, one for
+the power state itself (off, on or on with clock-gating), and another one for controlling the voltage.
+Let's add these 2 ports to our new component:
+
+.. code-block:: cpp
+
+    vp::WireMaster<int> power_ctrl_itf;
+    vp::WireMaster<int> voltage_ctrl_itf;
+
+.. code-block:: cpp
+
+    this->new_master_port("power_ctrl", &this->power_ctrl_itf);
+    this->new_master_port("voltage_ctrl", &this->voltage_ctrl_itf);
+
+Now the control of these 2 ports will be done through registers exposed to the core. We will use
+one for the power state, first bit telling if the component should be on, second bit if its clock
+should be on, another register for the voltage.
+
+.. code-block:: cpp
+
+    if (req->get_size() == 4)
+    {
+        if (req->get_addr() == 0)
+        {
+            if (req->get_is_write())
+            {
+                int power = (*(uint32_t *)req->get_data()) & 1;
+                int clock = ((*(uint32_t *)req->get_data()) >> 1) & 1;
+
+                int power_state;
+                if (power)
+                {
+                    if (clock)
+                    {
+                        power_state = vp::PowerSupplyState::ON;
+                     }
+                    else
+                    {
+                        power_state = vp::PowerSupplyState::ON_CLOCK_GATED;
+                    }
+                }
+                else
+                {
+                    power_state = vp::PowerSupplyState::OFF;
+
+                }
+
+                _this->power_ctrl_itf.sync(power_state);
+            }
+        }
+        else if (req->get_addr() == 4)
+        {
+            if (req->get_is_write())
+            {
+                int voltage = *(uint32_t *)req->get_data();
+                _this->voltage_ctrl_itf.sync(voltage);
+            }
+        }
+    }
+
+The control of the power state and the voltage is done by calling the 2 ports that we created.
+
+Now let's see how to handle that on the side of the component where we want to influence the power.
+We will use 2 power sources. The first one will be used to control the leakage, and the dynamic
+background power, which is the dynamic power burnt when the component is in idle and has a clock toggling.
+The second source will be used to model the dynamic power burnt when an access is done to the component.
+
+Let's first declare our 2 power sources:
+
+.. code-block:: cpp
+
+    vp::PowerSource access_power;
+    vp::PowerSource background_power;
+
+.. code-block:: cpp
+
+    this->power.new_power_source("leakage", &background_power, this->get_js_config()->get("**/background_power"));
+    this->power.new_power_source("access", &access_power, this->get_js_config()->get("**/access_power"));
+    this->background_power.leakage_power_start();
+
+Leakage is started immediately since it is automatically managed by the framework.
+
+A power source needs to be fed with power values by the Python generator. These power values are power consumptions
+measured at different voltages, temperatures and frequencies that the framework will use to compute the current
+power value, depending on the current voltage, temperature and frequency.
+
+In our case, we will add values for a single temperature and 2 voltages and consider that this does not
+depend on frequency:
+
+.. code-block:: python
+
+    self.add_properties({
+        "background_power": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "W",
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 0.00020
+                        },
+                        "1200.0": {
+                            "any": 0.00050
+                        }
+                    }
+                }
+            },
+            "leakage": {
+                "type": "linear",
+                "unit": "W",
+
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 0.00005
+                        },
+                        "1200.0": {
+                            "any": 0.00010
+                        }
+                    }
+                }
+            },
+        },
+        "access_power": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "pJ",
+
+                "values": {
+                    "25": {
+                        "600.0": {
+                            "any": 5.00000
+                        },
+                        "1200.0": {
+                            "any": 10.00000
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+The handling of the voltage is automatic, the framework will just interpolate the power values based
+our 2 values. The 2 states OFF and ON are also automatic, this will just impact if the leakage must
+be applied or not. Then we need to take care of the clock-gating. This can be done by overloading
+the *power_supply_set* method. The only thing we have to is to activate the dynamic power of our
+background source as soon as power is on:
+
+.. code-block:: cpp
+
+    void MyComp::power_supply_set(vp::PowerSupplyState state)
+    {
+        if (state == vp::PowerSupplyState::ON)
+        {
+            this->background_power.dynamic_power_start();
+
+        }
+        else
+        {
+            this->background_power.dynamic_power_stop();
+        }
+    }
+
+Now we have to take care of the power burnt by the accesses. Such consumption is based on enery quantum
+that we can account where an event happens, like an access or an instruction. The quantum has already been
+interpolated depending on the voltage, so we just need to assign it when we receive the access:
+
+.. code-block:: cpp
+
+    _this->access_power.account_energy_quantum();
+
+The last thing to do is to update our generators.
+
+Our power controller needs 2 power ports:
+
+.. code-block:: python
+
+    def o_POWER_CTRL(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('power_ctrl', itf, signature='wire<int>')
+
+    def o_VOLTAGE_CTRL(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('voltage_ctrl', itf, signature='wire<int>')
+
+And it needs to be instantiated and bound. Each component has a power and voltage port where we can connect
+our controller.
+
+.. code-block:: python
+
+    comp2 = my_comp.MyComp2(self, 'my_comp2')
+    ico.o_MAP(comp2.i_INPUT(), 'comp2', base=0x30000000, size=0x00001000, rm_base=True)
+    comp2.o_POWER_CTRL( comp.i_POWER  ())
+    comp2.o_VOLTAGE_CTRL( comp.i_VOLTAGE())
+
+One last thing is that we can use the memory model as a trigger to generate a power report. Writing
+value 0xabbaabba at its offset 0 will start capturing power, and writing 0xdeadcaca will stop it and generate
+a report. We instantiate a second one for this purpose:
+
+.. code-block:: python
+
+    mem2 = memory.memory.Memory(self, 'mem2', size=0x00100000, power_trigger=True)
+    ico.o_MAP(mem2.i_INPUT(), 'mem2', base=0x10000000, size=0x00100000, rm_base=True)
+
+
+Now we need to test that. Our simulated binary can be modified with the following code, so that
+we exercise the various states and voltages:
+
+.. code-block:: cpp
+
+    int voltages[] = { 600, 800, 1200};
+
+    for (int i=0; i<sizeof(voltages)/sizeof(int); i++)
+    {
+        printf("Voltage %d\n", voltages[i]);
+
+        *(volatile uint32_t *)0x30000004 = voltages[i];
+
+        // Mesure power when off and no clock
+        printf("OFF\n");
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power when on and no clock
+        printf("ON clock-gated\n");
+        *(volatile uint32_t *)0x30000000 = 1;
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power when on and clock
+        printf("ON\n");
+        *(volatile uint32_t *)0x30000000 = 0x3;
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        // Mesure power with accesses
+        printf("ON with accesses\n");
+        *(volatile uint32_t *)0x10000000 = 0xabbaabba;
+        for (int i=0; i<20; i++)
+        {
+            *(volatile uint32_t *)0x20000000 = i;
+        }
+        *(volatile uint32_t *)0x10000000 = 0xdeadcaca;
+
+
+        *(volatile uint32_t *)0x30000000 = 0;
+
+        printf("\n\n");
+    }
+
+The simulation must be launcher with option *--vcd*:
+
+    make all run runner_args="--vcd"
+
+This should dump the average power in the terminal: ::
+
+    Voltage 600
+    OFF
+    @power.measure_0@0.000000@
+    ON clock-gated
+    @power.measure_1@0.000050@
+    ON
+    @power.measure_2@0.000250@
+    ON with accesses
+    @power.measure_3@0.000333@
+
+
+    Voltage 800
+    OFF
+    @power.measure_4@-0.000000@
+    ON clock-gated
+    @power.measure_5@0.000067@
+    ON
+    @power.measure_6@0.000367@
+    ON with accesses
+    @power.measure_7@0.000478@
+
+
+    Voltage 1200
+    OFF
+    @power.measure_8@0.000000@
+    ON clock-gated
+    @power.measure_9@0.000100@
+    ON
+    @power.measure_10@0.000600@
+    ON with accesses
+    @power.measure_11@0.000767@
+
+A more detailed power report has also been generated in *build/power_report.csv*.
+
+GTKwave can also be used to visualize the power consumption. Each level in our system architecture has
+a power VCD trace which can be displayed with analog step data format:
+
+.. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd.png
+
+
+15 - How to build a multi-chip system
+.....................................
+
+The goal of this tutorial is to show how to build a multi-chip system, reusing
+existing chips.
+
+For that we will start from our first tutorial where we built a simple system.
+
+Since the python generators are fully recursive, we can instantiate a multi-chip
+system by just adding one more level and instantiating several times our previous
+system:
+
+.. code-block:: python
+
+    class MultiChip(gvsoc.systree.Component):
+        def __init__(self, parent, name, parser, options):
+            super().__init__(parent, name, options=options)
+
+            chip0 = Rv64(self, 'chip0', parser, options)
+
+            chip1 = Rv64(self, 'chip1', parser, options)
+
+
+    # This is the top target that gapy will instantiate
+    class Target(gvsoc.runner.Target):
+
+        def __init__(self, parser, options):
+            super(Target, self).__init__(parser, options,
+                model=MultiChip, description="RV64 virtual board")
+
+Since our chip are independent, as each one has its own memory, the runtime
+is replicated twice in memory, and we see both executing at the same time: ::
+
+    Launching GVSOC with command:
+    gvsoc_launcher --config=gvsoc_config.json
+    Hello
+    Hello
+
+We can also have a look at traces to see how their execution is interleaved: ::
+
+    28340000: 2834: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
+    28340000: 2834: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
+    28350000: 2835: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
+    28350000: 2835: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
+
+This time, they execute exactly the same, because there is no contention at all between them.
+
+GTKwave can also be used to see what is going on. We will see in it our 2 chips with one more level
+in the hierarchy compared to before.
+
+This is also possible to connect our 2 chips together, through a wire, uart and so, but
+this requires a more sophisticated runtime to do so.
+
+
+
+
+16 - How to control GVSOC from a python script
+..............................................
+
+The goal of this tutorial is to show how to connect a Python script to gvsoc and control it frmo the script.
+
+The script will be used to run gvsoc in step mode and inject some memory accesses in order to synchronize
+with the simulated binary. This can often be used to connect some external tool to gvsoc and interact with it.
+
+We modify the simulated binary so that it write a special value to a specific location and wait for it
+to change. On Python side, the script will do the reverse:
+
+
+.. code-block:: cpp
+
+    printf("Hello\n");
+
+    *(volatile uint32_t *)0x00010000 = 0x12345678;
+
+    while (*(volatile uint32_t *)0x00010000 == 0x12345678)
+    {
+
+    }
+
+    printf("Leaving\n");
+
+
+The Python script needs to instantiate a gvsoc proxy from *gvsoc_control.py*, then the proxy
+router, and then start interacting:
+
+.. code-block:: python
+
+    import argparse
+    import gv.gvsoc_control as gvsoc
+    import threading
+    import time
+
+    parser = argparse.ArgumentParser(description='Control GVSOC')
+
+    parser.add_argument("--host", dest="host", default="localhost", help="Specify host name")
+    parser.add_argument("--port", dest="port", default=42951, type=int, help="Specify host port")
+
+    args = parser.parse_args()
+
+
+    gv = gvsoc.Proxy(args.host, args.port)
+
+    axi = gvsoc.Router(gv, path='**/soc/ico')
+
+
+    while True:
+        gv.run(5000000)
+        value = axi.mem_read_int(0x00010000, 4)
+        print ('Got 0x%x' % value)
+
+        if value == 0x12345678:
+            break
+
+    axi.mem_write_int(0x00010000, 4, 0)
+
+    gv.run()
+    gv.quit(0)
+    gv.close()
+
+    exit(0)
+
+GVSOC must be started in proxy mode with this option: ::
+
+    make all run runner_args="--config-opt=**/gvsoc/proxy/enabled=true"
+
+This will block its execution until the script is connected. This also displays the port we have to use
+on script side.
+
+On script side, we have to make sure *gv/gvsoc_control.py* is in PYTHONPATH. Then we can launch it with: ::
+
+    ./gvcontrol --host=localhost --port=42951
+
+
+17 - How to control GVSOC from an external simulator
+....................................................
+
+The goal how this tutorial is to show how to control GVSOC from an external simulator or tool through
+its C++ API.
+
+For that we will write a C++ application which is using GVSOC C++ API to instantiate it and interact with it.
+
+The GVSOC API is available using this include:
+
+.. code-block:: cpp
+
+    #include <gv/gvsoc.hpp>
+
+It must first be instantiated:
+
+.. code-block:: cpp
+
+    gv::GvsocConf conf = { .config_path=config_path, .api_mode=gv::Api_mode::Api_mode_sync };
+    gv::Gvsoc *gvsoc = gv::gvsoc_new(&conf);
+    gvsoc->open();
+
+The configuration should contain the path to the system configuration, which can be generated
+by launching the simulation once in normal mode. The configuration should also indicate
+the mode in which GVSOC is launched. Here we launch in synchronous mode, which means GVSOC engine
+will run from the thread calling the GVSOC API.
+
+Since we will also interact with GVSOC by exchanging some memory requests, we need to
+be bound to a router proxy.
+
+The proxy must first be added into our system:
+
+.. code-block:: Python
+
+    import interco.router_proxy
+
+.. code-block:: Python
+
+    axi_proxy = interco.router_proxy.Router_proxy(self, 'axi_proxy')
+    self.bind(axi_proxy, 'out', ico, 'input')
+
+Since the external code may also receive requests from GVSOC side, we need to instantiate a class
+which inherits from *gv::Io_user* and must overload a few methods to handle the accesses:
+
+.. code-block:: cpp
+
+    class MyLauncher : public gv::Io_user
+    {
+    public:
+        int run(std::string config_path);
+
+        // This gets called when an access from gvsoc side is reaching us
+        void access(gv::Io_request *req);
+        // This gets called when one of our access gets granted
+        void grant(gv::Io_request *req);
+        // This gets called when one of our access gets its response
+        void reply(gv::Io_request *req);
+
+    private:
+        gv::Io_binding *axi;
+    };
+
+Then we can finish the initializations:
+
+.. code-block:: cpp
+
+    // Get a connection to the main soc AXI. This will allow us to inject accesses
+    // and could also be used to received accesses from simulated test
+    // to a certain mapping corresponding to the external devices.
+    this->axi = gvsoc->io_bind(this, "/soc/axi_proxy", "");
+    if (this->axi == NULL)
+    {
+        fprintf(stderr, "Couldn't find AXI proxy\n");
+        return -1;
+    }
+
+    gvsoc->start();
+
+At this point, all the system to be simulated should be instantiated. Now we can interact with
+memory accesses, and step the simulation:
+
+.. code-block:: cpp
+
+    // Run for 1ms to let the chip boot as it is not accessible before it is powered-up
+    gvsoc->step(10000000000);
+
+    // Writes few values to specific address, test will exit when it reads the last one
+    for (int i=0; i<10; i++)
+    {
+        uint32_t value = 0x12345678 + i;
+
+        gv::Io_request req;
+        req.data = (uint8_t *)&value;
+        req.size = 4;
+        req.type = gv::Io_request_write;
+        req.addr = 0x00010000;
+
+        // The response is received through a function call to our access method.
+        // This is done either directly from our function call to the axi access
+        // method for simple accesses or asynchronously for complex accesses which
+        // cannot be replied immediately (e.g. due to cache miss).
+        this->axi->access(&req);
+
+        // Wait for a while so that the simulated test sees the value and prints it
+        gvsoc->step(1000000000);
+    }
+
+In the simulated binary, we just loop reading the values that the external launcher
+is writing:
+
+.. code-block:: cpp
+
+    uint32_t last_value = *(volatile int *)0x00010000;
+
+    while(1)
+    {
+        uint32_t value;
+        while(1)
+        {
+            value = *(volatile int *)0x00010000;
+            if (value != last_value)
+            {
+                break;
+            }
+        }
+
+        printf("Read value %x\n", value);
+        last_value = value;
+
+        if (value == 0x12345678 + 9)
+        {
+            break;
+        }
+    }
+
+In the makefile, we now need to compile the launcher together with gvsoc:
+
+.. code-block:: makefile
+
+    gvsoc:
+        make -C ../../../.. TARGETS=my_system MODULES=$(CURDIR) build
+        g++ -o launcher launcher.cpp -I../../../../core/engine/include -L../../../../install/lib -lpulpvp
+
+Running is now done through the launcher:
+
+.. code-block:: makefile
+
+    run_launcher:
+        LD_LIBRARY_PATH=$(CURDIR)/../../../../install/lib:$(LD_LIBRARY_PATH) ./launcher --config=build/gvsoc_config.json

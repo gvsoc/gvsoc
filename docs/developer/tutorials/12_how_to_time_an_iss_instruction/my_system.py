@@ -1,13 +1,10 @@
-import gvsoc.systree
-import gvsoc.runner
-
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gdbserver.gdbserver
-
+import gvsoc.systree
+import gvsoc.runner
 import my_comp
 
 

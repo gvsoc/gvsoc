@@ -1,13 +1,10 @@
-import gvsoc.systree
-import gvsoc.runner
-
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gdbserver.gdbserver
-
+import gvsoc.systree
+import gvsoc.runner
 import my_comp
 
 
@@ -47,7 +44,6 @@ class Soc(gvsoc.systree.Component):
         loader.o_OUT     ( ico.i_INPUT     ())
         loader.o_START   ( host.i_FETCHEN  ())
         loader.o_ENTRY   ( host.i_ENTRY    ())
-
 
 
 # This is a wrapping component of the real one in order to connect a clock generator to it

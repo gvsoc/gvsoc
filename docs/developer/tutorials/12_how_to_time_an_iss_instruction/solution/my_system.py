@@ -1,17 +1,42 @@
-import gvsoc.systree
-import gvsoc.runner
-
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gdbserver.gdbserver
-
+import gvsoc.systree
+import gvsoc.runner
 import my_comp
 
 
 GAPY_TARGET = True
+
+
+
+class MyRiscv(cpu.iss.riscv.RiscvCommon):
+    def __init__(self,
+            parent: gvsoc.systree.Component, name: str, isa: str='rv64imafdc', binaries: list=[],
+            fetch_enable: bool=False, boot_addr: int=0, timed: bool=True,
+            core_id: int=0):
+
+        # Instantiates the ISA from the provided string.
+        isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
+
+        for insn in isa_instance.get_insns():
+            if insn.label == "my_instr":
+                insn.get_out_reg(0).set_latency(100)
+
+        # And instantiate common class with default parameters
+        super().__init__(parent, name, isa=isa_instance, misa=0,
+            riscv_exceptions=True, riscv_dbg_unit=True, binaries=binaries, mmu=True, pmp=True,
+            fetch_enable=fetch_enable, boot_addr=boot_addr, internal_atomics=True,
+            supervisor=True, user=True, timed=timed, prefetcher_size=64, core_id=core_id)
+
+        self.add_c_flags([
+            "-DPIPELINE_STAGES=2",
+            "-DCONFIG_ISS_CORE=riscv",
+        ])
+
+
 
 class Soc(gvsoc.systree.Component):
 
@@ -37,7 +62,7 @@ class Soc(gvsoc.systree.Component):
         ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True)
 
         # Instantiates the main core and connect fetch and data to the interconnect
-        host = cpu.iss.riscv.Riscv(self, 'host', isa='rv64imafdc')
+        host = MyRiscv(self, 'host', isa='rv64imafdc')
         host.o_FETCH     ( ico.i_INPUT     ())
         host.o_DATA      ( ico.i_INPUT     ())
 

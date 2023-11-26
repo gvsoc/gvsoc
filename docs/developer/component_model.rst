@@ -4,20 +4,51 @@ Component model
 High-level component model
 ..........................
 
+In GVSOC, the system to be simulated is modeled using a component-based approach.
+
+Each piece of hardware which is modeled is a component and is interacting with other components
+only through well identified bindings.
+
+Bindings are connections between a master port of a component to a slave port of another connection.
+They allow both sides to interact together using function calls.
+
+Each port has a signature, which is the set of methods that the component can call on the other
+component.
+
+The following figure shows an example where a core is connected to a router so that it can
+fetch instructions and do memory accesses. The router can route requests to a single target, the memory.
+A loader is also connected to the router so that it can preload the binary to be executed into the
+memory.
+
 .. image:: images/component_model.png
 
 
 Python generators
 .................
 
+The system to be simulated is assembled using Python scripts called generators. They describe the
+system as a set of components built hierarchically and connected together. This is also the place
+where each component is specialized by receiving values to its parameters, like the size of the memory.
+
 Composites for building systems
 ###############################
+
+Composites are intermediate components which are not associated model code and are just assembling
+components together in order to build a bigger component which can in turn be used by a higher-level
+component.
+
+The figure below shows the example described previously, implemented with a Python generator.
+Components are instantiated by instantiating their Python class, and giving at the same time the values
+of their parameters. Bindings are done by calling components methods.
+
+Although primitives are mostly used for assembling other components, they can also sometime be associated
+with C++ code, for example to implement some power modeling code at the composite level.
 
 .. code-block:: python
 
     import cpu.iss.riscv
     import memory.memory
-    import vp.clock_domain 
+    import vp.clock_domain
     import interco.router
     import utils.loader.loader
     import gvsoc.systree
@@ -79,6 +110,21 @@ Composites for building systems
 
 Primitives for wrapping C++ models
 ##################################
+
+Primitives are Python classes wrapping C++ model into Python components which can then be instantiated
+and bound by composites.
+
+Their constructor must have a set of paramaters which are used to configure the instance of the
+component. These parameters must be propagated to the component properties, so that the framework
+generates a JSON file containing all the parameters and passes them to the C++ model.
+
+It must be associated C++ source code and can also have C flags. The framework will compile one version
+of the component for each set of source code and flags so that they can depend on the parameters.
+
+Primitive components must also expose the available ports through methods, so that the user can easily
+know what must or can be connected when assembling this component.
+
+Hereafter you can see the exemple of a memory.
 
 .. code-block:: python
 

@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+import argparse
+import gv.gvsoc_control as gvsoc
+import threading
+import time
+
+parser = argparse.ArgumentParser(description='Control GVSOC')
+
+parser.add_argument("--host", dest="host", default="localhost", help="Specify host name")
+parser.add_argument("--port", dest="port", default=42951, type=int, help="Specify host port")
+
+args = parser.parse_args()
+
+
+gv = gvsoc.Proxy(args.host, args.port)
+
+axi = gvsoc.Router(gv, path='**/soc/ico')
+
+
+while True:
+    gv.run(5000000)
+    value = axi.mem_read_int(0x00010000, 4)
+    print ('Got 0x%x' % value)
+
+    if value == 0x12345678:
+        break
+
+axi.mem_write_int(0x00010000, 4, 0)
+
+gv.run()
+gv.quit(0)
+gv.close()
+
+exit(0)

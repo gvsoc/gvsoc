@@ -1,14 +1,11 @@
-import gvsoc.systree
-import gvsoc.runner
-
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gdbserver.gdbserver
-
-import my_comp
+import gvsoc.systree
+import gvsoc.runner
+import interco.router_proxy
 
 
 GAPY_TARGET = True
@@ -25,10 +22,6 @@ class Soc(gvsoc.systree.Component):
 
         # Main interconnect
         ico = interco.router.Router(self, 'ico')
-
-        # Custom components
-        comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
-        ico.o_MAP(comp.i_INPUT(), 'comp', base=0x20000000, size=0x00001000, rm_base=True)
 
         # Main memory
         mem = memory.memory.Memory(self, 'mem', size=0x00100000)
@@ -47,6 +40,10 @@ class Soc(gvsoc.systree.Component):
         loader.o_OUT     ( ico.i_INPUT     ())
         loader.o_START   ( host.i_FETCHEN  ())
         loader.o_ENTRY   ( host.i_ENTRY    ())
+
+        # AXI proxy
+        axi_proxy = interco.router_proxy.Router_proxy(self, 'axi_proxy')
+        self.bind(axi_proxy, 'out', ico, 'input')
 
 
 

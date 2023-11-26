@@ -1,13 +1,10 @@
-import gvsoc.systree
-import gvsoc.runner
-
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gdbserver.gdbserver
-
+import gvsoc.systree
+import gvsoc.runner
 import my_comp
 
 
@@ -30,6 +27,11 @@ class Soc(gvsoc.systree.Component):
         comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
         ico.o_MAP(comp.i_INPUT(), 'comp', base=0x20000000, size=0x00001000, rm_base=True)
 
+        comp2 = my_comp.MyComp2(self, 'my_comp2')
+        ico.o_MAP(comp2.i_INPUT(), 'comp2', base=0x30000000, size=0x00001000, rm_base=True)
+        comp2.o_POWER_CTRL( comp.i_POWER  ())
+        comp2.o_VOLTAGE_CTRL( comp.i_VOLTAGE())
+
         # Main memory
         mem = memory.memory.Memory(self, 'mem', size=0x00100000)
         # The memory needs to be connected with a mpping. The rm_base is used to substract
@@ -48,6 +50,8 @@ class Soc(gvsoc.systree.Component):
         loader.o_START   ( host.i_FETCHEN  ())
         loader.o_ENTRY   ( host.i_ENTRY    ())
 
+        mem2 = memory.memory.Memory(self, 'mem2', size=0x00100000, power_trigger=True)
+        ico.o_MAP(mem2.i_INPUT(), 'mem2', base=0x10000000, size=0x00100000, rm_base=True)
 
 
 # This is a wrapping component of the real one in order to connect a clock generator to it
