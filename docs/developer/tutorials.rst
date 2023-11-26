@@ -1811,3 +1811,82 @@ in the hierarchy compared to before.
 
 This is also possible to connect our 2 chips together, through a wire, uart and so, but
 this requires a more sophisticated runtime to do so.
+
+
+
+
+16 - How to control GVSOC from a python script
+..............................................
+
+The goal of this tutorial is to show how to connect a Python script to gvsoc and control it frmo the script.
+
+The script will be used to run gvsoc in step mode and inject some memory accesses in order to synchronize
+with the simulated binary. This can often be used to connect some external tool to gvsoc and interact with it.
+
+We modify the simulated binary so that it write a special value to a specific location and wait for it
+to change. On Python side, the script will do the reverse:
+
+
+.. code-block:: cpp
+
+    printf("Hello\n");
+
+    *(volatile uint32_t *)0x00010000 = 0x12345678;
+
+    while (*(volatile uint32_t *)0x00010000 == 0x12345678)
+    {
+
+    }
+
+    printf("Leaving\n");
+
+
+The Python script needs to instantiate a gvsoc proxy from *gvsoc_control.py*, then the proxy
+router, and then start interacting:
+
+.. code-block:: python
+
+    import argparse
+    import gv.gvsoc_control as gvsoc
+    import threading
+    import time
+
+    parser = argparse.ArgumentParser(description='Control GVSOC')
+
+    parser.add_argument("--host", dest="host", default="localhost", help="Specify host name")
+    parser.add_argument("--port", dest="port", default=42951, type=int, help="Specify host port")
+
+    args = parser.parse_args()
+
+
+    gv = gvsoc.Proxy(args.host, args.port)
+
+    axi = gvsoc.Router(gv, path='**/soc/ico')
+
+
+    while True:
+        gv.run(5000000)
+        value = axi.mem_read_int(0x00010000, 4)
+        print ('Got 0x%x' % value)
+
+        if value == 0x12345678:
+            break
+
+    axi.mem_write_int(0x00010000, 4, 0)
+
+    gv.run()
+    gv.quit(0)
+    gv.close()
+
+    exit(0)
+
+GVSOC must be started in proxy mode with this option: ::
+
+    make all run runner_args="--config-opt=**/gvsoc/proxy/enabled=true"
+
+This will block its execution until the script is connected. This also displays the port we have to use
+on script side.
+
+On script side, we have to make sure *gv/gvsoc_control.py* is in PYTHONPATH. Then we can launch it with: ::
+
+    ./gvcontrol --host=localhost --port=42951
