@@ -204,6 +204,14 @@ C++ component model
 Module constructor
 ##################
 
+A C++ code of a primitive component must have a special function which will be called
+by the upper-level component to instantiate this one.
+
+This function must return a new instance of the C++ class of the component and pass it the configuration
+that the function received.
+
+Here you can see an example.
+
 .. code-block:: cpp
 
     extern "C" vp::Component *gv_new(vp::ComponentConf &config)
