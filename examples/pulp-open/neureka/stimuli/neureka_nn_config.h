@@ -1,0 +1,53 @@
+int32_t PI_L2 neureka_cfg[]={
+ 4294967295, 
+ 4294967295, 
+ 4294967295, 
+ 4294967295, 
+ 4294967295, 
+ 4294967295, 
+ 4294967295, 
+ 39, 
+ 741, 
+ 12597, 
+ 32, 
+ 39, 
+ 741, 
+ 32, 
+ 64, 
+ 0, 
+ 458759, 
+ 327681, 
+ 327681, 
+ 131074, 
+ 196612, 
+ 0, 
+ -128, 
+ 0, 
+ 461374039
+ };
+uint32_t INFEAT_OFFSET[]={
+0
+ };
+uint32_t WEIGHT_OFFSET[]={
+2496
+ };
+uint32_t NORM_MULT_OFFSET_PARAM[]={
+39
+ };
+uint32_t NORM_SHIFT_OFFSET_PARAM[]={
+39
+ };
+uint32_t NORM_BIAS_OFFSET_PARAM[]={
+156
+ };
+uint32_t CONFIG_OFFSET_PARAM[]={
+25
+ };
+uint32_t CONFIG_IS_RESIDUAL[]={
+0
+ };
+uint32_t CONFIG_KEEP_OUTFEAT[]={
+0
+ };
+#define N_LAYERS 1
+#define BATCH_SIZE 1
