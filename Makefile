@@ -28,4 +28,7 @@ clean:
 run_neureka:
 	./install/bin/gvsoc --target=pulp-open --binary ./examples/pulp-open/neureka/BUILD/PULP/GCC_RISCV/test/test run
 
+run_hello:
+	./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
+
 .PHONY: build
