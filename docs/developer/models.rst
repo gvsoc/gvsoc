@@ -119,6 +119,17 @@ On top of that, the slow handler is adding these steps:
 Instruction decoding
 --------------------
 
+The encoding of the instructions in the ISS must be described in a Python script so that the framework
+can automatically generate the code for decoding instructions and dumping them in the instructions traces.
+
+The encoding is described in this file: *core/models/cpu/iss/isa_gen/isa_riscv_gen.py*.
+
+There is a first section in it which describes all the possible formats for the instructions.
+
+Each format specifies how registers and immediates must be extracted from the opcode.
+
+Here is a first example for instructions having 2 input registers and one output register:
+
 .. code-block:: python
 
     if format == 'R':
@@ -126,24 +137,87 @@ Instruction decoding
                         InReg (0, Range(15, 5)),
                         InReg (1, Range(20, 5)),
                         ]
-    elif format == 'I':
+
+A different class must be used for input and output registers. The first argument gives
+the register instruction index and the second gives the range in the opcode where the
+register regfile index must be extracted.
+
+The range is in this example a contiguous single range but it can also be made of several ranges put together.
+In this example, the first argument is the first bit of the range and the second argument is the width of
+the range.
+
+Here is another example where an immediate is also extracted:
+
+.. code-block:: python
+
+    if format == 'I':
         self.args = [   OutReg(0, Range(7,  5)),
                         InReg (0, Range(15, 5)),
                         SignedImm(0, Range(20, 12)),
                     ]
+
+The encoding of the instruction must give the instruction label, the instruction format, a string
+describing the opcode, and additional options like tags.
+
+The opcode can contain a dash for bits which are not relevant for the decoding because they are used
+to encode registers or immediates.
+
+Here are examples of encoded instructions. The tag can be used later on to track all instructions
+of a certain kind, like here the ones doing a load, so that we can assign something like latency.
 
 .. code-block:: python
 
     R5('lw',    'L',    '------- ----- ----- 010 ----- 0000011', tags=["load"]),
     R5('addi',  'I',    '------- ----- ----- 000 ----- 0010011'),
 
+Instruction decoding cache
+--------------------------
+
+To increase the simulation speed of the ISS, the instructions are decoded only once using
+a cache of decoded instructions.
+
+Decoding an instruction consists in unpacking the opcode to extract all the register and immediate
+information and find out which handler should take care of emulating the instruction.
+
+All this information takes time to extract, thus they are done only once and then stored into
+an unpacked instruction structure.
+
+The role of the cache is to maintain a database of decoded instruction and allow the core to quickly
+get them from the PC.
+
+For that, as shown on the figure below, the exec module query the instruction cache to get the decoded
+instruction for a certain PC.
+
+To reduce the time neeed to access instructions, the cache is grouping them into pages of
+instructions.
+
+Since instructions are more likely to execute in sequence, the cache maintains a pointer to the current
+instruction page, so that it first check if the required instruction is within the current page. If so,
+this is the fastest look-up we can get and the instruction is returned. If not, the cache looks
+for the page using a hash table. if this is a hit, the page becomes the current one and the instruction
+is returned. If this is a miss, a new page is allocated, inserted into the hash and the instruction is
+returned.
+
 .. image:: images/insn_decoding.png
+
+Since it takes quite some time to decode instructions, and we will most likely not use all the
+instructions in a page, instructions are actually not decoded immediately. Just a pointer to the
+instruction structure is returned.
+
+Then to avoid adding checks on the critical path, the exec module will execute the model
+of the instruction by calling the handler associated to the unpacked instruction structure.
+This handler is initialized at first to be a decoding function, so that the first time the instruction
+is executed, it is decoded. Then the next executions will directly jump to the right handler.
 
 .. image:: images/insn_execution.png
 
 
 ISS customization
 -----------------
+
+The ISS is having some kind of flexibility to allow building on top of it several variants of cores.
+
+The following is an example of how the ISS gets customized for the snitch core:
 
 .. code-block:: python
 
@@ -173,6 +247,24 @@ ISS customization
                 "cpu/iss/src/spatz.cpp",
             ])
 
+As we can see, snitch core is described with a specific class inheriting from a generic ISS. It overloads
+a few parameters, like the core type, and the scoreboard which is enabled. Extra source code is given
+to include some code specific to this core.
+
+Here is another kind of customization which can be done in the ISS generator:
+
+.. code-block:: python
+
+    isa = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(name, 'rv32imfc')
+
+    isa.add_tree(IsaDecodeTree('sfloat', [Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux()]))
+    isa.add_tree(IsaDecodeTree('pulpv2', [PulpV2()]))
+
+The ISA can be generated differently first by giving a different isa string, for what concerns generic isa
+subsets. Then custom isa can be added by adding them to the tree.
+
+Hereafter is the generic ISS class with all the possible parameters which can be customized
+to get ISS variants:
 
 .. code-block:: python
 
@@ -213,6 +305,14 @@ ISS customization
 ISS timing customization
 ------------------------
 
+To customize the timing of the ISS, there is a first possibility to do it in the decoding tree.
+
+This has the advantage of not requiring any modification to the C++ code, which can be easier to provide
+several implementations of the same core.
+
+Here is an example where we use the tags on the instructions to identify a certain kind of instructions
+and attach some latency to it.
+
 .. code-block:: python
 
     def __build_isa(name):
@@ -232,8 +332,21 @@ ISS timing customization
 
         return isa
 
+There is another big advantage of timing an instruction here. The decoder will detect it and will decode the instruction
+in a specific way which will allow taking into account the latency without requiring any additional check at runtime.
 
+In the example below, this is used to model the data dependency which can happen between a load and the next
+instruction. Checking that at runtime requires monitoring every register access to see if one instruction tries to
+read a register the cycle after a load read data from memory to this register. This means adding a check at every cycle.
 
+To avoid that, the decoder detects the dependency while decoding the instruction and only if it is found, replace
+the normal instruction callback by a slower one adding the latency. The good thing is that most of the time,
+the compiler will take care of avoiding the data dependency, so we avoid doing one check per cycle for a rare case.
+
+Here is another example where we modify the isa to add a shared resource which is modeling the fact
+that floating-point instructions are offloading to a shared FPU, which can create some contentions.
+
+.. code-block:: python
 
     def __build_cluster_isa():
 
@@ -272,6 +385,51 @@ ISS timing customization
 
 
         return isa
+
+The instruction is functionnally executed in the ISS the standard way, and then the resource model is applied
+to compute the contentions.
+
+For that, each resource is assign a bandwidth and a latency. The latency tells after how many cycles
+the instruction result is available, which can stall the core if its pipeline is not deep enough.
+Then the bandwith indicates how many cycles it needs to take the next instruction.
+
+The resource model is keeping track of the cycle where the next instruction can be accepted, based on the bandwidth
+and will apply stalls if another instruction is coming before that.
+
+For lots of cases, this way of customizing the timing on the isa is not suitable because for example
+the number of cycles of the instruction depends on something we only know during execution like the value of the
+registers.
+
+This is the case for example for the iming of the div instruction on ri5cy core, as it depends on the number
+of zero. The instruction can still be correctly timed by calling some functions in the timing module:
+
+.. code-block:: cpp
+
+    int cycles;
+
+    if (divider == 0)
+    {
+        cycles = 1;
+    }
+    else if (divider > 0)
+    {
+        cycles = __builtin_clz(divider) + 3;
+    }
+    else
+    {
+        cycles = __builtin_clz((~divider) + 1) + 2;
+    }
+
+    iss->timing.stall_insn_dependency_account(cycles);
+
+In this case, the number of cycles is computed depending on the register value, and the core is stalled
+for the estimated amount of cycles.
+
+The main drawback of this approach is that it makes it more difficult to maintain several implementions of the core
+as it is increasing the number of ifdef in the code.
+
+Another example is the timing of the compare and branch instruction, where the stalls must be applied
+only if the branch is taken:
 
 .. code-block:: cpp
 

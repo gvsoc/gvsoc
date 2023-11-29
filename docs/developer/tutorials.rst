@@ -2041,3 +2041,14 @@ Running is now done through the launcher:
 
     run_launcher:
         LD_LIBRARY_PATH=$(CURDIR)/../../../../install/lib:$(LD_LIBRARY_PATH) ./launcher --config=build/gvsoc_config.json
+
+18 - How to boot Linux
+......................
+
+GVSOC should first be compiled for rv64 with this command: ::
+
+    make TARGETS=rv64 build
+
+THe Linux kernel can be taken from cva6 sdk, and the following command run from it: ::
+
+    gvsoc --target=rv64 --binary install64/spike_fw_payload.elf  run

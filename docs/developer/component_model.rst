@@ -368,6 +368,7 @@ As seen earlier, ports methods must be implemented with class methods, which wil
 called when the remote port is called.
 
 They must be static methods, as we can see on this example:
+
 .. code-block:: cpp
 
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
