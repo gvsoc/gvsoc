@@ -146,10 +146,24 @@ On ETH network, please use this command to get the proper version of gcc and cma
 CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
 ~~~~~
 
+You can also build snitch cluster for target using command:
+
+~~~~~shell
+CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp.snitch.snitch_cluster
+~~~~~
+
+The top generator of snitch cluster is under the directory pulp/pulp/snitch/snitch_cluster.py.
+
 ## Usage
 
 The following example can be launched on pulp-open:
 
 ~~~~~shell
 ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
+~~~~~
+
+The another example can be launched on snitch-cluster with trace:
+
+~~~~~shell
+./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/name_of_binary_file --trace=.*:log.txt image flash run
 ~~~~~
