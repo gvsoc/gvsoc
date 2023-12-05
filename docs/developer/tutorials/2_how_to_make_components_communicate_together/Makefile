@@ -1,6 +1,13 @@
 include ../utils/rt.mk
 BUILDDIR = $(CURDIR)/build
 
+clean:
+	rm -f *.o $(BUILDDIR)/test
+	make -C ../../../.. TARGETS=my_system MODULES=$(CURDIR) clean
+
+prepare:
+	cp solution/* .
+
 all:
 	mkdir -p $(BUILDDIR)
 	riscv64-unknown-elf-gcc -o $(BUILDDIR)/test main.c $(RT_SRCS) $(RT_FLAGS)
