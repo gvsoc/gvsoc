@@ -6,3 +6,4 @@ else
 fi
 
 export PATH=$SDK_HOME/install/bin:$PATH
+export PYTHONPATH=$SDK_HOME/install/python:$PYTHONPATH
