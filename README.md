@@ -34,7 +34,8 @@ sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl
 Additional Python packages are needed and can be installed with the following commands from root folder:
 
 ```bash
-git submodule update --init --recursive -j8
+git checkout snitch_cluster
+git submodule update --init --recursive
 pip3 install -r core/requirements.txt
 pip3 install -r gapy/requirements.txt
 ```
@@ -79,4 +80,10 @@ The another example can be launched on snitch-cluster with trace:
 
 ~~~~~shell
 ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/name_of_binary_file --trace=.*:log.txt image flash run
+~~~~~
+
+For example, we want to run the simulation of binary file examples/snitch_cluster/axpy_fmadd.elf and read the trace related to the first integer core (/soc/pe0):
+
+~~~~~shell
+./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_fmadd.elf --trace=pe0:pe0.txt --trace-level=trace image flash run
 ~~~~~
