@@ -45,6 +45,7 @@ jobs:
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_fmadd.elf run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_frep.elf run
 
   # Removed due to no space left on eth machine
   # build_eth:
