@@ -31,6 +31,7 @@ jobs:
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_fmadd.elf run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_frep.elf run
 
   # Removed due to no space left on eth machine
   # build_eth:
