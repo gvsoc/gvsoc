@@ -2,6 +2,16 @@
 
 GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166).
 
+## [Look Here!] How to get start GVSoC with DRAMSys5 Library
+
+For your convience, you can build, run and test dramsys-integrated GVSoC, just by pushing the button below:
+
+~~~~~shell
+source dramsys_pushbutton.sh
+~~~~~
+
+The default DRAM model using here is one HBM2 channel
+
 ## Citing
 
 If you intend to use or reference GVSoC for an academic publication, please consider citing it:
