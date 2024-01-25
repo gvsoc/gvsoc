@@ -1,0 +1,15 @@
+diff --git a/pulp/chips/pulp_open/soc.py b/pulp/chips/pulp_open/soc.py
+index 26403fb..aee187e 100644
+--- a/pulp/chips/pulp_open/soc.py
++++ b/pulp/chips/pulp_open/soc.py
+@@ -261,8 +261,8 @@ class Soc(st.Component):
+         self.bind(soc_ico, 'axi_proxy', axi_ico, 'input')
+         self.bind(soc_ico, 'ddr', axi_ico, 'input')
+ 
+-        axi_ico.add_mapping('ddr', base=0x80000000, size=0x80000000)
+-        self.bind(soc_ico, 'ddr', self, 'ddr')
++        axi_ico.add_mapping('ddr', base=0x80000000, size=0x00100000)
++        self.bind(axi_ico, 'ddr', self, 'ddr')
+ 
+         self.bind(axi_ico, 'soc', soc_ico, 'axi_slave')
+         self.bind(self, 'soc_input', axi_ico, 'input')
