@@ -4,6 +4,7 @@ CMAKE ?= cmake
 TARGETS ?= rv32;rv64
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
+export LD_LIBRARY_PATH:=$(CURDIR)/third_party/DRAMSys:$(CURDIR)/third_party/systemc_install/lib64:${LD_LIBRARY_PATH}
 
 all: checkout build
 
