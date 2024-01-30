@@ -23,7 +23,11 @@ jobs:
       - name: build all targets
         run: |
           source sourceme.sh
-          make dramsys_preparation
+          make apply_patch 
+          make build-systemc
+          pwd
+          ls .
+          ls third_party/systemc_install/lib64/
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open
