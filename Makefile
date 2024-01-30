@@ -75,8 +75,8 @@ third_party/DRAMSys/libDRAMSys_Simulator.so:
 		if [ "$$user_input" = "n" ]; then echo "oops, I see, your time is precious, see you next time"; exit 1; fi; \
 		echo "Go Go Go!" ; \
 		cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5 && make all; \
-		cp add_dramsyslib_patches/build_dynlib_from_github_dramsys5/DRAMSys/build/lib/libDRAMSys_Simulator.so third_party/DRAMSys/ ; \
-		cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5 && make clean; \
+		cp DRAMSys/build/lib/libDRAMSys_Simulator.so ../../third_party/DRAMSys/ ; \
+		make clean; \
     fi
 
 build-configs: core/models/memory/dramsys_configs
