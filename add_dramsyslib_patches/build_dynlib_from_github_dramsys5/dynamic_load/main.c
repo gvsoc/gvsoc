@@ -9,7 +9,8 @@ uint64_t rec[64] = {0,0,0,0,0};
 #define TXN_LEN 64
 
 void print_data(uint64_t * buf){
-    for (int i = 0; i < 10; ++i)
+    int i;
+    for (i = 0; i < 10; ++i)
     {
         printf("%d, ", buf[i]);
     }
@@ -58,9 +59,10 @@ int main() {
     //try to write something
     if (dram_can_accept_req(dram_id))
     {
+        int i;
         printf("send write req \n");
         uint8_t * byte_buf = (uint8_t *)buf;
-        for (int i = 0; i < TXN_LEN; ++i)
+        for (i = 0; i < TXN_LEN; ++i)
         {
             dram_write_buffer(dram_id,byte_buf[i],i);
             if (i<10)
