@@ -30,6 +30,7 @@ jobs:
           make all TARGETS=pulp.spatz.spatz
       - name: Run examples
         run: |
+          source sourceme.sh
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
