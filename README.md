@@ -4,28 +4,28 @@ GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and 
 
 ## [Look Here!] How to get start GVSoC with DRAMSys5 Library
 
-For your convenience, you can build, run and test dramsys-integrated GVSoC, just by pushing the button below:
+For a streamlined experience, you can build, run, and test the dramsys-integrated GVSoC simply by following instructions below:
 
-On ETH network
+**On the ETH Network:**
 
-~~~~~shell
-source dramsys_pushbutton_ETHenv.sh
-~~~~~
+- Run the command:
+	~~~~~shell
+	source dramsys_pushbutton_ETHenv.sh
+	~~~~~
+    Note: If you encounter errors related to Python packages not being found, please install the necessary packages yourself.
 
-The default DRAM model using here is one HBM2 channel.
-
-After pushing button, you can freely develop GVSoC models with DRAM connecting, and rebuild GVSoC as usual.
+The default configuration utilizes one HBM2 channel for the DRAM model.
 
 
-Note: If you are operating on a machine outside the ETH network, specific environment requirements must be met, as detailed below:
+**Outside the ETH Network:**
+Ensure your system meets the following environment requirements:
 
-```
-gcc version >= 11.2.0
-g++ version >= 11.2.0
-cmake version >= 3.18.1
-```
+- GCC version 11.2.0 or higher
+- G++ version 11.2.0 or higher
+- CMake version 3.18.1 or higher
 
-Then you can push the button
+Once these requirements are met, proceed by using:
+
 ~~~~~shell
 source dramsys_pushbutton.sh
 ~~~~~
