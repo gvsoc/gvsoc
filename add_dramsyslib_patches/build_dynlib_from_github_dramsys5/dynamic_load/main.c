@@ -29,7 +29,7 @@ int main() {
     void (*run_ns)(int ns);
 
     printf("load library --- \n");
-    libraryHandle = dlopen("../../../build/lib/libDRAMSys_Simulator.so", RTLD_LAZY);
+    libraryHandle = dlopen("../../libDRAMSys_Simulator.so", RTLD_LAZY);
 
     printf("get function --- \n");
     add_dram = dlsym(libraryHandle, "add_dram");

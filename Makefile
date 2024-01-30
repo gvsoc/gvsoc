@@ -61,9 +61,34 @@ third_party/systemc_install/lib64/libsystemc.so:
 
 build-dramsys: build-systemc third_party/DRAMSys/libDRAMSys_Simulator.so
 
+test_lib:
+		@echo "Test libaray failed, We need to rebuild the library, tasks around 40min"; \
+		echo -n "Do you want to proceed? (y/n) "; \
+		read -t 30 -r user_input; \
+		if [ "$$user_input" = "n" ]; then echo "oops, I see, your time is precious, see you next time"; exit 1; fi; \
+		echo "Go Go Go!"
+
 third_party/DRAMSys/libDRAMSys_Simulator.so: third_party
 	mkdir -p third_party/DRAMSys
 	cp add_dramsyslib_patches/libDRAMSys_Simulator.so third_party/DRAMSys/
+	echo "Check Library Functionality"
+	cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/ && \
+	gcc main.c -ldl
+	@if add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out ; then \
+        echo "Test libaray succeeded"; \
+		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
+    else \
+		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
+		@echo "Test libaray failed, We need to rebuild the library, tasks around 40 min"; \
+		echo -n "Do you want to proceed? (y/n) "; \
+		read -t 30 -r user_input; \
+		if [ "$$user_input" = "n" ]; then echo "oops, I see, your time is precious, see you next time"; exit 1; fi; \
+		echo "Go Go Go!" ; \
+		cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5 && make all; \
+		rm third_party/DRAMSys/libDRAMSys_Simulator.so; \
+		cp add_dramsyslib_patches/build_dynlib_from_github_dramsys5/DRAMSys/build/lib/libDRAMSys_Simulator.so third_party/DRAMSys/ ; \
+		cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5 && make clean; \
+    fi
 
 build-configs: core/models/memory/dramsys_configs
 
