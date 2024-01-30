@@ -45,10 +45,7 @@ apply_patch:
 	fi
 
 
-third_party:
-	mkdir -p third_party
-
-build-systemc: third_party third_party/systemc_install/lib64/libsystemc.so
+build-systemc: third_party/systemc_install/lib64/libsystemc.so
 
 third_party/systemc_install/lib64/libsystemc.so:
 	mkdir -p $(SYSTEMC_INSTALL_DIR)
@@ -61,14 +58,7 @@ third_party/systemc_install/lib64/libsystemc.so:
 
 build-dramsys: build-systemc third_party/DRAMSys/libDRAMSys_Simulator.so
 
-test_lib:
-		@echo "Test libaray failed, We need to rebuild the library, tasks around 40min"; \
-		echo -n "Do you want to proceed? (y/n) "; \
-		read -t 30 -r user_input; \
-		if [ "$$user_input" = "n" ]; then echo "oops, I see, your time is precious, see you next time"; exit 1; fi; \
-		echo "Go Go Go!"
-
-third_party/DRAMSys/libDRAMSys_Simulator.so: third_party
+third_party/DRAMSys/libDRAMSys_Simulator.so:
 	mkdir -p third_party/DRAMSys
 	cp add_dramsyslib_patches/libDRAMSys_Simulator.so third_party/DRAMSys/
 	echo "Check Library Functionality"
@@ -79,7 +69,7 @@ third_party/DRAMSys/libDRAMSys_Simulator.so: third_party
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
     else \
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
-		@echo "Test libaray failed, We need to rebuild the library, tasks around 40 min"; \
+		echo "Test libaray failed, We need to rebuild the library, tasks around 40 min"; \
 		echo -n "Do you want to proceed? (y/n) "; \
 		read -t 30 -r user_input; \
 		if [ "$$user_input" = "n" ]; then echo "oops, I see, your time is precious, see you next time"; exit 1; fi; \
