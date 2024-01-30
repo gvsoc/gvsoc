@@ -18,6 +18,7 @@ The default configuration utilizes one HBM2 channel for the DRAM model.
 
 
 **Outside the ETH Network:**
+
 Ensure your system meets the following environment requirements:
 
 - GCC version 11.2.0 or higher
