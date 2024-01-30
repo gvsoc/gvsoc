@@ -67,6 +67,7 @@ third_party/DRAMSys/libDRAMSys_Simulator.so:
 	@if add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out ; then \
         echo "Test libaray succeeded"; \
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
+		rm DRAMSysRecordable* ; \
     else \
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
 		echo "Test libaray failed, We need to rebuild the library, tasks around 40 min"; \
