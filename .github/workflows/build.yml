@@ -25,8 +25,16 @@ jobs:
           source sourceme.sh
           make apply_patch 
           make build-systemc
+          echo $SYSTEMC_HOME
+          echo $LD_LIBRARY_PATH
           pwd
+          echo "---------------------------------------------"
           ls .
+          echo "---------------------------------------------"
+          ls third_party/
+          echo "---------------------------------------------"
+          ls third_party/systemc_install
+          echo "---------------------------------------------"
           ls third_party/systemc_install/lib64/
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
