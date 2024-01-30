@@ -11,13 +11,31 @@ export CXX=g++-11.2.0
 export CC=gcc-11.2.0
 ~~~~~
 
-For your convience, you can build, run and test dramsys-integrated GVSoC, just by pushing the button below:
+For your convenience, you can build, run and test dramsys-integrated GVSoC, just by pushing the button below:
 
+On ETH network
+
+~~~~~shell
+source dramsys_pushbutton_ETHenv.sh
+~~~~~
+
+The default DRAM model using here is one HBM2 channel.
+
+After pushing button, you can freely develop GVSoC models with DRAM connecting, and rebuild GVSoC as usual.
+
+
+Note: If you are operating on a machine outside the ETH network, specific environment requirements must be met, as detailed below:
+
+```
+gcc version >= 11.2.0
+g++ version >= 11.2.0
+cmake version >= 3.18.1
+```
+
+Then you can push the button
 ~~~~~shell
 source dramsys_pushbutton.sh
 ~~~~~
-
-The default DRAM model using here is one HBM2 channel
 
 ## Citing
 
