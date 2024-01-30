@@ -35,13 +35,11 @@ SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
 apply_patch:
 	git submodule update --init --recursive
-	cd core && git apply --check ../add_dramsyslib_patches/gvsoc_core.patch
-	if [ $$? -eq 0 ]; then \
-		cd core && git apply ../add_dramsyslib_patches/gvsoc_core.patch;\
+	if cd core && git apply --check ../add_dramsyslib_patches/gvsoc_core.patch; then \
+		git apply ../add_dramsyslib_patches/gvsoc_core.patch;\
 	fi
-	cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch
-	if [ $$? -eq 0 ]; then \
-		cd pulp && git apply ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch;\
+	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch; then \
+		git apply ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch;\
 	fi
 
 
