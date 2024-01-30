@@ -4,7 +4,6 @@ CMAKE ?= cmake
 TARGETS ?= rv32;rv64
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
-export LD_LIBRARY_PATH:=$(CURDIR)/third_party/DRAMSys:$(CURDIR)/third_party/systemc_install/lib64:${LD_LIBRARY_PATH}
 
 all: checkout build
 
@@ -52,7 +51,7 @@ third_party/systemc_install/lib64/libsystemc.so:
 	git clone $(SYSTEMC_GIT_URL) && \
 	cd systemc && git fetch --tags && git checkout $(SYSTEMC_VERSION) && \
 	mkdir build && cd build && \
-	$(CMAKE) -DCMAKE_CXX_STANDARD=17 -DCMAKE_INSTALL_PREFIX=$(SYSTEMC_INSTALL_DIR) .. && \
+	$(CMAKE) -DCMAKE_CXX_STANDARD=17 -DCMAKE_INSTALL_PREFIX=$(SYSTEMC_INSTALL_DIR) -DCMAKE_INSTALL_LIBDIR=lib64 .. && \
 	make && make install
 
 build-dramsys: build-systemc third_party/DRAMSys/libDRAMSys_Simulator.so
