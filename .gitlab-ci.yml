@@ -12,9 +12,7 @@ build:
   script:
     - /usr/local/anaconda3/bin/python3 -m venv venv
     - source venv/bin/activate
-    - source sourceme.sh
-    - CXX=g++-11.2.0 CC=gcc-11.2.0 make dramsys_preparation
     - pip3 install -r core/requirements.txt
     - pip3 install -r gapy/requirements.txt
-    - CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 MAGICK_ROOT=/usr/pack/graphicsmagick-1.3.36-kgf make TARGETS=pulp-open-ddr all
-    - ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run --trace=ddr
+    - CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 MAGICK_ROOT=/usr/pack/graphicsmagick-1.3.36-kgf make all TARGETS=pulp-open
+    - ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
