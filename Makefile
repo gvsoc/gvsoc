@@ -85,3 +85,6 @@ core/models/memory/dramsys_configs:
 	cp -rf add_dramsyslib_patches/dramsys_configs core/models/memory/
 
 dramsys_preparation: apply_patch build-systemc build-dramsys build-configs
+
+clean_dramsys_preparation:
+	rm -rf third_party
