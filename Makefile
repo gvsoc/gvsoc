@@ -27,19 +27,23 @@ build:
 clean:
 	rm -rf build install
 
-# CMAKE = /scratch2/chi/dramsys_upgrade/cmake_bin/install/bin/cmake
+
+
+######################################################################
+## 				Make Targets for DRAMSys Integration 				##
+######################################################################
 
 SYSTEMC_VERSION := 2.3.3
 SYSTEMC_GIT_URL := https://github.com/accellera-official/systemc.git
 SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
-apply_patch:
+drmasys_apply_patch:
 	git submodule update --init --recursive
 	if cd core && git apply --check ../add_dramsyslib_patches/gvsoc_core.patch; then \
 		git apply ../add_dramsyslib_patches/gvsoc_core.patch;\
 	fi
-	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch; then \
-		git apply ../add_dramsyslib_patches/gvsoc_pulp_modify_for_DMA_DRAM_test.patch;\
+	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp.patch; then \
+		git apply ../add_dramsyslib_patches/gvsoc_pulp.patch;\
 	fi
 
 
@@ -84,7 +88,7 @@ build-configs: core/models/memory/dramsys_configs
 core/models/memory/dramsys_configs:
 	cp -rf add_dramsyslib_patches/dramsys_configs core/models/memory/
 
-dramsys_preparation: apply_patch build-systemc build-dramsys build-configs
+dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs
 
 clean_dramsys_preparation:
 	rm -rf third_party
