@@ -14,7 +14,31 @@ For a streamlined experience, you can build, run, and test the dramsys-integrate
 	~~~~~
     Note: If you encounter errors related to Python packages not being found, please install the necessary packages yourself.
 
-The default configuration utilizes one HBM2 channel for the DRAM model.
+The default configuration utilizes one HBM2 channel for the DRAM model. If you want to use different DRAM models, you can modify the code in `core/models/memory/dramsys.py` 
+
+```python
+import gvsoc.systree as st
+
+class Dramsys(st.Component):
+
+    def __init__(self, parent, name):
+
+        super(Dramsys, self).__init__(parent, name)
+
+        self.set_component('memory.dramsys')
+
+        self.add_properties({
+            'require_systemc': True,
+            'dram-type': 'hbm2',
+        })
+```
+
+You can change the `dram-type` to `ddr3`, `ddr4`, `hbm2`, `lpddr4`, which they models DRAM of:
+
+- `ddr3` : DDR3 DIMM (8 x MICRON_DDR3 Chips, 1GB capacity, 1600MHz-DDR)
+- `ddr4` : DDR4 DIMM (8 x JEDEC_SPEC_DDR4 Chips, 4GB capacity, 1866MHz-DDR )
+- `hbm2` : Single Channel of HBM2 Stack (1GB capacity, 2000MHz-DDR)
+- `lpddr4` : Single Channle of LPDDR4 Chip (1GB capacity, 3200MHz-DDR)
 
 
 **Outside the ETH Network:**
