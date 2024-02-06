@@ -49,6 +49,9 @@ parser.add_argument("--target-dir", dest="target_dirs", default=[], action="appe
 parser.add_argument('--target-opt', dest='target_opt', action="append", default=[],
     help='Specifies target options.')
 
+parser.add_argument("--target-property", dest="target_properties", default=[],
+    action="append", help="specify the value of a target property")
+
 parser.add_argument('--config-opt', dest='config_opt', action="append", default=[],
     help='Specifies target options (use only for backward-compatibility).')
 
@@ -78,7 +81,15 @@ try:
     # Instantiate the specified target or if no target is specified, instantiate an empty one
     # since we need a target to handle commands
     if args.target is not None:
-        target = gapylib.target.get_target(args.target)(
+        # Check if the target name has target properties inlined and if so, inject them
+        # into the list of target properties
+        target_name = args.target
+        target_properties = []
+        if target_name.find(':') != -1:
+            target_name, target_properties = target_name.split(':')
+            args.target_properties.append(target_properties)
+
+        target = gapylib.target.get_target(target_name)(
             parser=parser,
             options=args.config_opt + args.target_opt
         )
