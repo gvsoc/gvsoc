@@ -115,9 +115,6 @@ class Target():
     def __init__(self, parser, options: list=None):
 
         if parser is not None:
-            parser.add_argument("--target-property", dest="target_properties", default=[],
-                action="append", help="specify the value of a target property")
-
             parser.add_argument("--flash-property", dest="flash_properties", default=[],
                 action="append", help="specify the value of a flash property")
 
@@ -166,6 +163,7 @@ class Target():
         ]
 
         [args, _] = parser.parse_known_args()
+
         self.target_dirs = []
         self.flashes = {}
         self.work_dir = args.work_dir
@@ -392,15 +390,16 @@ class Target():
             [args, _] = self.parser.parse_known_args()
             properties = args.target_properties
 
-            for property_desc in properties:
-                # Property format is name=value
-                try:
-                    name, value = property_desc.rsplit('=', 1)
-                except Exception as exc:
-                    raise RuntimeError('Invalid target property (must be of form '
-                        '<name>=<value>: ' + property_desc) from exc
+            for property_desc_list in properties:
+                for property_desc in property_desc_list.split(','):
+                    # Property format is name=value
+                    try:
+                        name, value = property_desc.rsplit('=', 1)
+                    except Exception as exc:
+                        raise RuntimeError('Invalid target property (must be of form '
+                            '<name>=<value>: ' + property_desc) from exc
 
-                self.args_properties[name] = value
+                    self.args_properties[name] = value
 
 
     def check_args(self):
