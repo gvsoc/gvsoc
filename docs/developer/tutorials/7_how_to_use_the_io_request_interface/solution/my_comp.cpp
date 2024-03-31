@@ -1,8 +1,6 @@
 #include <vp/vp.hpp>
 #include <vp/signal.hpp>
 #include <vp/itf/io.hpp>
-#include "headers/mycomp_regfields.h"
-#include "headers/mycomp_gvsoc.h"
 
 class MyComp : public vp::Component
 {
