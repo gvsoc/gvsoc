@@ -32,7 +32,7 @@ jobs:
           make all TARGETS=occamy
           make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
           make TARGETS=snitch build
-          make all TARGETS=pulp.snitch.snitch_cluster
+          make all TARGETS=pulp.snitch.snitch_cluster_single
       - name: Run examples
         run: |
           source sourceme.sh
@@ -44,14 +44,12 @@ jobs:
           ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_fmadd.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/axpy_frep.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/tests/fp32_computation_scalar.elf
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/tests/fp32_computation_vector.elf
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/apps/axpy/axpy_frep.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/apps/axpy/axpy_ndma_24.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/apps/dnn/gemm/gemm_fp32_baseline_64.elf --trace=pe0:pe0.txt --trace-level=trace image flash run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster --binary examples/snitch_cluster/apps/dnn/gemm/gemm_fp64_baseline_64.elf --trace=fp_ss0:fp_ss0.txt --trace-level=trace image flash run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/tests/fp32_computation_scalar.elf
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/tests/fp32_computation_vector.elf
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/apps/axpy/axpy_frep.elf run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/apps/axpy/axpy_ndma_24.elf run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/apps/dnn/gemm/gemm_fp32_baseline_64.elf --trace=pe0:pe0.txt --trace-level=trace image flash run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/apps/dnn/gemm/gemm_fp64_baseline_64.elf --trace=fp_ss0:fp_ss0.txt --trace-level=trace image flash run
 
   # Removed due to no space left on eth machine
   # build_eth:
