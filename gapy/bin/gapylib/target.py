@@ -138,6 +138,9 @@ class Target():
             parser.add_argument("--binary", dest = "binary", default = None,
                 help = "Binary to execute on the target")
 
+            parser.add_argument("--debug-binary", dest = "debug_binary", action="append", default = None,
+                help = "Addiotional binaries to be laoded on the target")
+
             parser.add_argument("--flash-property-override", dest = "flash_override", default = [],
                 action="append",
                 help = "Handle to override flash property")
