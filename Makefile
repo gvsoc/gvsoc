@@ -37,15 +37,6 @@ SYSTEMC_VERSION := 2.3.3
 SYSTEMC_GIT_URL := https://github.com/accellera-official/systemc.git
 SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
-drmasys_apply_patch:
-	git submodule update --init --recursive
-	if cd core && git apply --check ../add_dramsyslib_patches/gvsoc_core.patch; then \
-		git apply ../add_dramsyslib_patches/gvsoc_core.patch;\
-	fi
-	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp.patch; then \
-		git apply ../add_dramsyslib_patches/gvsoc_pulp.patch;\
-	fi
-
 
 build-systemc: third_party/systemc_install/lib64/libsystemc.so
 
@@ -88,7 +79,7 @@ build-configs: core/models/memory/dramsys_configs
 core/models/memory/dramsys_configs:
 	cp -rf add_dramsyslib_patches/dramsys_configs core/models/memory/
 
-dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs
+dramsys_preparation: build-systemc build-dramsys build-configs
 
 clean_dramsys_preparation:
 	rm -rf third_party
