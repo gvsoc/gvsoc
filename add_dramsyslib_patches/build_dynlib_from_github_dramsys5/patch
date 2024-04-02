@@ -1,0 +1,1164 @@
+diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
+index 2dbaacd..4671dec 100644
+--- a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
++++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
+@@ -126,6 +126,40 @@ const Configuration& DRAMSys::getConfig() const
+     return config;
+ }
+ 
++unsigned char * DRAMSys::getDramBasePointer()
++{
++    unsigned char * ptr = nullptr;
++    for (auto& dram : drams)
++        ptr = dram->getDramBasePointer();
++    return ptr;
++}
++
++void DRAMSys::perloadByte(uint64_t addr, unsigned char data)
++{
++    if (config.storeMode == Configuration::StoreMode::Store )
++    {
++        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
++        for (auto& dram : drams)
++            dram->perloadByteInDram(addr,data);
++    }else{
++        SC_REPORT_FATAL(this->name(), "Storage not configured!");
++    }
++    
++}
++
++unsigned char DRAMSys::checkByte(uint64_t addr)
++{
++    if (config.storeMode == Configuration::StoreMode::Store )
++    {
++        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
++        for (auto& dram : drams)
++            return dram->checkByte(addr);
++    }else{
++        SC_REPORT_FATAL(this->name(), "Storage not configured!");
++    }
++    return 0;
++}
++
+ void DRAMSys::end_of_simulation()
+ {
+     if (config.powerAnalysis)
+diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.h b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
+index 3202b88..4c19e5f 100644
+--- a/src/libdramsys/DRAMSys/simulation/DRAMSys.h
++++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
+@@ -71,6 +71,9 @@ public:
+ 
+     const Configuration& getConfig() const;
+     const AddressDecoder& getAddressDecoder() const { return *addressDecoder; }
++    unsigned char * getDramBasePointer();
++    void perloadByte(uint64_t addr, unsigned char data);
++    unsigned char checkByte(uint64_t addr);
+ 
+     /**
+      * Returns true if all memory controllers are in idle state.
+diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
+index a2c21dc..e537d38 100644
+--- a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
++++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
+@@ -111,6 +111,24 @@ Dram::~Dram()
+         free(memory);
+ }
+ 
++unsigned char * Dram::getDramBasePointer()
++{
++    return memory;
++}
++
++void Dram::perloadByteInDram(uint64_t addr, unsigned char data)
++{
++    unsigned char *phyAddr = memory + addr;
++    *phyAddr = data;
++}
++
++unsigned char Dram::checkByte(uint64_t addr)
++{
++    unsigned char *phyAddr = memory + addr;
++    unsigned char check_data = *phyAddr;
++    return check_data;
++}
++
+ void Dram::reportPower()
+ {
+ #ifdef DRAMPOWER
+diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.h b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
+index d800406..2ee2bce 100644
+--- a/src/libdramsys/DRAMSys/simulation/dram/Dram.h
++++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
+@@ -88,6 +88,9 @@ public:
+ 
+     tlm_utils::simple_target_socket<Dram> tSocket;
+ 
++    unsigned char * getDramBasePointer();
++    void perloadByteInDram(uint64_t addr, unsigned char data);
++    unsigned char checkByte(uint64_t addr);
+     virtual void reportPower();
+ 
+     void serialize(std::ostream& stream) const override;
+diff --git a/src/simulator/CMakeLists.txt b/src/simulator/CMakeLists.txt
+index a485bbd..8891e4e 100644
+--- a/src/simulator/CMakeLists.txt
++++ b/src/simulator/CMakeLists.txt
+@@ -1,67 +1,28 @@
+-# Copyright (c) 2020, RPTU Kaiserslautern-Landau
+-# All rights reserved.
+-#
+-# Redistribution and use in source and binary forms, with or without
+-# modification, are permitted provided that the following conditions are
+-# met:
+-#
+-# 1. Redistributions of source code must retain the above copyright notice,
+-#    this list of conditions and the following disclaimer.
+-#
+-# 2. Redistributions in binary form must reproduce the above copyright
+-#    notice, this list of conditions and the following disclaimer in the
+-#    documentation and/or other materials provided with the distribution.
+-#
+-# 3. Neither the name of the copyright holder nor the names of its
+-#    contributors may be used to endorse or promote products derived from
+-#    this software without specific prior written permission.
+-#
+-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+-# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+-# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER
+-# OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+-# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-#
+-# Authors: 
+-#    Matthias Jung
+-#    Lukas Steiner
+-#    Derek Christ
+-#    Thomas Psota
+-
+ ########################################
+ ###      DRAMSys::simulator          ###
+ ########################################
+ 
+ project(DRAMSys_Simulator)
+ 
++# Gather all source and header files
+ file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
+ file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS *.h;*.hpp)
+ 
++# Exclude main.cpp from the source files list
+ list(FILTER SOURCE_FILES EXCLUDE REGEX "main.cpp")
+ 
+-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${HEADER_FILES})
++# Create a shared library instead of a static library
++add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
+ 
++# Specify include directories
+ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+ 
++# Link libraries
+ target_link_libraries(${PROJECT_NAME}
+     PUBLIC
+         Threads::Threads
+         DRAMSys::libdramsys
+ )
+ 
+-add_executable(DRAMSys
+-    main.cpp
+-)
+-
+-target_link_libraries(DRAMSys
+-    PRIVATE
+-        DRAMSys_Simulator
+-)
+-
++# Source group for better organization in IDEs
+ build_source_group()
+diff --git a/src/simulator/simulator/MemoryManager.cpp b/src/simulator/simulator/MemoryManager.cpp
+index 44d6502..8283798 100644
+--- a/src/simulator/simulator/MemoryManager.cpp
++++ b/src/simulator/simulator/MemoryManager.cpp
+@@ -53,6 +53,8 @@ MemoryManager::~MemoryManager()
+             tlm_generic_payload* payload = innerBuffer.second.top();
+             if (storageEnabled)
+                 delete[] payload->get_data_ptr();
++            if (payload->get_byte_enable_ptr())
++                delete[] payload->get_byte_enable_ptr();
+             payload->reset();
+             delete payload;
+             innerBuffer.second.pop();
+@@ -92,5 +94,9 @@ tlm_generic_payload& MemoryManager::allocate(unsigned dataLength)
+ void MemoryManager::free(tlm_generic_payload* payload)
+ {
+     unsigned dataLength = payload->get_data_length();
++    if (payload->get_byte_enable_ptr()){
++        delete[] payload->get_byte_enable_ptr();
++        payload->set_byte_enable_ptr(nullptr);
++    }
+     freePayloads[dataLength].push(payload);
+ }
+diff --git a/src/simulator/simulator/Simulator.h b/src/simulator/simulator/Simulator.h
+index 35f2ddf..3cff9dd 100644
+--- a/src/simulator/simulator/Simulator.h
++++ b/src/simulator/simulator/Simulator.h
+@@ -37,6 +37,7 @@
+ 
+ #include "Initiator.h"
+ #include "MemoryManager.h"
++#include "dramsys_conv.h"
+ 
+ #include <DRAMSys/config/DRAMSysConfiguration.h>
+ #include <DRAMSys/simulation/DRAMSysRecordable.h>
+diff --git a/src/simulator/simulator/dramsys_conv.h b/src/simulator/simulator/dramsys_conv.h
+new file mode 100644
+index 0000000..d9787f5
+--- /dev/null
++++ b/src/simulator/simulator/dramsys_conv.h
+@@ -0,0 +1,363 @@
++#pragma once
++
++#include "simulator/MemoryManager.h"
++
++#include <systemc>
++#include <iostream>
++#include <fstream>
++#include <deque>
++#include <string>
++#include <math.h>
++#include <queue>
++#include <list>
++#include <memory>
++#include <fcntl.h>
++#include <unistd.h>
++
++#include <iostream>
++#include <memory>
++#include <string>
++#include <utility>
++#include <vector>
++#include <list>
++#include <chrono>
++
++#include <systemc>
++#include <tlm>
++#include <tlm_utils/peq_with_cb_and_phase.h>
++#include <tlm_utils/simple_initiator_socket.h>
++
++using namespace sc_core;
++using namespace tlm;
++
++typedef void*   CallbackInstance_t;
++typedef void    (AsynCallbackResp_Meth)(CallbackInstance_t instance, int is_write);
++typedef void    (AsynCallbackUpdateReq_Meth)(CallbackInstance_t instance);
++
++SC_MODULE(dramsys_conv)
++{
++
++    struct req_t
++    {
++        uint64_t                                      addr;
++        uint32_t                                      len;
++        int                                           is_write;
++    };
++
++    std::list<req_t>                                  all_req_list;
++    std::list<req_t>                                  read_req_list;
++    std::list<std::pair<req_t, std::queue<uint8_t>>>  out_order_rsp_list;
++    std::list<req_t>                                  write_req_list;
++    std::queue<uint8_t>                               read_rsp_queue;
++    std::queue<int>                                   write_rsp_queue;
++    int                                               max_pending_req;
++    int                                               inflight_read_cnt;
++
++    //tlm utilities
++    tlm_utils::simple_initiator_socket<dramsys_conv>  iSocket;
++    tlm_utils::peq_with_cb_and_phase<dramsys_conv>    payloadEventQueue;
++    MemoryManager                                     memoryManager;
++
++    //callback function of iSocket
++    tlm_sync_enum nb_transport_bw(tlm_generic_payload &payload, tlm_phase &phase, sc_time &bwDelay){
++        payloadEventQueue.notify(payload, phase, bwDelay);
++      return TLM_ACCEPTED;
++    }
++
++    //callback for asynchronize interface
++    CallbackInstance_t                                async_callback_instance;
++    AsynCallbackResp_Meth*                            async_callback_response_meth;
++    AsynCallbackUpdateReq_Meth*                       async_callback_update_request_meth;
++
++    //callback function to deal with
++    void peqCallback(tlm_generic_payload &payload,const tlm_phase &phase){
++      if (phase == END_REQ)
++      {
++        req_t req;
++        std::list<req_t>::iterator it;
++        it = all_req_list.begin();
++        req = *it;
++        if (payload.get_command() == tlm::TLM_READ_COMMAND ){
++            if (req.is_write != 0)
++            {
++              SC_REPORT_FATAL("CONV", "end read request, but pop write req");
++            }
++            read_req_list.push_back(req);
++            inflight_read_cnt ++;
++            // std::cout << sc_time_stamp() <<"  ---- Accept a Read Req -----" << std::endl;
++        }
++        if (payload.get_command() == tlm::TLM_WRITE_COMMAND){
++            if (req.is_write == 0)
++            {
++              SC_REPORT_FATAL("CONV", "end write request, but pop read req");
++            }
++            write_req_list.push_back(req);
++            // std::cout << sc_time_stamp() <<"  ---- Accept a Write Req -----" << std::endl;
++        }
++        all_req_list.pop_front();
++        if (async_callback_instance && async_callback_update_request_meth)
++        {
++            async_callback_update_request_meth(async_callback_instance);
++        }
++      }
++      else if (phase == BEGIN_RESP)
++      {
++        // std::cout << sc_time_stamp() <<"  ---- Response Come-----" << std::endl;
++        if (payload.get_command() == tlm::TLM_READ_COMMAND)
++        {
++          //check if the response can be find in request list
++          req_t req;
++          {
++            std::list<req_t>::iterator it;
++            int find_out = 0;
++            for (it = read_req_list.begin(); it != read_req_list.end(); ++it)
++            {
++              req = *it;
++              if (req.addr == payload.get_address() && req.len == payload.get_data_length())
++              {
++                find_out = 1;
++                break;
++              }
++            }
++            if (find_out == 0)
++            {
++              SC_REPORT_FATAL("AXI4_to_TLM", "How could? can not find corresponding request!");
++            }
++          }
++
++          // std::cout << sc_time_stamp() <<"  ---- Match Read Resp-----" << std::endl;
++
++          std::queue<uint8_t>     rsp_out_order_queue;
++          std::pair<req_t, std::queue<uint8_t>> pair;
++
++          unsigned char * data_ptr = (unsigned char*)malloc(payload.get_data_length());
++          memcpy(data_ptr, payload.get_data_ptr(), payload.get_data_length());
++
++          for (int i = 0; i < req.len; ++i)
++          {
++              rsp_out_order_queue.push(data_ptr[i]);
++          }
++          pair.first = req;
++          pair.second = rsp_out_order_queue;
++          out_order_rsp_list.push_back(pair);
++
++          free(data_ptr);
++
++          {
++            std::list<req_t>::iterator req_it;
++            std::list<std::pair<req_t, std::queue<uint8_t>>>::iterator rsp_it;
++            while (true)
++            {
++                if (read_req_list.size() == 0)
++                {
++                    break;
++                }
++
++                req_it = read_req_list.begin();
++
++                int matched = 0;
++
++                //sanity check if out of order is empty
++                if (out_order_rsp_list.size() == 0)
++                {
++                    break;
++                }
++
++                for (rsp_it = out_order_rsp_list.begin(); rsp_it != out_order_rsp_list.end(); ++rsp_it)
++                {
++                    if ( req_it->addr == rsp_it->first.addr && req_it->len == rsp_it->first.len )
++                    {
++                        matched = 1;
++                        break;
++                    }
++                }
++
++                if (matched == 0)
++                {
++                    break;
++                }
++
++                //push data and erase
++                std::queue<uint8_t> oo_queue = rsp_it->second;
++                for (uint32_t i = 0; i < req_it->len; ++i)
++                {
++                    uint8_t byte;
++                    byte = oo_queue.front();
++                    read_rsp_queue.push(byte);
++                    oo_queue.pop();
++                }
++                read_req_list.erase(req_it);
++                out_order_rsp_list.erase(rsp_it);
++                inflight_read_cnt --;
++                if (async_callback_instance && async_callback_response_meth)
++                {
++                    async_callback_response_meth(async_callback_instance, 0);
++                }
++            }
++          }
++        }
++        if (payload.get_command() == tlm::TLM_WRITE_COMMAND)
++        {
++            write_req_list.pop_front();
++            write_rsp_queue.push(1);
++            if (async_callback_instance && async_callback_response_meth)
++            {
++                async_callback_response_meth(async_callback_instance, 1);
++            }
++        }
++        payload.release();
++        sendToTarget(payload, END_RESP, SC_ZERO_TIME);
++      }
++      else
++      {
++          SC_REPORT_FATAL("dramsys_conv", "PEQ was triggered with unknown phase");
++      }
++    }
++
++    //send request via socket
++    void sendToTarget(tlm_generic_payload &payload, const tlm_phase &phase, const sc_time &delay)
++    {
++      tlm_phase TPhase = phase;
++      sc_time TDelay = delay;
++      iSocket->nb_transport_fw(payload, TPhase, TDelay);
++    }
++
++    //public functions
++    int dram_can_accept_req()
++    {
++        return (all_req_list.size() < max_pending_req);
++    }
++
++    void dram_send_req(uint64_t addr, uint64_t length , uint64_t is_write, uint64_t strob_enable, uint8_t * buf, uint8_t * strb_buf)
++    {
++        req_t req;
++        tlm_generic_payload& payload = memoryManager.allocate(length);
++
++        req.addr = addr;
++        req.len  = length;
++        req.is_write = is_write;
++        payload.acquire();
++        payload.set_address(addr);
++        payload.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
++        payload.set_dmi_allowed(false);
++        if (strob_enable)
++        {
++            // std::cout << sc_time_stamp() <<"  ---- Write With Strobe-----" << std::endl;
++            payload.set_byte_enable_length(length);
++            // Allocate a strobe buffer, this strobe buffer will be deleted with payload delete
++            auto* strb = new unsigned char[length];
++            payload.set_byte_enable_ptr(strb);
++            memcpy(payload.get_byte_enable_ptr(), strb_buf , length);
++            // std::cout << "Strb: ";
++            // for (int i = 0; i < length; ++i)
++            // {
++            //     if (strb_buf[i] == TLM_BYTE_ENABLED)
++            //     {
++            //         std::cout << "1,";
++            //     } else if (strb_buf[i] == TLM_BYTE_DISABLED)
++            //     {
++            //         std::cout << "0,";
++            //     } else {
++            //         std::cout << "Nan,";
++            //     }
++            // }
++            // std::cout << std::endl;
++            // std::cout << std::dec << (long long int)payload.get_byte_enable_ptr() << std::endl;
++        }else{
++            // std::cout << sc_time_stamp() <<"  ---- Without Strobe-----" << std::endl;
++            payload.set_byte_enable_length(0);
++        }
++        payload.set_data_length(length);
++        payload.set_streaming_width(length);
++
++        if (is_write)
++        {
++            memcpy(payload.get_data_ptr(), buf , payload.get_data_length());
++            payload.set_command(tlm::TLM_WRITE_COMMAND);
++            sendToTarget(payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
++            all_req_list.push_back(req);
++        } else {
++            payload.set_command(tlm::TLM_READ_COMMAND);
++            sendToTarget(payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
++            all_req_list.push_back(req);
++        }
++
++    }
++
++    int dram_has_read_rsp()
++    {
++        return read_rsp_queue.size();
++    }
++
++    int dram_has_write_rsp()
++    {
++        return write_rsp_queue.size();
++    }
++
++    int dram_get_write_rsp()
++    {
++        write_rsp_queue.pop();
++        return 1;
++    }
++
++    void dram_get_read_rsp(uint64_t length, uint8_t* buf)
++    {
++        for (int i = 0; i < length; ++i)
++        {
++            if (read_rsp_queue.size())
++            {
++                buf[i] = read_rsp_queue.front();
++                read_rsp_queue.pop();
++            } else {
++                buf[i] = 0;
++            }
++        }
++    }
++
++    uint8_t dram_get_read_rsp_byte()
++    {
++        uint8_t byte;
++        if (read_rsp_queue.size())
++        {
++            byte = read_rsp_queue.front();
++            read_rsp_queue.pop();
++        } else {
++            byte = 0;
++        }
++        return byte;
++    }
++
++    void registerCBInstance(CallbackInstance_t instance)
++    {
++        async_callback_instance = instance;
++    }
++
++    void registerCBRespMeth(AsynCallbackResp_Meth* meth)
++    {
++        async_callback_response_meth = meth;
++    }
++
++    void registerCBUpdateReqMeth(AsynCallbackUpdateReq_Meth* meth)
++    {
++        async_callback_update_request_meth = meth;
++    }
++
++
++    SC_CTOR(dramsys_conv):
++    max_pending_req(1),
++    inflight_read_cnt(0),
++    memoryManager(true),
++    iSocket("socket"),
++    async_callback_instance(nullptr),
++    async_callback_response_meth(nullptr),
++    async_callback_update_request_meth(nullptr),
++    payloadEventQueue(this, &dramsys_conv::peqCallback)
++    {
++        iSocket.register_nb_transport_bw(this, &dramsys_conv::nb_transport_bw);
++    }
++
++};
++
++
++
++
+diff --git a/src/simulator/simulator/dramsys_lib.cpp b/src/simulator/simulator/dramsys_lib.cpp
+new file mode 100644
+index 0000000..fb90e9a
+--- /dev/null
++++ b/src/simulator/simulator/dramsys_lib.cpp
+@@ -0,0 +1,253 @@
++#include "Simulator.h"
++
++#include <DRAMSys/config/DRAMSysConfiguration.h>
++#include <filesystem>
++#include "elfloader.h"
++
++#define svOpenArrayHandle void*
++
++std::vector<uint64_t>                               list_of_DRAMburst;
++std::vector<uint64_t>                               list_of_DRAMsize;
++std::vector<DRAMSys::DRAMSys *>                     list_of_DRAMsys;
++std::vector<dramsys_conv *>                         list_of_conv;
++std::vector<uint8_t *>                              list_of_wbuffer;
++std::vector<uint8_t *>                              list_of_wstrobe;
++
++extern "C" int add_dram(char * resources_path, char * simulationJson_path){
++
++    static int id = 0;
++
++    std::filesystem::path resourceDirectory = DRAMSYS_RESOURCE_DIR;
++    if (resources_path != 0)
++    {
++        resourceDirectory = resources_path;
++    }
++
++    std::filesystem::path baseConfig = resourceDirectory / "hbm2-example.json";
++    if (simulationJson_path != 0)
++    {
++        baseConfig = simulationJson_path;
++    }
++
++    DRAMSys::Config::Configuration configuration =
++        DRAMSys::Config::from_path(baseConfig.c_str(), resourceDirectory.c_str());
++
++    DRAMSys::DRAMSys * dramSys;
++    dramsys_conv * conv;
++
++    std::string dramsys_name = "DRAMSysRecordable";
++    std::string conv_name = "dramsys_conv";
++    std::string id_str = std::to_string(id);
++    dramsys_name = dramsys_name + id_str;
++    conv_name = conv_name + id_str;
++
++    if (configuration.simconfig.DatabaseRecording.value_or(false))
++    {
++        dramSys = new DRAMSys::DRAMSysRecordable(dramsys_name.c_str(), configuration);
++    }
++    else
++    {
++        dramSys = new DRAMSys::DRAMSys(dramsys_name.c_str(), configuration);
++    }
++
++    conv = new dramsys_conv(conv_name.c_str());
++
++    conv->iSocket.bind(dramSys->tSocket);
++
++    //init systemC engine
++    if (id == 0)
++    {
++        auto start = std::chrono::high_resolution_clock::now();
++        sc_set_stop_mode(SC_STOP_FINISH_DELTA);
++    }
++
++    DRAMSys::Configuration config;
++    config.loadMemSpec(configuration.memspec);
++    uint64_t dramChannelSize = config.memSpec->getSimMemSizeInBytes() / config.memSpec->numberOfChannels;
++    uint64_t dramMaxBurstByte = config.memSpec->maxBytesPerBurst;
++
++    //put them into vector container
++    list_of_DRAMsys.push_back(dramSys);
++    list_of_conv.push_back(conv);
++    list_of_DRAMsize.push_back(dramChannelSize);
++    list_of_DRAMburst.push_back(dramMaxBurstByte);
++
++    uint8_t* wbuffer_ptr = new uint8_t [2048];
++    list_of_wbuffer.push_back(wbuffer_ptr);
++
++    uint8_t* wstrobe_ptr = new uint8_t [2048];
++    list_of_wstrobe.push_back(wstrobe_ptr);
++
++
++    std::cout << "the instantiated DRAM id is: " << id << std::endl;
++
++    int res = id;
++    id += 1;
++    return res;
++
++}
++
++
++
++extern "C" int dram_can_accept_req(int dram_id) {
++
++    // std::cout << "dram_can_accept_req:  #" << dram_id << std::endl;
++    return list_of_conv[dram_id]->dram_can_accept_req();
++}
++
++
++extern "C" int dram_has_read_rsp(int dram_id) {
++
++    // std::cout << "dram_has_read_rsp:  #" << dram_id << std::endl;
++    return list_of_conv[dram_id]->dram_has_read_rsp();
++}
++
++extern "C" int dram_has_write_rsp(int dram_id) {
++
++    // std::cout << "dram_has_read_rsp:  #" << dram_id << std::endl;
++    return list_of_conv[dram_id]->dram_has_write_rsp();
++}
++
++extern "C" int dram_get_write_rsp(int dram_id) {
++    return list_of_conv[dram_id]->dram_get_write_rsp();
++}
++
++extern "C" void dram_write_buffer(int dram_id, int byte_int, int idx) {
++
++    // std::cout << "dram_send_req:  #" << dram_id << std::endl;
++    ((uint8_t *)(list_of_wbuffer[dram_id]))[idx] = (uint8_t)byte_int;
++}
++
++extern "C" void dram_write_strobe(int dram_id, int strob_int, int idx) {
++
++    // std::cout << "dram_send_req:  #" << dram_id << std::endl;
++    ((uint8_t *)(list_of_wstrobe[dram_id]))[idx] = strob_int != 0? TLM_BYTE_ENABLED: TLM_BYTE_DISABLED;
++}
++
++extern "C" void dram_send_req(int dram_id, uint64_t addr, uint64_t length , uint64_t is_write, uint64_t strob_enable) {
++
++    // std::cout << "dram_send_req:  #" << dram_id << std::endl;
++    if (is_write && strob_enable && (length > list_of_DRAMburst[dram_id]))
++    {
++        if (length%list_of_DRAMburst[dram_id] != 0) SC_REPORT_FATAL("dramsys_conv", "cannot tackle strob write with misaligned size");
++        int num_subreq = length/list_of_DRAMburst[dram_id];
++        uint64_t sub_addr = addr;
++        uint8_t * wbuf_ptr = list_of_wbuffer[dram_id];
++        uint8_t * wstrb_ptr = list_of_wstrobe[dram_id];
++        for (int i = 0; i < num_subreq; ++i)
++        {
++            list_of_conv[dram_id]->dram_send_req(sub_addr, list_of_DRAMburst[dram_id], is_write, strob_enable, wbuf_ptr, wstrb_ptr);
++            sub_addr = sub_addr + list_of_DRAMburst[dram_id];
++            wbuf_ptr = wbuf_ptr + list_of_DRAMburst[dram_id];
++            wstrb_ptr = wstrb_ptr + list_of_DRAMburst[dram_id];
++        }
++
++    } else {
++        list_of_conv[dram_id]->dram_send_req(addr, length, is_write, strob_enable, list_of_wbuffer[dram_id], list_of_wstrobe[dram_id]);
++    }
++}
++
++extern "C" void dram_get_read_rsp(int dram_id, uint64_t length, const svOpenArrayHandle buf) {
++
++    // std::cout << "dram_get_read_rsp:  #" << dram_id << std::endl;
++    list_of_conv[dram_id]->dram_get_read_rsp(length, (uint8_t *)buf);
++    // std::cout << "p10"<< std::endl;
++}
++
++extern "C" int dram_get_read_rsp_byte(int dram_id) {
++
++    uint8_t byte;
++    int byte_int;
++    byte = list_of_conv[dram_id]->dram_get_read_rsp_byte();
++    byte_int = (int)byte;
++    // std::cout << "dram_get_read_rsp_byte: " << byte_int << std::endl;
++    return byte_int;
++}
++
++extern "C" void run_ns(int ns) {
++    sc_start(ns, SC_NS);
++}
++
++extern "C" int dram_get_inflight_read(int dram_id) {
++    return list_of_conv[dram_id]->inflight_read_cnt;
++}
++
++
++extern "C" void cloes_dram(int dram_id) {
++    if(dram_id == 0) sc_stop();
++    delete list_of_conv[dram_id];
++    delete list_of_DRAMsys[dram_id];
++}
++
++
++extern "C" void dram_preload_byte(int dram_id, uint64_t dram_addr_ofst, int byte_int) {
++    // std::cout << "Load byte " << byte_int << ", in addr "<<dram_addr_ofst <<", DRAM id " << dram_id << std::endl;
++    list_of_DRAMsys[dram_id]->perloadByte(dram_addr_ofst,byte_int);
++}
++
++extern "C" int dram_check_byte(int dram_id, uint64_t dram_addr_ofst) {
++    // std::cout << "Load byte " << byte_int << ", in addr "<<dram_addr_ofst <<", DRAM id " << dram_id << std::endl;
++    return list_of_DRAMsys[dram_id]->checkByte(dram_addr_ofst);
++}
++
++extern "C" void dram_load_elf(int dram_id, uint64_t dram_base_addr, char * elf_path) {
++    std::string app_binary;
++    app_binary = elf_path;
++    std::ifstream f(app_binary.c_str());
++    if (f.good())
++    {
++        elfloader_read_elf(app_binary.c_str(), list_of_DRAMsize[dram_id], dram_base_addr, list_of_DRAMsys[dram_id]->getDramBasePointer());
++        std::cout << "Load elf file [" << app_binary << "] in DRAM id " << dram_id << std::endl;
++    } else {
++        std::cout << "Can not Load elf file [" << app_binary << "] in DRAM id " << dram_id << " : File not found"<< std::endl;
++    }
++
++}
++
++extern "C" void dram_load_memfile(int dram_id, uint64_t addr_ofst, char * mem_path){
++
++    //Memory pre-loading
++    std::string read_byte;
++    uint64_t addr = addr_ofst;
++    std::cout << "Load mem file [" << mem_path << "] in DRAM id " << dram_id << " from addr " << addr_ofst << std::endl;
++    std::ifstream MemFile(mem_path);
++    //sanity check
++    if (!MemFile.good())
++    {
++        std::cout << "Can not Load Mem file [" << mem_path << "] in DRAM id " << dram_id << " : File not found"<< std::endl;
++        return;
++    }
++
++    //Get the total file size
++    MemFile.seekg(0, std::ios::end);
++    std::streampos fileSize = MemFile.tellg();
++    MemFile.seekg(0, std::ios::beg);
++
++
++    double percentage_cnt = 0.0;
++    double cnt_add = 0.5;
++    //Load Mem file
++    while(getline(MemFile,read_byte)){
++        //Calculate the percentage loaded
++        std::streampos currentPosition = MemFile.tellg();
++        double percentage = (static_cast<double>(currentPosition) / fileSize) * 100.0;
++
++        //Write to Dram Buffer
++        unsigned int data;
++        std::stringstream ss;
++        ss << std::hex << read_byte;
++        ss >> data;
++        list_of_DRAMsys[dram_id]->perloadByte(addr,data);
++        addr++;
++    }
++    MemFile.close();
++    std::cout << std::endl;
++    std::cout << "Load Mem Completed !" << std::endl;
++}
++
++extern "C" void dram_register_async_callback(int dram_id, CallbackInstance_t instance, AsynCallbackResp_Meth* resp_meth, AsynCallbackUpdateReq_Meth* req_meth) {
++    list_of_conv[dram_id]->registerCBInstance(instance);
++    list_of_conv[dram_id]->registerCBRespMeth(resp_meth);
++    list_of_conv[dram_id]->registerCBUpdateReqMeth(req_meth);
++}
++
+diff --git a/src/simulator/simulator/elfloader.cpp b/src/simulator/simulator/elfloader.cpp
+new file mode 100644
+index 0000000..57d7b6d
+--- /dev/null
++++ b/src/simulator/simulator/elfloader.cpp
+@@ -0,0 +1,106 @@
++#include "elfloader.h"
++
++#define SHT_PROGBITS 0x1
++#define SHT_GROUP 0x11
++
++// address and size
++std::vector<std::pair<reg_t, reg_t>> sections;
++std::map<std::string, uint64_t> symbols;
++// memory based address and content
++reg_t entry;
++int section_index = 0;
++
++void write (uint64_t address, uint64_t len, uint8_t* buf, long long dest_size, long long dest_base_addr, unsigned char * dest_buffer) {
++    std::cout << "elfloader section addr: 0x" << std::hex << address << " len: 0x" << len <<std::endl;
++    for (int i = 0; i < len; i++) {
++        assert( address - dest_base_addr + i < dest_size);
++        dest_buffer[address - dest_base_addr + i] = buf[i];
++        // std::cout << "offset 0x" << address - dest_base_addr + i << "= 0x" << std::hex <<(unsigned int)buf[i] <<std::endl;
++    }
++}
++
++// Communicate the section address and len
++// Returns:
++// 0 if there are no more sections
++// 1 if there are more sections to load
++char elfloader_get_section (long long* address, long long* len) {
++    if (section_index < sections.size()) {
++      *address = sections[section_index].first;
++      *len = sections[section_index].second;
++      section_index++;
++      return 1;
++    } else return 0;
++}
++
++
++void elfloader_read_elf(const char* filename, long long dest_size, long long dest_base_addr, unsigned char * dest_buffer) {
++    int fd = open(filename, O_RDONLY);
++    struct stat s;
++    assert(fd != -1);
++    if (fstat(fd, &s) < 0)
++    abort();
++    size_t size = s.st_size;
++
++    char* buf = (char*)mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
++    assert(buf != MAP_FAILED);
++    close(fd);
++
++    assert(size >= sizeof(Elf64_Ehdr));
++    const Elf64_Ehdr* eh64 = (const Elf64_Ehdr*)buf;
++    assert(IS_ELF32(*eh64) || IS_ELF64(*eh64));
++
++
++
++    std::vector<uint8_t> zeros;
++    std::map<std::string, uint64_t> symbols;
++
++    #define LOAD_ELF(ehdr_t, phdr_t, shdr_t, sym_t) do { \
++    ehdr_t* eh = (ehdr_t*)buf; \
++    phdr_t* ph = (phdr_t*)(buf + eh->e_phoff); \
++    entry = eh->e_entry; \
++    assert(size >= eh->e_phoff + eh->e_phnum*sizeof(*ph)); \
++    for (unsigned i = 0; i < eh->e_phnum; i++) { \
++      if(ph[i].p_type == PT_LOAD && ph[i].p_memsz) { \
++        if (ph[i].p_filesz) { \
++          assert(size >= ph[i].p_offset + ph[i].p_filesz); \
++          sections.push_back(std::make_pair(ph[i].p_paddr, ph[i].p_memsz)); \
++          write(ph[i].p_paddr, ph[i].p_filesz, (uint8_t*)buf + ph[i].p_offset, dest_size, dest_base_addr, dest_buffer); \
++        } \
++        zeros.resize(ph[i].p_memsz - ph[i].p_filesz); \
++      } \
++    } \
++    shdr_t* sh = (shdr_t*)(buf + eh->e_shoff); \
++    assert(size >= eh->e_shoff + eh->e_shnum*sizeof(*sh)); \
++    assert(eh->e_shstrndx < eh->e_shnum); \
++    assert(size >= sh[eh->e_shstrndx].sh_offset + sh[eh->e_shstrndx].sh_size); \
++    char *shstrtab = buf + sh[eh->e_shstrndx].sh_offset; \
++    unsigned strtabidx = 0, symtabidx = 0; \
++    for (unsigned i = 0; i < eh->e_shnum; i++) { \
++      unsigned max_len = sh[eh->e_shstrndx].sh_size - sh[i].sh_name; \
++      if ((sh[i].sh_type & SHT_GROUP) && strcmp(shstrtab + sh[i].sh_name, ".strtab") != 0 && strcmp(shstrtab + sh[i].sh_name, ".shstrtab") != 0) \
++      assert(strnlen(shstrtab + sh[i].sh_name, max_len) < max_len); \
++      if (sh[i].sh_type & SHT_PROGBITS) continue; \
++      if (strcmp(shstrtab + sh[i].sh_name, ".strtab") == 0) \
++        strtabidx = i; \
++      if (strcmp(shstrtab + sh[i].sh_name, ".symtab") == 0) \
++        symtabidx = i; \
++    } \
++    if (strtabidx && symtabidx) { \
++      char* strtab = buf + sh[strtabidx].sh_offset; \
++      sym_t* sym = (sym_t*)(buf + sh[symtabidx].sh_offset); \
++      for (unsigned i = 0; i < sh[symtabidx].sh_size/sizeof(sym_t); i++) { \
++        unsigned max_len = sh[strtabidx].sh_size - sym[i].st_name; \
++        assert(sym[i].st_name < sh[strtabidx].  sh_size); \
++        assert(strnlen(strtab + sym[i].st_name, max_len) < max_len); \
++        symbols[strtab + sym[i].st_name] = sym[i].st_value; \
++      } \
++    } \
++    } while(0)
++
++  if (IS_ELF32(*eh64))
++    LOAD_ELF(Elf32_Ehdr, Elf32_Phdr, Elf32_Shdr, Elf32_Sym);
++  else
++    LOAD_ELF(Elf64_Ehdr, Elf64_Phdr, Elf64_Shdr, Elf64_Sym);
++
++  munmap(buf, size);
++}
+\ No newline at end of file
+diff --git a/src/simulator/simulator/elfloader.h b/src/simulator/simulator/elfloader.h
+new file mode 100644
+index 0000000..52c37b0
+--- /dev/null
++++ b/src/simulator/simulator/elfloader.h
+@@ -0,0 +1,200 @@
++#ifndef _ELFLOADER_H
++#define _ELFLOADER_H
++
++#include <cstring>
++#include <string>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <assert.h>
++#include <unistd.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <vector>
++#include <map>
++#include <iostream>
++#include <stdint.h>
++#include <stddef.h>
++
++#define ET_EXEC 2
++#define EM_RISCV 243
++#define EM_NONE 0
++#define EV_CURRENT 1
++
++#define IS_ELF(hdr) \
++  ((hdr).e_ident[0] == 0x7f && (hdr).e_ident[1] == 'E' && \
++   (hdr).e_ident[2] == 'L'  && (hdr).e_ident[3] == 'F')
++
++#define IS_ELF32(hdr) (IS_ELF(hdr) && (hdr).e_ident[4] == 1)
++#define IS_ELF64(hdr) (IS_ELF(hdr) && (hdr).e_ident[4] == 2)
++#define IS_ELFLE(hdr) (IS_ELF(hdr) && (hdr).e_ident[5] == 1)
++#define IS_ELFBE(hdr) (IS_ELF(hdr) && (hdr).e_ident[5] == 2)
++#define IS_ELF_EXEC(hdr) (IS_ELF(hdr) && (hdr).e_type == ET_EXEC)
++#define IS_ELF_RISCV(hdr) (IS_ELF(hdr) && (hdr).e_machine == EM_RISCV)
++#define IS_ELF_EM_NONE(hdr) (IS_ELF(hdr) && (hdr).e_machine == EM_NONE)
++#define IS_ELF_VCURRENT(hdr) (IS_ELF(hdr) && (hdr).e_version == EV_CURRENT)
++
++#define PT_LOAD 1
++
++#define SHT_NOBITS 8
++
++typedef struct {
++  uint8_t  e_ident[16];
++  uint16_t e_type;
++  uint16_t e_machine;
++  uint32_t e_version;
++  uint32_t e_entry;
++  uint32_t e_phoff;
++  uint32_t e_shoff;
++  uint32_t e_flags;
++  uint16_t e_ehsize;
++  uint16_t e_phentsize;
++  uint16_t e_phnum;
++  uint16_t e_shentsize;
++  uint16_t e_shnum;
++  uint16_t e_shstrndx;
++} Elf32_Ehdr;
++
++typedef struct {
++  uint32_t sh_name;
++  uint32_t sh_type;
++  uint32_t sh_flags;
++  uint32_t sh_addr;
++  uint32_t sh_offset;
++  uint32_t sh_size;
++  uint32_t sh_link;
++  uint32_t sh_info;
++  uint32_t sh_addralign;
++  uint32_t sh_entsize;
++} Elf32_Shdr;
++
++typedef struct
++{
++  uint32_t p_type;
++  uint32_t p_offset;
++  uint32_t p_vaddr;
++  uint32_t p_paddr;
++  uint32_t p_filesz;
++  uint32_t p_memsz;
++  uint32_t p_flags;
++  uint32_t p_align;
++} Elf32_Phdr;
++
++typedef struct
++{
++  uint32_t st_name;
++  uint32_t st_value;
++  uint32_t st_size;
++  uint8_t  st_info;
++  uint8_t  st_other;
++  uint16_t st_shndx;
++} Elf32_Sym;
++
++typedef struct {
++  uint8_t  e_ident[16];
++  uint16_t e_type;
++  uint16_t e_machine;
++  uint32_t e_version;
++  uint64_t e_entry;
++  uint64_t e_phoff;
++  uint64_t e_shoff;
++  uint32_t e_flags;
++  uint16_t e_ehsize;
++  uint16_t e_phentsize;
++  uint16_t e_phnum;
++  uint16_t e_shentsize;
++  uint16_t e_shnum;
++  uint16_t e_shstrndx;
++} Elf64_Ehdr;
++
++typedef struct {
++  uint32_t sh_name;
++  uint32_t sh_type;
++  uint64_t sh_flags;
++  uint64_t sh_addr;
++  uint64_t sh_offset;
++  uint64_t sh_size;
++  uint32_t sh_link;
++  uint32_t sh_info;
++  uint64_t sh_addralign;
++  uint64_t sh_entsize;
++} Elf64_Shdr;
++
++typedef struct {
++  uint32_t p_type;
++  uint32_t p_flags;
++  uint64_t p_offset;
++  uint64_t p_vaddr;
++  uint64_t p_paddr;
++  uint64_t p_filesz;
++  uint64_t p_memsz;
++  uint64_t p_align;
++} Elf64_Phdr;
++
++typedef struct {
++  uint32_t st_name;
++  uint8_t  st_info;
++  uint8_t  st_other;
++  uint16_t st_shndx;
++  uint64_t st_value;
++  uint64_t st_size;
++} Elf64_Sym;
++
++typedef uint64_t reg_t;
++typedef int64_t sreg_t;
++typedef reg_t addr_t;
++
++class chunked_memif_t
++{
++public:
++  virtual void read_chunk(addr_t taddr, size_t len, void* dst) = 0;
++  virtual void write_chunk(addr_t taddr, size_t len, const void* src) = 0;
++  virtual void clear_chunk(addr_t taddr, size_t len) = 0;
++
++  virtual size_t chunk_align() = 0;
++  virtual size_t chunk_max_size() = 0;
++};
++
++class memif_t
++{
++public:
++  memif_t(chunked_memif_t* _cmemif) : cmemif(_cmemif) {}
++  virtual ~memif_t(){}
++
++  // read and write byte arrays
++  virtual void read(addr_t addr, size_t len, void* bytes);
++  virtual void write(addr_t addr, size_t len, const void* bytes);
++
++  // read and write 8-bit words
++  virtual uint8_t read_uint8(addr_t addr);
++  virtual int8_t read_int8(addr_t addr);
++  virtual void write_uint8(addr_t addr, uint8_t val);
++  virtual void write_int8(addr_t addr, int8_t val);
++
++  // read and write 16-bit words
++  virtual uint16_t read_uint16(addr_t addr);
++  virtual int16_t read_int16(addr_t addr);
++  virtual void write_uint16(addr_t addr, uint16_t val);
++  virtual void write_int16(addr_t addr, int16_t val);
++
++  // read and write 32-bit words
++  virtual uint32_t read_uint32(addr_t addr);
++  virtual int32_t read_int32(addr_t addr);
++  virtual void write_uint32(addr_t addr, uint32_t val);
++  virtual void write_int32(addr_t addr, int32_t val);
++
++  // read and write 64-bit words
++  virtual uint64_t read_uint64(addr_t addr);
++  virtual int64_t read_int64(addr_t addr);
++  virtual void write_uint64(addr_t addr, uint64_t val);
++  virtual void write_int64(addr_t addr, int64_t val);
++
++protected:
++  chunked_memif_t* cmemif;
++};
++
++char elfloader_get_section (long long* address, long long* len);
++char elfloader_read_section (long long address, unsigned char * buf);
++void elfloader_read_elf(const char* filename, long long dest_size, long long dest_base_addr, unsigned char * dest_buffer);
++
++#endif
+\ No newline at end of file

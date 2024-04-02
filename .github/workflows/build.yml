@@ -22,14 +22,19 @@ jobs:
           sudo pip3 install -r gapy/requirements.txt
       - name: build all targets
         run: |
+          source sourceme.sh
+          make dramsys_preparation
+          make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open
           make all TARGETS=pulp.spatz.spatz
           make all TARGETS=pulp.snitch.snitch_cluster_single
       - name: Run examples
         run: |
+          source sourceme.sh
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
+          ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/tests/fp32_computation_scalar.elf
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/tests/fp32_computation_vector.elf
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/apps/axpy/axpy_frep.elf run
