@@ -1,0 +1,202 @@
+
+{
+    "alias": "0x00000000",
+    "mapping": {
+        "base": "0x10000000",
+        "size": "0x01000000"
+    },
+
+    "version": 5,
+    "json_file": "cluster_v6",
+    "nb_pe": 8,
+    "has_cc": true,
+
+    "pe": {
+        "irq": [
+        null       , null       , null         , null,
+        null       , null       , null         , null,
+        "dma_0"    , "dma_1"    , "timer_0"    , "timer_1",
+        "acc_0"    , "acc_1"    , "acc_2"      , "acc_3",
+        "eu_bar"   , "eu_mutex" , "eu_dispatch", null,
+        null       , null       , "dma_ext"    , null,
+        null       , null       , null         , null,
+        "mpu_error", null       , "soc_event"  , "soc_fifo"
+        ]
+    },
+
+    "l1": {
+        "mapping": {
+            "base": "0x10000000",
+            "size": "0x00040000",
+            "remove_offset": "0x10000000"
+        },
+        "ts_mapping": {
+            "base": "0x10040000",
+            "size": "0x00010000",
+            "remove_offset": "0x10040000"
+        },
+        "banking_factor": 2,
+        "power_models": "pulp/chips/pulp_open/power_models/l1/l1.json"
+    },
+    
+    "icache": {
+        "config": {
+            "has_cc": true,
+            "nb_cores": 8,
+            "nb_l1_banks":2,
+
+            "l0": {
+                "nb_sets_bits": 3,
+                "nb_ways_bits": 2,
+                "line_size_bits": 4,
+                "refill_latency": 2
+            },
+
+            "l0_cc": {
+                "nb_sets_bits": 5,
+                "nb_ways_bits": 2,
+                "line_size_bits": 4,
+                "refill_latency": 2
+            },
+            
+            "l1": {
+                "nb_sets_bits": 5,
+                "nb_ways_bits": 2,
+                "line_size_bits": 4,
+                "refill_latency": 2
+            }
+        }
+    },
+
+    "peripherals": {
+
+        "mapping": {
+            "base": "0x10300000",
+            "size": "0x00200000"
+        },
+
+        "alias": {
+            "base": "0x00300000",
+            "size": "0x00200000"
+        },
+
+        "cluster_ctrl": {
+            "mapping": {
+                "base": "0x10300000",
+                "size": "0x00000400",
+                "remove_offset": "0x10300000"
+            }
+        },
+
+        "timer": {
+            "mapping": {
+                "base": "0x10300400",
+                "size": "0x00000400",
+                "remove_offset": "0x10300400"
+            }
+        },
+
+        "event_unit": {
+            "version": "4",
+            "mapping": {
+                "base": "0x10300800",
+                "size": "0x00000800",
+                "remove_offset": "0x10300800"
+            },
+            "config": {
+                "nb_core": 8,
+                "properties": {
+                    "dispatch": {
+                        "size": 8
+                    },
+                    "mutex": {
+                        "nb_mutexes": 8
+                    },
+                    "barriers": {
+                        "nb_barriers": 8
+                    },
+                    "semaphores": {
+                        "nb_semaphores": 16,
+                        "width": 12
+                    },
+                    "bitfields": {
+                        "nb_bitfields": 24
+                    },
+                    "soc_event": {
+                        "nb_fifo_events": 8,
+                        "fifo_event": 27
+                    },
+                    "events": {
+                        "barrier" : 16,
+                        "mutex"   : 17,
+                        "dispatch": 18,
+                        "semaphore": 19
+                    }
+                }
+            }
+        },
+
+        "icache_ctrl": {
+            "mapping": {
+                "base": "0x10301400",
+                "size": "0x00000400",
+                "remove_offset": "0x10301400"
+            }
+        },
+
+        "dma": {
+            "version": 7,
+            "mapping": {
+                "base": "0x10301800",
+                "size": "0x00000400",
+                "remove_offset": "0x10201800"
+            }
+        },
+
+        "neureka": {
+            "mapping": {
+                "base": "0x10302000",
+                "size": "0x00000400",
+                "remove_offset": "0x10302000"
+            }
+        },
+
+
+
+        
+
+        "dbg_unit": {
+            "base": "0x10400000",
+            "size"  : "0x00008000"
+        },
+
+        "cluster_ico": {}
+    },
+
+    "demux_peripherals":
+    {
+        "base": "0x10304000",
+
+        "event_unit": {
+            "mapping": {
+                "base": "0x10304000",
+                "size": "0x00000400",
+                "remove_offset": "0x10304000"
+            }
+        },
+        "dma": {
+            "mapping": {
+                "base": "0x10304400",
+                "size": "0x00000400",
+                "remove_offset": "0x10304400"
+            }
+        }
+    },
+
+    "wmem": {
+        "mapping": {
+            "base": "0x10500000",
+            "size": "0x00400000"
+        }
+    }
+}
