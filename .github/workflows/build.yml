@@ -18,17 +18,11 @@ jobs:
         run: |
           pwd
           ls -la
-          sudo pip3 install -r core/requirements.txt
-          sudo pip3 install -r gapy/requirements.txt
+          sudo pip3 install -r requirements.txt
       - name: build all targets
         run: |
           source sourceme.sh
           make dramsys_preparation
-          make all TARGETS=pulp-open-ddr
-          make all TARGETS=rv64
-          make all TARGETS=pulp-open
-          make all TARGETS=pulp.spatz.spatz
-          make all TARGETS=snitch
           make all TARGETS=occamy
       - name: Run examples
         run: |
