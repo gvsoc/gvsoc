@@ -28,12 +28,17 @@ jobs:
           make all TARGETS=rv64
           make all TARGETS=pulp-open
           make all TARGETS=pulp.spatz.spatz
+          make all TARGETS=snitch
+          make all TARGETS=occamy
       - name: Run examples
         run: |
           source sourceme.sh
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
+          ./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
+          ./install/bin/gvsoc --target=snitch --binary examples/rv64uv-p-vfadd run
+          ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
 
   # Removed due to no space left on eth machine
   # build_eth:
