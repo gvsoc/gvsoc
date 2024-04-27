@@ -20,4 +20,8 @@ gvsoc:
 run:
 	../../install/bin/gvsoc --target-dir=$(CURDIR) --target=pulp.snitch.snitch_cluster_single --work-dir=$(BUILDDIR) --binary=$(BUILDDIR)/test image flash run 
 
+run-trace:
+	../../install/bin/gvsoc --target-dir=$(CURDIR) --target=pulp.snitch.snitch_cluster_single --work-dir=$(BUILDDIR) --binary=$(BUILDDIR)/test \
+	--trace=.*:log.txt --trace-level=trace image flash run 
+
 all: clean sw gvsoc run
