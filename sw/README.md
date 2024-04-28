@@ -9,7 +9,7 @@ This example synthesizes compilation and simulation process by GVSoC. The input 
 Clone the repository:
 
 ~~~~~shell
-https://github.com/gvsoc/gvsoc.git
+git clone https://github.com/gvsoc/gvsoc.git
 ~~~~~
 
 Clone its submodules:
