@@ -56,7 +56,7 @@ pip3 install -r gapy/requirements.txt
 Install LLVM for PULP Platform Projects if you don't have it on your machine. LLVM can be found in `https://github.com/pulp-platform/llvm-project`. After installing LLVM, run the command to set compiler toolchain,
 
 ```bash
-export LLVM_BINROOT = $YOUR_PULP_LLVM/bin
+export LLVM_BINROOT=$YOUR_PULP_LLVM/bin
 ```
 
 # Building the software and running a simulation
