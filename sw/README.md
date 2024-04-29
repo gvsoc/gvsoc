@@ -21,12 +21,42 @@ git submodule update --init --recursive
 
 ## Python requirements
 
+Set up the environment from root folder:
+
+**On the ETH Network:**
+
+- Run the command:
+	~~~~~shell
+	source dramsys_pushbutton_ETHenv.sh
+	~~~~~
+    Note: If you encounter errors related to Python packages not being found, please install the necessary packages yourself.
+
+**Outside the ETH Network:**
+
+Ensure your system meets the following environment requirements:
+
+- GCC version 11.2.0 or higher
+- G++ version 11.2.0 or higher
+- CMake version 3.18.1 or higher
+
+Once these requirements are met, proceed by using:
+
+~~~~~shell
+source dramsys_pushbutton.sh
+~~~~~
+
 Additional Python packages are needed and can be installed with the following commands from root folder:
 
 ```bash
 source sourceme.sh
 pip3 install -r core/requirements.txt
 pip3 install -r gapy/requirements.txt
+```
+
+Install LLVM for PULP Platform Projects if you don't have it on your machine. LLVM can be found in `https://github.com/pulp-platform/llvm-project`. After installing LLVM, run the command to set compiler toolchain,
+
+```bash
+export LLVM_BINROOT = $YOUR_PULP_LLVM/bin
 ```
 
 # Building the software and running a simulation
@@ -67,7 +97,7 @@ Trace helps us a lot in debugging. It shows the instruction flows and computatio
 make run-trace
 ~~~~~
 
-The trace can be found in `tests/log.txt`. This trace file contains the execution details of all submodules.
+The trace can be found in `tests/build/log.txt`. This trace file contains the execution details of all submodules.
 
 If you want to run the whole process together, use the following command:
 
