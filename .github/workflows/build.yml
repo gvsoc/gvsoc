@@ -16,8 +16,6 @@ jobs:
   #         sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
   #     - name: Install python requirements
   #       run: |
-  #         pwd
-  #         ls -la
   #         sudo pip3 install -r core/requirements.txt
   #         sudo pip3 install -r gapy/requirements.txt
   #     - name: build all targets
@@ -57,15 +55,12 @@ jobs:
           apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
       - name: Install python requirements
         run: |
-          pwd
-          ls -la
           pip3 install -r core/requirements.txt
           pip3 install -r gapy/requirements.txt
       - name: build snitch target
         run: |
-          pwd
-          ls -la
-          . ./sourceme.sh
+          mkdir build
+          source ./sourceme.sh
           make TARGETS=pulp.snitch.snitch_cluster_single build
       - name: Run Testsuite
         run: |
