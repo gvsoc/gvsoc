@@ -92,3 +92,15 @@ dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-confi
 
 clean_dramsys_preparation:
 	rm -rf third_party
+
+######################################################################
+## 				Snitch cluster testsuite			 				##
+######################################################################
+
+snitch_cluster:
+	git clone git@github.com:pulp-platform/snitch_cluster.git -b gvsoc-ci
+	cd snitch_cluster && git submodule update --recursive --init
+	cd snitch_cluster/target/snitch_cluster && make DEBUG=ON OPENOCD_SEMIHOSTING=ON BIST=ON sw
+
+snitch_cluster.test: snitch_cluster
+	cd snitch_cluster/target/snitch_cluster && ./util/run.py sw/run.yaml --simulator gvsoc -j

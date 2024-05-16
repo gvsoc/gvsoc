@@ -40,6 +40,37 @@ jobs:
           ./install/bin/gvsoc --target=snitch --binary examples/rv64uv-p-vfadd run
           ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
 
+  snitch:
+    name: Launch snitch testsuite
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/pulp-platform/snitch_cluster:main
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install system software requirements
+        run: |
+          sudo apt update
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+      - name: Install python requirements
+        run: |
+          pwd
+          ls -la
+          sudo pip3 install -r core/requirements.txt
+          sudo pip3 install -r gapy/requirements.txt
+      - name: build snitch target
+        run: |
+          source sourceme.sh
+          make TARGETS=pulp.snitch.snitch_cluster_single build
+      - name: Run Testsuite
+        run: |
+          source sourceme.sh
+          make snitch_cluster.test
+
+
+
   # Removed due to no space left on eth machine
   # build_eth:
   #   name: Try to build on ETH internal servers
