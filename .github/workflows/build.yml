@@ -51,10 +51,10 @@ jobs:
       - name: Install system software requirements
         run: |
           export DEBIAN_FRONTEND=noninteractive
-          cmake --version
           lsb_release -a
-          # apt update
-          # apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          apt update
+          apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          cmake --version
       # - name: Install python requirements
       #   run: |
       #     pip3 install -r core/requirements.txt
