@@ -60,7 +60,7 @@ jobs:
       - name: build snitch target
         run: |
           mkdir build
-          source ./sourceme.sh
+          . ./sourceme.sh
           make TARGETS=pulp.snitch.snitch_cluster_single build
       - name: Run Testsuite
         run: |
