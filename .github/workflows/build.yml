@@ -59,8 +59,8 @@ jobs:
           pip3 install -r gapy/requirements.txt
       - name: build snitch target
         run: |
-          mkdir build
-          . ./sourceme.sh
+          cmake --version
+          # . ./sourceme.sh
           make TARGETS=pulp.snitch.snitch_cluster_single build
       - name: Run Testsuite
         run: |
