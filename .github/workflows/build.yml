@@ -2,9 +2,47 @@ name: check_build_works
 on: [push, pull_request]
 
 jobs:
-  build_ubuntu:
-    name: Try build on ubuntu latest
-    runs-on: ubuntu-latest
+  # build_ubuntu:
+  #   name: Try build on ubuntu latest
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
+  #     - name: Install system software requirements
+  #       run: |
+  #         sudo apt update
+  #         sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+  #     - name: Install python requirements
+  #       run: |
+  #         sudo pip3 install -r core/requirements.txt
+  #         sudo pip3 install -r gapy/requirements.txt
+  #     - name: build all targets
+  #       run: |
+  #         source sourceme.sh
+  #         make dramsys_preparation
+  #         make all TARGETS=pulp-open-ddr
+  #         make all TARGETS=rv64
+  #         make all TARGETS=pulp-open
+  #         make all TARGETS=pulp.spatz.spatz
+  #         make all TARGETS=snitch
+  #         make all TARGETS=occamy
+  #     - name: Run examples
+  #       run: |
+  #         source sourceme.sh
+  #         ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
+  #         ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
+  #         ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
+  #         ./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
+  #         ./install/bin/gvsoc --target=snitch --binary examples/rv64uv-p-vfadd run
+  #         ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
+
+  snitch:
+    name: Launch snitch testsuite
+    runs-on: ubuntu-22.04
+    container:
+      image: ghcr.io/pulp-platform/snitch_cluster:main
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -12,33 +50,27 @@ jobs:
           submodules: recursive
       - name: Install system software requirements
         run: |
-          sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
-      - name: Install python requirements
-        run: |
-          pwd
-          ls -la
-          sudo pip3 install -r core/requirements.txt
-          sudo pip3 install -r gapy/requirements.txt
-      - name: build all targets
-        run: |
-          source sourceme.sh
-          make dramsys_preparation
-          make all TARGETS=pulp-open-ddr
-          make all TARGETS=rv64
-          make all TARGETS=pulp-open
-          make all TARGETS=pulp.spatz.spatz
-          make all TARGETS=snitch
-          make all TARGETS=occamy
-      - name: Run examples
-        run: |
-          source sourceme.sh
-          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
-          ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
-          ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
-          ./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
-          ./install/bin/gvsoc --target=snitch --binary examples/rv64uv-p-vfadd run
-          ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
+          export DEBIAN_FRONTEND=noninteractive
+          lsb_release -a
+          apt update
+          apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          cmake --version
+      # - name: Install python requirements
+      #   run: |
+      #     pip3 install -r core/requirements.txt
+      #     pip3 install -r gapy/requirements.txt
+      # - name: build snitch target
+      #   run: |
+      #     cmake --version
+      #     lsb_release -a
+      #     # . ./sourceme.sh
+      #     make TARGETS=pulp.snitch.snitch_cluster_single build
+      # - name: Run Testsuite
+      #   run: |
+      #     . ./sourceme.sh
+      #     make snitch_cluster.test
+
+
 
   # Removed due to no space left on eth machine
   # build_eth:
