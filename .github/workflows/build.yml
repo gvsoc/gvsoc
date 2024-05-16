@@ -63,11 +63,13 @@ jobs:
           pip3 install -r gapy/requirements.txt
       - name: build snitch target
         run: |
-          . sourceme.sh
+          pwd
+          ls -la
+          . ./sourceme.sh
           make TARGETS=pulp.snitch.snitch_cluster_single build
       - name: Run Testsuite
         run: |
-          . sourceme.sh
+          . ./sourceme.sh
           make snitch_cluster.test
 
 
