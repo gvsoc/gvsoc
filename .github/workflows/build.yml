@@ -52,14 +52,14 @@ jobs:
           submodules: recursive
       - name: Install system software requirements
         run: |
-          sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          apt update
+          apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
       - name: Install python requirements
         run: |
           pwd
           ls -la
-          sudo pip3 install -r core/requirements.txt
-          sudo pip3 install -r gapy/requirements.txt
+          pip3 install -r core/requirements.txt
+          pip3 install -r gapy/requirements.txt
       - name: build snitch target
         run: |
           source sourceme.sh
