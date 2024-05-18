@@ -27,6 +27,9 @@ build:
 clean:
 	rm -rf build install
 
+run_neureka:
+	./install/bin/gvsoc --target=pulp-open --binary ./examples/pulp-open/neureka/BUILD/PULP/GCC_RISCV/test/test run
+
 
 
 ######################################################################
