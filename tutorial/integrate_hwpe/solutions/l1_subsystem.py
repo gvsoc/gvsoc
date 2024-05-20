@@ -40,19 +40,13 @@ class L1_subsystem(st.Component):
         # Properties
         #
 
-        # To-Do List:
-            # 2. Connect Neureka to L1 Subsystem
-            #    - Task 2.1: Increase the number of masters by 1 towards teh L1 interleaver masters.
-            #    - Task 2.2: Create a Neureka port towards the interleaver port.
-
         nb_pe = cluster.get_property('nb_pe', int)
         l1_banking_factor = cluster.get_property('l1/banking_factor')
         nb_l1_banks = 1<<int(math.log(nb_pe * l1_banking_factor, 2.0))
         l1_bank_size = int(cluster.get_property('l1/mapping/size', int) / nb_l1_banks)
-        
-        # Task 2.1: Increase number of Masters by 1 to accommodate Neureka
-        l1_interleaver_nb_masters = nb_pe + 4 + 1 # 1 port per PE + 4 for DMA 
-        
+
+#### SOLUTION-6 -- Add one more port for the hwpe
+        l1_interleaver_nb_masters = nb_pe + 4 + 1 + 1# 1 port per PE + 4 for DMA + 1 for NE16
         first_external_pcer = 12
         power_models = cluster.get_property('l1/power_models')
 
@@ -130,8 +124,9 @@ class L1_subsystem(st.Component):
         for i in range(0, nb_l1_banks):
             self.bind(interleaver, 'out_%d' % i, l1_banks[i], 'input')
 
-        #Task 2.2: Bind Neureka port to interleaver and name it "neureka_in" [self : neureka_in -> interleaver : 'in_%d' % (nb_pe + 4)]
-        self.bind(self, 'neureka_in', interleaver, 'in_%d' % (nb_pe + 4))
+#### SOLUTION-7 -- Bind it with hwpe port name and attach it with correct index of the L1 subsystem's interleaver. Hint: (nb_pe + 5) connection
+        self.bind(self, 'hwpe', interleaver, 'in_%d' % (nb_pe + 5))    
+        self.bind(self, 'ne16_in', interleaver, 'in_%d' % (nb_pe + 4))
 
         for i in range(0, 4):
             self.bind(self, 'dma_in_%d' % i, interleaver, 'in_%d' % (nb_pe + i))

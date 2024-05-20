@@ -14,29 +14,20 @@
 # limitations under the License.
 #
 
-# To-Do List:
-            # 3. Add Neureka to PULP Cluster
-            #    - Task 3.1: Import Neureka python model
-            #    - Task 3.2: Instantiate Neureka
-            #    - Task 3.3: Connect Neureka to peripheral interconnect
-            #    - Task 3.4: Connect Neureka to L1 subsystem[port created in Task 2.2]
-            #    - Task 3.5: Connect Neureka to Event Unit
-            #    - Task 3.6: Connect Neureka to wmem
-
 import gvsoc.systree as st
 import pulp.cpu.iss.pulp_cores as iss
 from cache.hierarchical_cache import Hierarchical_cache
-from pulp.chips.pulp_open.l1_subsystem import L1_subsystem
+
+#### SOLUTION - Change the path from pulp.chips.pulp_open.l1_subsystem to pulp.chips.pulp_open_hwpe.l1_subsystem
+
+from pulp.chips.pulp_open_hwpe.l1_subsystem import L1_subsystem
 from pulp.event_unit.event_unit_v3 import Event_unit
 from interco.router import Router
 from pulp.mchan.mchan_v7 import Mchan
 from pulp.timer.timer_v2 import Timer
 from pulp.cluster.cluster_control_v2 import Cluster_control
 
-# Task 3.1 Import Neureka.py located in pulp.neureka.neureka
-from pulp.neureka.neureka import Neureka
-
-from pulp.chips.pulp_open.wmem_subsystem import Wmem_subsystem
+from pulp.ne16.ne16 import Ne16
 from pulp.icache_ctrl.icache_ctrl_v2 import Icache_ctrl
 
 
@@ -87,15 +78,14 @@ class Cluster(st.Component):
         self.cluster_offset = cluster_size * cid
         self.cluster_base   = self.get_property('mapping/base', int)
         self.cluster_alias  = self.get_property('alias', int)
-        neureka_irq         = self.get_property('pe/irq').index('acc_0')
+        ne16_irq            = self.get_property('pe/irq').index('acc_0')
         dma_irq_0           = self.get_property('pe/irq').index('dma_0')
         dma_irq_1           = self.get_property('pe/irq').index('dma_1')
         dma_irq_ext         = self.get_property('pe/irq').index('dma_ext')
         timer_irq_0         = self.get_property('pe/irq').index('timer_0')
         timer_irq_1         = self.get_property('pe/irq').index('timer_1')
         first_external_pcer = 12
-        has_neureka = True
-
+        has_ne16 = False
 
         #
         # Components
@@ -103,11 +93,6 @@ class Cluster(st.Component):
 
         # L1 subsystem
         l1 = L1_subsystem(self, 'l1', self)
-
-        # Task 3.2 Instanitate Neureka and assign it to neureka. Instantiate with (self , "neureka")
-        neureka = Neureka(self, 'neureka')
-
-
 
         # Cores
         pes = []
@@ -138,14 +123,12 @@ class Cluster(st.Component):
         # Cluster control
         cluster_control = Cluster_control(self, 'cluster_ctrl', nb_core=nb_pe)
 
+        if has_ne16:
+            # NE16
+            ne16 = Ne16(self, 'ne16')
 
         # Icache controller
         icache_ctrl = Icache_ctrl(self, 'icache_ctrl')
-
-        # Wmem
-        wmem = Wmem_subsystem(self, 'wmem', self, remove_offset=(self.cluster_offset))
-
-       
     
 
         #
@@ -200,10 +183,6 @@ class Cluster(st.Component):
         cluster_ico.add_mapping('periph_ico_alias', **self.get_property('peripherals/alias'), add_offset=int(self.get_property('peripherals/mapping/base'), 0) - int(self.get_property('peripherals/alias/base'), 0))
         self.bind(cluster_ico, 'periph_ico_alias', periph_ico, 'input')
 
-        cluster_ico.add_mapping('wmem_soc', **self._reloc_mapping(self.get_property('wmem/mapping'), remove=False))
-        self.bind(cluster_ico, 'wmem_soc', wmem, 'input')
-
-
         # Periph interconnect
         periph_ico.add_mapping('error', **self._reloc_mapping(self.get_property('mapping')))
 
@@ -225,9 +204,9 @@ class Cluster(st.Component):
         periph_ico.add_mapping('dma', **self._reloc_mapping(self.get_property('peripherals/dma/mapping')))
         self.bind(periph_ico, 'dma', mchan, 'in_%d' % nb_pe)
 
-        #Task 3.3: Connect Neureka to peripheral interconnect [periph_ico : neureka -> neureka : input]
-        periph_ico.add_mapping('neureka', **self._reloc_mapping(self.get_property('peripherals/neureka/mapping')))
-        self.bind(periph_ico, 'neureka', neureka, 'input')
+        if has_ne16:
+            periph_ico.add_mapping('ne16', **self._reloc_mapping(self.get_property('peripherals/ne16/mapping')))
+            self.bind(periph_ico, 'ne16', ne16, 'input')
 
         # MCHAN
         self.bind(mchan, 'ext_irq_itf', self, 'dma_irq')
@@ -253,20 +232,14 @@ class Cluster(st.Component):
             self.bind(cluster_control, 'fetchen_%d' % i, pes[i], 'fetchen')
             self.bind(cluster_control, 'halt_%d' % i, pes[i], 'halt')
             self.bind(pes[i], 'halt_status', cluster_control, 'core_halt_%d' % i)
-        
-        #Task 3.4: Connect Neureka to L1 subsystem[port created in Task 2.2][neureka : tcdm_port -> l1 : neureka_in]
-        self.bind(neureka, 'tcdm_port', l1, 'neureka_in')
 
-        #Task 3.5: Connect Neureka to event unit[uncomment the following lines]
-        for i in range(0, nb_pe):
-            self.bind(neureka, 'irq', event_unit, 'in_event_%d_pe_%d' % (neureka_irq, i))
+        if has_ne16:
+            # NE16
+            for i in range(0, nb_pe):
+                self.bind(ne16, 'irq', event_unit, 'in_event_%d_pe_%d' % (ne16_irq, i))
+
+            self.bind(ne16, 'out', l1, 'ne16_in')
             
-        
-
-        #Task 3.6: Connect Neureka to Weight Memory[uncomment the follwing line]
-        self.bind(neureka, 'wmem_port', wmem, 'input')
-
-
         # Icache controller
         self.bind(icache_ctrl, 'enable', icache, 'enable')
         self.bind(icache_ctrl, 'flush', icache, 'flush')
@@ -277,7 +250,7 @@ class Cluster(st.Component):
             self.bind(icache_ctrl, 'flush', pes[i], 'flush_cache')
 
 
-    def _reloc_mapping(self, mapping, remove=True):
+    def _reloc_mapping(self, mapping):
         """Relocate a mapping to this cluster, depending on the cluster ID.
 
         The offset of the cluster is added to base, remove_offset and add_offset so that
@@ -295,7 +268,7 @@ class Cluster(st.Component):
         if mapping.get('base') is not None:
             mapping['base'] = '0x%x' % (int(mapping['base'], 0) + self.cluster_offset)
 
-        if remove and mapping.get('remove_offset') is not None:
+        if mapping.get('remove_offset') is not None:
             mapping['remove_offset'] = '0x%x' % (int(mapping['remove_offset'], 0) + self.cluster_offset)
             
         if mapping.get('add_offset') is not None:
