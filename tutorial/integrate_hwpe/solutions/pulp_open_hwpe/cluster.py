@@ -253,7 +253,7 @@ class Cluster(st.Component):
 #### SOLUTION-8 --  Connect hwpe's tcdm port to l1's hwpe port just created in the L1_subsystem
         self.bind(hwpe, 'tcdm', l1, 'hwpe')
 
-#### SOLUTION-10 -- Connect hwpe's interrupt request(irq) to all the cores
+#### SOLUTION-9 -- Connect hwpe's interrupt request(irq) to all the cores
         hwpe_irq = self.get_property('pe/irq').index('acc_1')
         for i in range(0, nb_pe):
             self.bind(hwpe, 'irq', event_unit, 'in_event_%d_pe_%d' % (hwpe_irq, i))

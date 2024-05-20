@@ -29,6 +29,8 @@ DEST_DIR := ./relative/path/to/dest_folder
 
 # Include the tasks.mk file
 include tutorial/tasks.mk
+include tutorial/solutions.mk
+
 
 
 clean:

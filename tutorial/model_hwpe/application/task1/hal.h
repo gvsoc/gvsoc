@@ -27,7 +27,7 @@
 /* REGISTER MAP */
 
 // global address map + event IDs
-#define HWPE_ADDR_BASE      0x00302000
+#define HWPE_ADDR_BASE      0x00201c00
 #define HWPE_EVT0           13
 
 /* LOW-LEVEL HAL */

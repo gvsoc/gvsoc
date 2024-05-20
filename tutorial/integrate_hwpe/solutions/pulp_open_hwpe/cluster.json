@@ -161,6 +161,16 @@
             }
         },
 
+
+        "hwpe": {
+            "mapping": {
+            "base": "0x10201c00",
+            "size": "0x00000400",
+            "remove_offset": "0x10201c00"
+            }
+        },
+
+
         "dbg_unit": {
             "base": "0x10300000",
             "size"  : "0x00008000"
