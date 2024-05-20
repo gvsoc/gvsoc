@@ -49,4 +49,4 @@ create_target_sol_task3: create_target_sol_task2
 
 create_target_sol_task4: create_target_sol_task3
 	$(call check_and_create_dir,$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe)
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
+	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)create_target/solutions/task4 DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
