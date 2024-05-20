@@ -37,25 +37,40 @@ print_subtasks_mk_dir:
 
 .PHONY: print_subtasks_mk_dir copy_folder copy_file create_target_sol_task1 create_target_sol_task2 create_target_sol_task3 create_target_sol_task4
 
-integrate_hwpe_task1:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task_files/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task2:
+create_target_sol_task1:
+	$(MAKE) SRC_FPATH=$(SUBTASKS_MK_DIR)../pulp/pulp-open.py DEST_FPATH=$(SUBTASKS_MK_DIR)../pulp/pulp-open-hwpe.py copy_file
+
+create_target_sol_task2: create_target_sol_task1
+	$(call check_and_create_dir,$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe)
+	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
+
+create_target_sol_task3: create_target_sol_task2
+	$(MAKE) SRC_FPATH=$(SUBTASKS_MK_DIR)create_target/solutions/task3/pulp-open-hwpe.py DEST_FPATH=$(SUBTASKS_MK_DIR)../pulp/ copy_file
+
+create_target_sol_task4: create_target_sol_task3
+	$(call check_and_create_dir,$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe)
+	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)create_target/solutions/task4 DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
+
+
+
+integrate_hwpe_sol1:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task1/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task3:
+integrate_hwpe_sol2:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task2/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task4:
+integrate_hwpe_sol3:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task3/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task5:
+integrate_hwpe_sol4:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task4/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task6:
+integrate_hwpe_sol5:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task5/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task7:
+integrate_hwpe_sol6:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task6/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task8:
+integrate_hwpe_sol7:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task7/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task9:
+integrate_hwpe_sol8:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task8/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task10:
+integrate_hwpe_sol9:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task9/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
-integrate_hwpe_task11:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/task10/ DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
+integrate_hwpe_sol10:
+	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)integrate_hwpe/solutions/pulp_open_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../pulp/pulp/chips/pulp_open_hwpe copy_folder
+	$(MAKE) SRC_FPATH=$(SUBTASKS_MK_DIR)integrate_hwpe/solutions/CMakeLists.txt DEST_FPATH=$(SUBTASKS_MK_DIR)../pulp/pulp/ copy_file 
