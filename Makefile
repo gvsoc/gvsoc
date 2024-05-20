@@ -23,6 +23,13 @@ build:
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
 	cd $(CURDIR) && $(CMAKE) --install build
 
+# Define the source and destination directories
+SRC_DIR := ./relative/path/to/src_folder
+DEST_DIR := ./relative/path/to/dest_folder
+
+# Include the tasks.mk file
+include tutorial/tasks.mk
+
 
 clean:
 	rm -rf build install
