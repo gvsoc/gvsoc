@@ -39,8 +39,7 @@ int64_t Hwpe::weight_offset()
       weight[i].fill(0);
     }
   }
-  Mode mode;
-  this->pe_instance_.ComputePartialSum(mode, enable, this->input_layout_, weight, shift, sum_array, sum);
+  this->pe_instance_.ComputePartialSum(enable, this->input_layout_, weight, shift, sum_array, sum);
   
   for(int i=0; i<OUTPUT_LINEAR_BUFFER_SIZE; i++){
     this->output_buffer_.WriteAtIndex(i, 1, this->reg_config_.woffs_val*sum);

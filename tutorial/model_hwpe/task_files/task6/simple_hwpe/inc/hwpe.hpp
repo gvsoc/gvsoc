@@ -30,6 +30,11 @@
 #include <bitset>
 #include "params.hpp"
 #include "datatype.hpp"
+#include "scalar_buffer.hpp"
+#include "linear_buffer.hpp"
+#include "binconv.hpp"
+#include "column.hpp"
+#include "pe_compute_unit.hpp"
 #include "regconfig_manager.hpp"
 class Hwpe : public vp::Component
 {
@@ -38,6 +43,7 @@ public:
   vp::IoMaster tcdm_port;
   vp::Trace trace;
   vp::reg_32 state;
+  vp::IoReq io_req;
 
 
   //register configuration instance
@@ -75,7 +81,7 @@ private:
   
   int64_t weight_offset();
   
-  int64_t compute();
+  int64_t compute_output();
   int64_t output_store();
 
   static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);

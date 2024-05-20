@@ -30,6 +30,9 @@ Hwpe::Hwpe(vp::ComponentConf &config)
   this->new_master_port("irq", &this->irq);
   this->new_master_port("tcdm", &this->tcdm_port );
 
+  this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave);
+
+
   // contructor of the RegConfigManager class with access to the Hwpe
   this->regconfig_manager_instance = RegConfigManager<Hwpe>(this);
 

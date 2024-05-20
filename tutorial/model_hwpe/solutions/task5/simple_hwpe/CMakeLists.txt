@@ -3,7 +3,7 @@ set(HWPE_SRCS
 "src/input_layout.cpp"
 "src/weight_load.cpp"
 "src/weight_layout.cpp"
-"src/weight_offset.cpp"
+"src/hwpe_weightoffset.cpp"
 "src/hwpe_compute.cpp"
 "src/output_store.cpp"
 "src/hwpe_fsm.cpp"

@@ -58,7 +58,10 @@ void Hwpe::FsmEndHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sen
   _this->state.set(IDLE);
   //////////////// TASK-2 /////////////////////
   // Set job running to 0
-  _this->irq.sync(true);
+
+  ///////////////////////// TASK-3 //////////////////////
+  // Uncomment the following line -> useful for termination
+  // _this->irq.sync(true);
   _this->state.set(IDLE);
 }
 

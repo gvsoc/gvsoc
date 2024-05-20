@@ -90,7 +90,7 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
   }
   else {
     if(addr == HWPE_REG_STATUS) {
-      ///////////////////////// TASK-3 //////////////////////
+      ///////////////////////// TASK-4 //////////////////////
       // send the job_running_status. Hint use get_job_running_status() from regconfig_manager
 
       _this->trace.msg("Returning %x\n", *(uint32_t *) data);

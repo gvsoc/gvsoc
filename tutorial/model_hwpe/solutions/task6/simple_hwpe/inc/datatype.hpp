@@ -47,6 +47,6 @@ enum HwpeState {
 struct Iterator{
     int count;
     int iteration;
-}
+};
 
 #endif

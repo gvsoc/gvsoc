@@ -43,9 +43,8 @@ std::string Hwpe::HwpeStateToString(const HwpeState& state) {
 void Hwpe::FsmStartHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(START);
-  //////////////// SOLUTION-1 /////////////////////
+  //////////////// TASK-1 /////////////////////
   // Set job running to 1
-  _this->regconfig_manager_instance.set_job_running(1);
   _this->reg_config_=_this->regconfig_manager_instance.get_reg_config();
 
   _this->fsm_loop();
@@ -57,9 +56,11 @@ void Hwpe::FsmHandler(vp::Block *__this, vp::ClockEvent *event) {
 void Hwpe::FsmEndHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(IDLE);
-  //////////////// SOLUTION-2 /////////////////////
+  //////////////// TASK-2 /////////////////////
   // Set job running to 0
-  _this->regconfig_manager_instance.set_job_running(0);
+
+  ///////////////////////// TASK-3 //////////////////////
+  // Uncomment the following line -> useful for termination
   _this->irq.sync(true);
   _this->state.set(IDLE);
 }

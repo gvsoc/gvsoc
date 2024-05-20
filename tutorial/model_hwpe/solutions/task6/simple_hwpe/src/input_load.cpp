@@ -36,12 +36,11 @@ int64_t Hwpe::input_load()
       int64_t latency = this->io_req.get_latency();
       max_latency = max_latency > latency ? max_latency : latency;
 #ifdef VERBOSE
-      this->trace.msg("max_latency=%d, latency=%d, addr=%d, data=%d\n", max_latency, latency, (addr), data[i]);
+      this->trace.msg("input load max_latency=%d, latency=%d, addr=0x%x, data=0x%x\n", max_latency, latency, (addr), data[i]);
 #endif
     } else {
       this->trace.fatal("Unsupported access\n");
     }
-    this->trace.msg("Load done for addr=%d, data=%d\n", (addr), data[i]);
 
     ///////////////////////////////  SOLUTION-1 //////////////////////////////
     // Write to input buffer at index

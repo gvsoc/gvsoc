@@ -80,7 +80,7 @@ int Hwpe::fsm() {
     case COMPUTE:
       latency = this->weight_load();
       this->weight_layout();
-      latency += this->compute();
+      latency += this->compute_output();
       state_next = STORE_OUTPUT; 
       break;
     case STORE_OUTPUT:

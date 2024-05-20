@@ -19,7 +19,7 @@
  */
 #include "hwpe.hpp"
 
-int64_t Hwpe::compute()
+int64_t Hwpe::compute_output()
 {
   std::array<std::array<bool, BINCONV_PER_COLUMN>, COLUMN_PER_PE> enable;
   std::array<std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight;

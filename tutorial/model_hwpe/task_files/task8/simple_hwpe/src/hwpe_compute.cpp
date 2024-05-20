@@ -32,8 +32,7 @@ int64_t Hwpe::compute_output()
       enable[i].fill(true);
       shift[i] = i;
   }
-  Mode mode;
-  this->pe_instance_.ComputePartialSum(mode, enable, this->input_layout_, this->weight_temp_layout_, shift, sum_array, sum);
+  this->pe_instance_.ComputePartialSum(enable, this->input_layout_, this->weight_temp_layout_, shift, sum_array, sum);
 
   this->output_buffer_.WriteAtIndex(this->compute.iteration, 1, sum);
   this->compute.iteration++;

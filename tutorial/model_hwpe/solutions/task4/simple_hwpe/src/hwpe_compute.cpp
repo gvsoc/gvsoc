@@ -19,7 +19,7 @@
  */
 #include "hwpe.hpp"
 
-int64_t Hwpe::compute()
+int64_t Hwpe::compute_output()
 {
   return 0;
 }
