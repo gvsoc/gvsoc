@@ -85,4 +85,6 @@ int Hwpe::fsm() {
     case END:
       break;
   }
+  this->state.set(state_next);
+  return latency;
 }

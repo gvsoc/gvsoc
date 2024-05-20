@@ -37,7 +37,7 @@ int64_t Hwpe::input_load()
     } else {
       this->trace.fatal("Unsupported access\n");
     }
-    this->trace.msg("Load done for addr=%d, data=%d\n", (addr), data[i]);
+    this->trace.msg("Load done for addr=%d, data=0x%x\n", (addr), data[i]);
 
     this->input.iteration++;
   }
