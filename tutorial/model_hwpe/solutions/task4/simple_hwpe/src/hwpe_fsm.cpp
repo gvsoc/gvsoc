@@ -23,11 +23,28 @@
 
 #include <string>
 #include <sstream>
+
+std::string Hwpe::HwpeStateToString(const HwpeState& state) {
+  switch (state) {
+    case IDLE: return "IDLE";
+    case START: return "START";
+    case LOAD_INPUT: return "LOAD_INPUT";
+    case WEIGHT_OFFSET: return "WEIGHT_OFFSET";
+    case LOAD_WEIGHT: return "LOAD_WEIGHT";
+    case COMPUTE: return "COMPUTE";
+    case STORE_OUTPUT: return "STORE_OUTPUT";
+    case END: return "END";
+    default : 
+      return "UNKNOWN";
+  }
+}
+
+
 void Hwpe::FsmStartHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(START);
-  //////////////////////////////// SOLUTION - 1 ///////////////////////////
-  // assign the register values to reg_config_ . Hint: use get_reg_config() of regconfig_manager_instance
+
+  // register values are assigned in the start of the FSM. 
   _this->reg_config_=_this->regconfig_manager_instance.get_reg_config();
 
   _this->fsm_loop();
@@ -60,8 +77,7 @@ int Hwpe::fsm() {
   switch(this->state.get()) {
     case START:
       state_next = LOAD_INPUT; 
-      //////////////////////////////// SOLUTION - 2 ///////////////////////////
-      // Print register values . Hint use print_reg() function of RegConfigManager
+      // Printing the register value 
       this->regconfig_manager_instance.print_reg();
 
       break;
@@ -69,9 +85,11 @@ int Hwpe::fsm() {
       //////////////////////////////// SOLUTION - 3 ///////////////////////////
       // Call input_load() function 
       latency = this->input_load();
-
       if(this->input.iteration == this->input.count)
         state_next = WEIGHT_OFFSET; 
+      //////////////////////////////// SOLUTION - 1 ////////////////////////// 
+      // Uncomment the following for debugging 
+      this->trace.msg("iteration=%d, count=%d\n", this->input.iteration, this->input.count);
       break;
     case WEIGHT_OFFSET:
       latency = this->weight_offset();
@@ -91,6 +109,9 @@ int Hwpe::fsm() {
     case END:
       break;
   }
+  std::string state_string = HwpeStateToString((HwpeState)this->state.get());
+  state_string = "(fsm state) current state "+ state_string + " finished with latency : "+std::to_string(latency)+" cycles\n"; 
+  this->trace.msg(state_string.c_str());
   this->state.set(state_next);
   return latency;
 }

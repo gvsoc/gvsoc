@@ -37,6 +37,9 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 
 void Hwpe::clear(){
   // An empty clear  function. Needs to be extended in later tasks
+  ////////////////////////////////////////   SOLUTION - 2  //////////////////////////////////////// 
+  // Add a trace saying hello from teh clear function 
+  this->trace.msg("Hello from the clear function()\n");
 }
 
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface
@@ -75,7 +78,7 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
     }
     else if(addr >= HWPE_REGISTER_OFFS)
     {
-      ////////////////////////////////////////   SOLUTION - 2  //////////////////////////////////////// 
+      ////////////////////////////////////////   SOLUTION - 3  //////////////////////////////////////// 
       // write code to assign the register_read value to the data. Take inspiration from the register write. 
 
       *(uint32_t *) data = _this->regconfig_manager_instance.regfile_read((addr - HWPE_REGISTER_OFFS) >> 2);

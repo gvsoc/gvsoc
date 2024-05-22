@@ -38,7 +38,7 @@ int64_t Hwpe::weight_load()
     if (err == vp::IO_REQ_OK) {
       int64_t latency = this->io_req.get_latency();
       max_latency = max_latency > latency ? max_latency : latency;
-      this->trace.msg("weight_load max_latency=%d, latency=%d, addr=0x%x, data=0x%x\n", max_latency, latency, (addr), data[i]);
+      this->trace.msg("weight load done  addr=0x%x, data=0x%x\n", (addr), data[i]);
     } else {
       this->trace.fatal("Unsupported access\n");
     }

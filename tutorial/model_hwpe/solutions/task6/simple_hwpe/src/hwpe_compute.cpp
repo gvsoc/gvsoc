@@ -25,7 +25,7 @@ int64_t Hwpe::compute_output()
   std::array<std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight;
   std::array<OutputType, COLUMN_PER_PE> sum_array;
   std::array<WeightType, COLUMN_PER_PE> shift;
-  ///////////////////////////////  SOLUTION-2 //////////////////////////////
+  ///////////////////////////////  SOLUTION-3 //////////////////////////////
   // Read partial accumulated value and assign it to sum. Hint: Use ReadFromIndex
   OutputType sum = this->output_buffer_.ReadFromIndex(this->compute.iteration);
 
@@ -35,7 +35,7 @@ int64_t Hwpe::compute_output()
   }
   this->pe_instance_.ComputePartialSum(enable, this->input_layout_, this->weight_temp_layout_, shift, sum_array, sum);
 
-  ///////////////////////////////  SOLUTION-3 //////////////////////////////
+  ///////////////////////////////  SOLUTION-4 //////////////////////////////
   // Write partial accumulated value to the output buffer
   this->output_buffer_.WriteAtIndex(this->compute.iteration, 1, sum);
   this->compute.iteration++;

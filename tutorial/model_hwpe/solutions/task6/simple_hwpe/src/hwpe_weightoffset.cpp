@@ -45,7 +45,7 @@ int64_t Hwpe::weight_offset()
     this->output_buffer_.WriteAtIndex(i, 1, this->reg_config_.woffs_val*sum);
   }
   int64_t latency = 0; 
-  ///////////////////////////////  SOLUTION-4 //////////////////////////////
+  ///////////////////////////////  SOLUTION-2 //////////////////////////////
   // Assign the latency =  WEIGHT_OFFSET_LATENCY
   latency = WEIGHT_OFFSET_LATENCY;
   return latency;

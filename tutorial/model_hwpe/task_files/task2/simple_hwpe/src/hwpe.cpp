@@ -37,6 +37,8 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 
 void Hwpe::clear(){
   // An empty clear  function. Needs to be extended in later tasks
+  ////////////////////////////////////////   TASK - 2  //////////////////////////////////////// 
+  // Add a trace saying hello from teh clear function 
 }
 
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface
@@ -56,7 +58,7 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
     }
     else if(addr == HWPE_REG_SOFT_CLEAR) {
       ////////////////////////////////////////   TASK - 1  //////////////////////////////////////// 
-      // call the clear function. We will build on the contents of the clear function later
+      // call the clear function. We will build on the contents of the clear function later. 
     }
     else if(addr >= HWPE_REGISTER_OFFS) {
       // write to the configuration registers 
@@ -74,7 +76,7 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
     }
     else if(addr >= HWPE_REGISTER_OFFS)
     {
-      ////////////////////////////////////////   TASK - 2  //////////////////////////////////////// 
+      ////////////////////////////////////////   TASK - 3  //////////////////////////////////////// 
       // write code to assign the register_read value to the data. Take inspiration from the register write. 
 
     }

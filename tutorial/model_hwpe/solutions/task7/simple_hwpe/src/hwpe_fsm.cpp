@@ -23,6 +23,22 @@
 
 #include <string>
 #include <sstream>
+
+std::string Hwpe::HwpeStateToString(const HwpeState& state) {
+  switch (state) {
+    case IDLE: return "IDLE";
+    case START: return "START";
+    case LOAD_INPUT: return "LOAD_INPUT";
+    case WEIGHT_OFFSET: return "WEIGHT_OFFSET";
+    case LOAD_WEIGHT: return "LOAD_WEIGHT";
+    case COMPUTE: return "COMPUTE";
+    case STORE_OUTPUT: return "STORE_OUTPUT";
+    case END: return "END";
+    default : 
+      return "UNKNOWN";
+  }
+}
+
 void Hwpe::FsmStartHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(START);
@@ -86,6 +102,9 @@ int Hwpe::fsm() {
     case END:
       break;
   }
+  std::string state_string = HwpeStateToString((HwpeState)this->state.get());
+  state_string = "(fsm state) current state "+ state_string + " finished with latency : "+std::to_string(latency)+" cycles\n"; 
+  this->trace.msg(state_string.c_str());
   this->state.set(state_next);
   return latency;
 }

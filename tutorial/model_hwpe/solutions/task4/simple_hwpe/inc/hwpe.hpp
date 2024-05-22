@@ -69,6 +69,7 @@ private:
   int64_t compute_output();
   int64_t output_store();
 
+  std::string HwpeStateToString(const HwpeState&);
   static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 
   vp::ClockEvent *fsm_start_event;

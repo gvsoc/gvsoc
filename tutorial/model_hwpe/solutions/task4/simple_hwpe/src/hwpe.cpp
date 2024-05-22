@@ -42,8 +42,9 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 
 void Hwpe::clear()
 {
-  //////////////////////////////// SOLUTION - 4 ///////////////////////////
-  // Call make input.iteration = 0 function 
+  //////////////////////////////// SOLUTION - 2 ///////////////////////////
+  // correct input.iteration = 0 function 
+  // assign input.count = 8 function
   this->input.iteration = 0;
   this->input.count = 8;
 }

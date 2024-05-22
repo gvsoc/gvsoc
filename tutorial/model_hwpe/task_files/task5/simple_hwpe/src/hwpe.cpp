@@ -48,7 +48,7 @@ void Hwpe::clear()
   this->weight.iteration = 0;
   this->weight.count = 8;
   this->output.iteration = 0;
-  this->output.count = 4;
+  this->output.count = 0;
 }
 
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface

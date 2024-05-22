@@ -42,9 +42,10 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 
 void Hwpe::clear()
 {
-  //////////////////////////////// TASK - 4 ///////////////////////////
-  // Call make input.iteration = 0 function 
-  this->input.count = 8;
+  //////////////////////////////// TASK - 2 ///////////////////////////
+  // correct input.iteration = 0  
+  // assign input.count = 8 
+  this->input.iteration = -1;
 }
 
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface
