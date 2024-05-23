@@ -53,23 +53,11 @@ int run_test() {
   HWPE_WRITE_REG(HWPE_REG_OUTPUT_PTR,    actual_output_ptr);
   HWPE_WRITE_REG(HWPE_REG_WEIGHT_OFFS,    -128);
 
-//   // configure & reset perf counters
-//   pi_perf_conf(1 << PI_PERF_CYCLES);
-//   pi_perf_reset();
-
   // commit HWPE computation
   HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD);
 
-//   // start perf counter
-//   pi_perf_start();
-
   // wait on barrier
-  HWPE_BARRIER();
-
-//   // stop perf counter
-//   pi_perf_stop();
-
-//   printf("%d cycles\n", pi_perf_read(PI_PERF_CYCLES));
+  HWPE_BARRIER_NOSTATUS();
 
   int errors = hwpe_compare_int(actual_output_ptr, expected_output_ptr, STIM_HWPE_EXPECTED_OUTPUT_SIZE);
   return errors;
