@@ -29,6 +29,8 @@ Hwpe::Hwpe(vp::ComponentConf &config)
   this->new_slave_port("config", &this->cfg_port_); 
   this->new_master_port("irq", &this->irq);
   this->new_master_port("tcdm", &this->tcdm_port );
+  ///////////////////////////////// SOLUTION-1 ///////////////////////////////////
+  // Attach the hwpe_slave to the callback function of cfg_port_
   this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave);
 }
 

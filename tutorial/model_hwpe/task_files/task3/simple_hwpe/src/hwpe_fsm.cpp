@@ -25,7 +25,8 @@
 #include <sstream>
 void Hwpe::FsmStartHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
-  _this->trace.msg("Call back to FsmStartHandler\n");
+  ////////////////////////////////////////   TASK - 3  //////////////////////////////////////// 
+  // Add a trace message in the FsmStartHandler 
 }
 void Hwpe::FsmHandler(vp::Block *__this, vp::ClockEvent *event) {
   Hwpe *_this = (Hwpe *)__this;

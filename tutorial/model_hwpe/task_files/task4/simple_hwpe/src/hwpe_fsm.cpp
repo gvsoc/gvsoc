@@ -93,13 +93,16 @@ int Hwpe::fsm() {
       break;
     case WEIGHT_OFFSET:
       latency = this->weight_offset();
+      state_next = LOAD_WEIGHT; 
+      break;
+    case LOAD_WEIGHT:
+      latency = this->weight_load();
+      this->weight_layout();
       state_next = COMPUTE; 
       break;
     case COMPUTE:
-      latency = this->weight_load();
-      this->weight_layout();
-      latency += this->compute_output();
-      state_next = STORE_OUTPUT; 
+      latency = this->compute_output();
+      state_next = STORE_OUTPUT;
       break;
     case STORE_OUTPUT:
       latency = this->output_store();

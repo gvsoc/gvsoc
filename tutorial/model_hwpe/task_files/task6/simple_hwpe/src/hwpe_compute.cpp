@@ -37,5 +37,5 @@ int64_t Hwpe::compute_output()
   ///////////////////////////////  TASK-4 //////////////////////////////
   // Write partial accumulated value to the output buffer
   this->compute.iteration++;
-  return 0;
+  return 1;
 }

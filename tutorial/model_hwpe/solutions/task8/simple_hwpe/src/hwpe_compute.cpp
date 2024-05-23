@@ -36,5 +36,5 @@ int64_t Hwpe::compute_output()
 
   this->output_buffer_.WriteAtIndex(this->compute.iteration, 1, sum);
   this->compute.iteration++;
-  return 0;
+  return 1;
 }
