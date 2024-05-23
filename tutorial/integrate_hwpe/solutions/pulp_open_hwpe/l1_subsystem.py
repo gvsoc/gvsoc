@@ -46,7 +46,7 @@ class L1_subsystem(st.Component):
         l1_bank_size = int(cluster.get_property('l1/mapping/size', int) / nb_l1_banks)
 
 #### SOLUTION-6 -- Add one more port for the hwpe
-        l1_interleaver_nb_masters = nb_pe + 4 + 1 + 1# 1 port per PE + 4 for DMA + 1 for NE16
+        l1_interleaver_nb_masters = nb_pe + 4 + 1 + 1# 1 port per PE + 4 for DMA + 1 for NE16 + 1 for Hwpe
         first_external_pcer = 12
         power_models = cluster.get_property('l1/power_models')
 
