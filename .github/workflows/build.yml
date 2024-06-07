@@ -50,6 +50,7 @@ jobs:
           submodules: recursive
       - name: Install system software requirements
         run: |
+          cmake --version
           export DEBIAN_FRONTEND=noninteractive
           lsb_release -a
           apt update
