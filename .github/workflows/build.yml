@@ -20,7 +20,7 @@ jobs:
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
-      - name: build all targets
+      - name: Build all targets
         run: |
           source sourceme.sh
           make dramsys_preparation
@@ -32,6 +32,7 @@ jobs:
           make all TARGETS=occamy
           make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
           make TARGETS=snitch build
+          make all TARGETS=pulp.snitch.snitch_cluster_single
       - name: Run examples
         run: |
           source sourceme.sh
@@ -43,6 +44,8 @@ jobs:
           ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/axpy.elf image flash run | tee out.log
+          if ! grep -q "nerr: 0" out.log; then exit 1; fi
 
   # Removed due to no space left on eth machine
   # build_eth:
