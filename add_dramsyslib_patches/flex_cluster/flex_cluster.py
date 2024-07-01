@@ -26,6 +26,7 @@ import utils.loader.loader
 import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_unit import ClusterUnit, ClusterArch
 from pulp.chips.flex_cluster.ctrl_registers import CtrlRegisters
+import pulp.floonoc.floonoc
 
 GAPY_TARGET = True
 
@@ -42,7 +43,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         num_cluster_x           = 2
         num_cluster_y           = 2
         noc_link_width          = 512
-        num_core_per_cluster    = 8
+        num_core_per_cluster    = 10
 
         instruction_mem_base    = 0x8000_0000
         instruction_mem_size    = 0x0001_0000
@@ -54,6 +55,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         soc_register_base       = 0x9000_0000
         soc_register_size       = 0x0001_0000
+
+        hbm_start_base          = 0xc000_0000
 
         # meta parameters
         num_clusters    = num_cluster_x * num_cluster_y
@@ -91,6 +94,16 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #control register
         csr = CtrlRegisters(self, 'ctrl_registers')
 
+        #hbm channels
+        hbm_list = []
+        for hbm_ch in range(num_clusters):
+            hbm_list.append(memory.memory.Memory(self, f'hbm_ch{hbm_ch}', size=cluster_tcdm_size))
+            pass
+
+        #Noc
+        noc = pulp.floonoc.floonoc.FlooNocClusterGrid(self, 'noc', width=noc_link_width/8,
+                nb_x_clusters=num_cluster_x, nb_y_clusters=num_cluster_y)
+
         ############
         # Bindings #
         ############
@@ -107,6 +120,14 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Clusters
         for cluster_id in range(num_clusters):
             cluster_list[cluster_id].o_NARROW_SOC(instr_router.i_INPUT())
+            pass
+
+        #NoC
+        for node_id in range(num_clusters):
+            x_id = int(node_id%num_cluster_x)
+            y_id = int(node_id/num_cluster_x)
+            cluster_list[node_id].o_WIDE_SOC(noc.i_CLUSTER_INPUT(x_id, y_id))
+            noc.o_MAP(hbm_list[node_id].i_INPUT(), base=hbm_start_base+node_id*cluster_tcdm_size, size=cluster_tcdm_size,x=x_id+1, y=y_id+1)
             pass
 
 

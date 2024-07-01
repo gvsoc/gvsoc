@@ -99,6 +99,7 @@ third_party/occamy:
 	git submodule update --init --recursive; bender vendor init; \
 	git apply ../../add_dramsyslib_patches/flex_cluster_pdk/occamy.patch; \
 	cp -rfv ../../add_dramsyslib_patches/flex_cluster_pdk/test target/sim/sw/device/apps/blas; \
+	sed -i -e '29,52d' -e '63,67d' -e '79,91d' deps/snitch_cluster/sw/snRuntime/src/start.c; \
 	cd target/sim; make DEBUG=ON sw
 
 clean_sw:
