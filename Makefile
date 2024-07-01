@@ -45,6 +45,7 @@ drmasys_apply_patch:
 	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp.patch; then \
 		git apply ../add_dramsyslib_patches/gvsoc_pulp.patch;\
 	fi
+	cp -rf add_dramsyslib_patches/flex_cluster pulp/pulp/chips/flex_cluster
 
 
 build-systemc: third_party/systemc_install/lib64/libsystemc.so
@@ -90,5 +91,22 @@ core/models/memory/dramsys_configs:
 
 dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs
 
+sw: third_party/occamy
+
+third_party/occamy:
+	cd third_party; git clone git@github.com:pulp-platform/occamy.git; \
+	cd occamy; git reset --hard ed0b98162fae196faff96a972f861a0aa4593227; \
+	git submodule update --init --recursive; bender vendor init; \
+	git apply ../../add_dramsyslib_patches/flex_cluster_pdk/occamy.patch; \
+	cp -rfv ../../add_dramsyslib_patches/flex_cluster_pdk/test target/sim/sw/device/apps/blas; \
+	cd target/sim; make DEBUG=ON sw
+
+clean_sw:
+	rm -rf third_party/occamy
+
 clean_dramsys_preparation:
 	rm -rf third_party
+
+update:
+	rm -rf add_dramsyslib_patches/flex_cluster
+	cp -rf pulp/pulp/chips/flex_cluster/ add_dramsyslib_patches/flex_cluster
