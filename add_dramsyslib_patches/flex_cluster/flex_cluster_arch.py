@@ -24,17 +24,15 @@ class FlexClusterArch:
         self.noc_link_width          = 512
         self.num_core_per_cluster    = 10
 
-        self.instruction_mem_base    = 0x8000_0000
-        self.instruction_mem_size    = 0x0001_0000
+        self.instruction_mem_base    = 0x80000000
+        self.instruction_mem_size    = 0x00010000
 
-        self.cluster_tcdm_base       = 0x0000_0000
-        self.cluster_tcdm_size       = 0x0002_0000
+        self.cluster_tcdm_base       = 0x00000000
+        self.cluster_tcdm_size       = 0x00020000
 
-        self.cluster_stack_base      = 0x1000_0000
+        self.cluster_stack_base      = 0x10000000
 
-        self.soc_register_base       = 0x9000_0000
-        self.soc_register_size       = 0x0001_0000
+        self.soc_register_base       = 0x90000000
+        self.soc_register_size       = 0x00010000
 
-        self.hbm_start_base          = 0xc000_0000
-         # meta parameters
-        self.num_clusters            = self.num_cluster_x * self.num_cluster_y
+        self.hbm_start_base          = 0xc0000000

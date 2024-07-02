@@ -41,7 +41,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
         # Configuration #
         #################
 
-        arch = FlexClusterArch()
+        arch            = FlexClusterArch()
+        num_clusters    = arch.num_cluster_x * arch.num_cluster_y
 
         # Get Binary
         binary = None
@@ -61,7 +62,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #clusters
         cluster_list=[]
-        for cluster_id in range(arch.num_clusters):
+        for cluster_id in range(num_clusters):
             cluster_arch = ClusterArch( nb_core_per_cluster =   arch.num_core_per_cluster,
                                         base                =   arch.cluster_tcdm_base + cluster_id * arch.cluster_tcdm_size * 2,
                                         first_hartid        =   cluster_id * arch.num_core_per_cluster,
@@ -78,7 +79,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #hbm channels
         hbm_list = []
-        for hbm_ch in range(arch.num_clusters):
+        for hbm_ch in range(num_clusters):
             hbm_list.append(memory.memory.Memory(self, f'hbm_ch{hbm_ch}', size=arch.cluster_tcdm_size))
             pass
 
@@ -95,17 +96,17 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         # Binary loader
         loader.o_OUT(instr_router.i_INPUT())
-        for cluster_id in range(arch.num_clusters):
+        for cluster_id in range(num_clusters):
             loader.o_START(cluster_list[cluster_id].i_FETCHEN())
             pass
 
         #Clusters
-        for cluster_id in range(arch.num_clusters):
+        for cluster_id in range(num_clusters):
             cluster_list[cluster_id].o_NARROW_SOC(instr_router.i_INPUT())
             pass
 
         #NoC
-        for node_id in range(arch.num_clusters):
+        for node_id in range(num_clusters):
             x_id = int(node_id%arch.num_cluster_x)
             y_id = int(node_id/arch.num_cluster_x)
             cluster_list[node_id].o_WIDE_SOC(noc.i_CLUSTER_INPUT(x_id, y_id))
