@@ -80,9 +80,9 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
             std::cout << "EOC register return value: 0x" << std::hex << ((value - 1) >> 1) << std::endl;
             _this->time.get_engine()->quit(value >> 1);
         }
-        if (offset == 4 && value == 0xFFFFFFFF)
+        if (offset == 4)
         {
-            _this->event_enqueue(_this->wakeup_event, 1000);
+            _this->event_enqueue(_this->wakeup_event, 1);
         }
     }
 

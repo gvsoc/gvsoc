@@ -54,30 +54,44 @@ class FlexClusterSystem(gvsoc.systree.Component):
         # Components #
         ##############
 
-        #loader
+        #Loader
         loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
 
-        #instruction memory
+        #Instruction memory
         instr_mem = memory.memory.Memory(self, 'instr_mem', size=arch.instruction_mem_size, atomics=True)
 
-        #clusters
+        #Clusters
         cluster_list=[]
         for cluster_id in range(num_clusters):
             cluster_arch = ClusterArch( nb_core_per_cluster =   arch.num_core_per_cluster,
-                                        base                =   arch.cluster_tcdm_base + cluster_id * arch.cluster_tcdm_size * 2,
-                                        first_hartid        =   cluster_id * arch.num_core_per_cluster,
+                                        base                =   arch.cluster_tcdm_base,
+                                        cluster_id          =   cluster_id,
                                         tcdm_size           =   arch.cluster_tcdm_size,
-                                        stack_base          =   arch.cluster_stack_base)
+                                        stack_base          =   arch.cluster_stack_base,
+                                        stack_size          =   arch.cluster_stack_size,
+                                        reg_base            =   arch.cluster_reg_base,
+                                        reg_size            =   arch.cluster_reg_size,
+                                        sync_base           =   arch.sync_base,
+                                        sync_size           =   arch.num_cluster_x*arch.num_cluster_y*arch.sync_interleave)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch))
             pass
 
-        #instruction router
+        #Instruction router
         instr_router = router.Router(self, 'instr_router')
 
-        #control register
+        #Control register
         csr = CtrlRegisters(self, 'ctrl_registers')
 
-        #hbm channels
+        #Synchronization bus
+        sync_bus = router.Router(self, 'sync_bus', bandwidth=4)
+
+        #Synchronization memory
+        sync_mem_list = []
+        for cluster_id in range(num_clusters):
+            sync_mem_list.append(memory.memory.Memory(self, f'sync_mem{cluster_id}', size=arch.sync_interleave, atomics=True))
+            pass
+
+        #HBM channels
         hbm_list = []
         for hbm_ch in range(num_clusters):
             hbm_list.append(memory.memory.Memory(self, f'hbm_ch{hbm_ch}', size=arch.cluster_tcdm_size))
@@ -87,14 +101,26 @@ class FlexClusterSystem(gvsoc.systree.Component):
         noc = pulp.floonoc.floonoc.FlooNocClusterGrid(self, 'noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y)
 
+        #Debug Memory
+        debug_mem = memory.memory.Memory(self,'debug_mem', size=1)
+
         ############
         # Bindings #
         ############
 
+        #Instruction Memory
         instr_router.o_MAP(instr_mem.i_INPUT(), base=arch.instruction_mem_base, size=arch.instruction_mem_size, rm_base=True)
-        instr_router.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
 
-        # Binary loader
+        #Debug memory
+        instr_router.o_MAP(debug_mem.i_INPUT())
+
+        #Control register
+        instr_router.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
+        for cluster_id in range(num_clusters):
+            csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ())
+            pass
+
+        #Binary loader
         loader.o_OUT(instr_router.i_INPUT())
         for cluster_id in range(num_clusters):
             loader.o_START(cluster_list[cluster_id].i_FETCHEN())
@@ -104,6 +130,13 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for cluster_id in range(num_clusters):
             cluster_list[cluster_id].o_NARROW_SOC(instr_router.i_INPUT())
             pass
+
+        #Synchornization bus
+        for node_id in range(num_clusters):
+            cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_INPUT())
+            sync_bus.o_MAP(sync_mem_list[node_id].i_INPUT(), base=arch.sync_base+node_id*arch.sync_interleave, size=arch.sync_interleave, rm_base=True)
+            pass
+        
 
         #NoC
         for node_id in range(num_clusters):

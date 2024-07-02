@@ -19,7 +19,7 @@ import pulp.snitch.snitch_core as iss
 import memory.memory as memory
 import interco.router as router
 import gvsoc.systree
-from pulp.snitch.snitch_cluster.cluster_registers import ClusterRegisters
+from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
 from pulp.snitch.zero_mem import ZeroMem
 from elftools.elf.elffile import *
@@ -43,16 +43,18 @@ class Area:
 
 
 class ClusterArch:
-    def __init__(self, nb_core_per_cluster, base, first_hartid, tcdm_size, stack_base ,auto_fetch=False, boot_addr=0x8000_0650):
+    def __init__(self, nb_core_per_cluster, base, cluster_id, tcdm_size, stack_base, stack_size, reg_base, reg_size, sync_base, sync_size ,auto_fetch=False, boot_addr=0x8000_0650):
         self.nb_core        = nb_core_per_cluster
         self.base           = base
-        self.first_hartid   = first_hartid
+        self.cluster_id     = cluster_id
 
         self.boot_addr      = boot_addr
         self.auto_fetch     = auto_fetch
         self.barrier_irq    = 19
         self.tcdm           = ClusterArch.Tcdm(base, self.nb_core, tcdm_size)
-        self.stack_area     = Area(stack_base, tcdm_size)
+        self.stack_area     = Area(stack_base, stack_size)
+        self.sync_area      = Area(sync_base, sync_size)
+        self.reg_area       = Area(reg_base, reg_size)
 
     class Tcdm:
         def __init__(self, base, nb_masters, tcdm_size):
@@ -115,8 +117,9 @@ class ClusterUnit(gvsoc.systree.Component):
         #
 
         # Main router
-        wide_axi = router.Router(self, 'wide_axi', bandwidth=64)
-        narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
+        wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm', bandwidth=64)
+        wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma', bandwidth=64)
+        narrow_axi = router.Router(self, 'narrow_axi')
 
         # Dedicated router for dma to TCDM
         tcdm_dma_ico = router.Router(self, 'tcdm_dma_ico', bandwidth=64)
@@ -134,11 +137,11 @@ class ClusterUnit(gvsoc.systree.Component):
         for core_id in range(0, arch.nb_core):
             cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdvca',
                 fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
-                core_id=arch.first_hartid + core_id, htif=False))
+                core_id=core_id, htif=False))
 
             fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdvca',
                 fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
-                core_id=arch.first_hartid + core_id, htif=False))
+                core_id=core_id, htif=False))
             if xfrep:
                 fpu_sequencers.append(Sequencer(self, f'fpu_sequencer{core_id}', latency=0))
 
@@ -146,7 +149,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers', nb_cores=arch.nb_core,
-            boot_addr=entry)
+            boot_addr=entry, cluster_id=arch.cluster_id)
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
@@ -154,6 +157,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
         #stack memory
         stack_mem = memory.Memory(self, 'stack_mem', size=arch.stack_area.size)
+
+        #synchronization router
+        sync_router = router.Router(self, 'sync_router', bandwidth=4)
 
         #
         # Bindings
@@ -169,10 +175,18 @@ class ClusterUnit(gvsoc.systree.Component):
         #binding to stack memory
         narrow_axi.o_MAP(stack_mem.i_INPUT(), base=arch.stack_area.base, size=arch.stack_area.size, rm_base=True)
 
+        #binding to cluster registers
+        narrow_axi.o_MAP(cluster_registers.i_INPUT(), base=arch.reg_area.base, size=arch.reg_area.size, rm_base=True)
+
+        #binding to synchronization bus
+        narrow_axi.o_MAP(sync_router.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size, rm_base=False)
+        sync_router.o_MAP(self.i_SYNC_OUTPUT())
+
         # Wire router for DMA and instruction caches
-        self.o_WIDE_INPUT(wide_axi.i_INPUT())
-        wide_axi.o_MAP(self.i_WIDE_SOC())
-        wide_axi.o_MAP(tcdm.i_BUS_INPUT(), base=arch.tcdm.area.base, size=arch.tcdm.area.size, rm_base=True)
+        self.o_WIDE_INPUT(wide_axi_goto_tcdm.i_INPUT())
+        wide_axi_goto_tcdm.o_MAP(tcdm.i_BUS_INPUT())
+        wide_axi_from_idma.o_MAP(self.i_WIDE_SOC())
+        
 
         # Cores
         cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
@@ -219,8 +233,12 @@ class ClusterUnit(gvsoc.systree.Component):
         for core_id in range(0, arch.nb_core):
             cluster_registers.o_EXTERNAL_IRQ(core_id, cores[core_id].i_IRQ(arch.barrier_irq))
 
+        #Global Synchronization
+        # self.o_SYNC_IRQ(cluster_registers.i_GLOBAL_REQ())
+        self.bind(self, 'sync_irq', cluster_registers, 'global_barrier_req')
+
         # Cluster DMA
-        idma.o_AXI(wide_axi.i_INPUT())
+        idma.o_AXI(wide_axi_from_idma.i_INPUT())
         idma.o_TCDM(tcdm.i_DMA_INPUT())
 
     def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
@@ -252,3 +270,15 @@ class ClusterUnit(gvsoc.systree.Component):
 
     def o_NARROW_SOC(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('narrow_soc', itf, signature='io')
+
+    def i_SYNC_OUTPUT(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'sync_output', signature='io')
+
+    def o_SYNC_OUTPUT(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('sync_output', itf, signature='io')
+
+    def i_SYNC_IRQ(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'sync_irq', signature='wire<bool>')
+
+    def o_SYNC_IRQ(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('sync_irq', itf, signature='wire<bool>')
