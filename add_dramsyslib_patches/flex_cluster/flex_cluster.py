@@ -27,7 +27,8 @@ import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_unit import ClusterUnit, ClusterArch
 from pulp.chips.flex_cluster.ctrl_registers import CtrlRegisters
 from pulp.chips.flex_cluster.flex_cluster_arch import FlexClusterArch
-import pulp.floonoc.floonoc
+from pulp.chips.flex_cluster.flex_mesh_noc import FlexMeshNoC
+import memory.dramsys
 
 GAPY_TARGET = True
 
@@ -54,12 +55,6 @@ class FlexClusterSystem(gvsoc.systree.Component):
         # Components #
         ##############
 
-        #Loader
-        loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
-
-        #Instruction memory
-        instr_mem = memory.memory.Memory(self, 'instr_mem', size=arch.instruction_mem_size, atomics=True)
-
         #Clusters
         cluster_list=[]
         for cluster_id in range(num_clusters):
@@ -72,12 +67,14 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         reg_base            =   arch.cluster_reg_base,
                                         reg_size            =   arch.cluster_reg_size,
                                         sync_base           =   arch.sync_base,
-                                        sync_size           =   arch.num_cluster_x*arch.num_cluster_y*arch.sync_interleave)
-            cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch))
+                                        sync_size           =   arch.num_cluster_x*arch.num_cluster_y*arch.sync_interleave,
+                                        insn_base           =   arch.instruction_mem_base,
+                                        insn_size           =   arch.instruction_mem_size)
+            cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 
-        #Instruction router
-        instr_router = router.Router(self, 'instr_router')
+        #Narrow AXI router
+        narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
 
         #Control register
         csr = CtrlRegisters(self, 'ctrl_registers')
@@ -91,14 +88,29 @@ class FlexClusterSystem(gvsoc.systree.Component):
             sync_mem_list.append(memory.memory.Memory(self, f'sync_mem{cluster_id}', size=arch.sync_interleave, atomics=True))
             pass
 
-        #HBM channels
-        hbm_list = []
-        for hbm_ch in range(num_clusters):
-            hbm_list.append(memory.memory.Memory(self, f'hbm_ch{hbm_ch}', size=arch.cluster_tcdm_size))
-            pass
+        # #HBM channels
+        # hbm_list_west = []
+        # for hbm_ch in range(arch.hbm_placement[0]):
+        #     hbm_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}'))
+        #     pass
 
-        #Noc
-        noc = pulp.floonoc.floonoc.FlooNocClusterGrid(self, 'noc', width=arch.noc_link_width/8,
+        # hbm_list_north = []
+        # for hbm_ch in range(arch.hbm_placement[1]):
+        #     hbm_list_north.append(memory.dramsys.Dramsys(self, f'north_hbm_chan_{hbm_ch}'))
+        #     pass
+
+        # hbm_list_east = []
+        # for hbm_ch in range(arch.hbm_placement[2]):
+        #     hbm_list_east.append(memory.dramsys.Dramsys(self, f'east_hbm_chan_{hbm_ch}'))
+        #     pass
+
+        # hbm_list_south = []
+        # for hbm_ch in range(arch.hbm_placement[3]):
+        #     hbm_list_south.append(memory.dramsys.Dramsys(self, f'south_hbm_chan_{hbm_ch}'))
+        #     pass
+
+        #NoC
+        noc = FlexMeshNoC(self, 'noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y)
 
         #Debug Memory
@@ -108,27 +120,18 @@ class FlexClusterSystem(gvsoc.systree.Component):
         # Bindings #
         ############
 
-        #Instruction Memory
-        instr_router.o_MAP(instr_mem.i_INPUT(), base=arch.instruction_mem_base, size=arch.instruction_mem_size, rm_base=True)
-
         #Debug memory
-        instr_router.o_MAP(debug_mem.i_INPUT())
+        narrow_axi.o_MAP(debug_mem.i_INPUT())
 
         #Control register
-        instr_router.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
+        narrow_axi.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
         for cluster_id in range(num_clusters):
             csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ())
             pass
 
-        #Binary loader
-        loader.o_OUT(instr_router.i_INPUT())
-        for cluster_id in range(num_clusters):
-            loader.o_START(cluster_list[cluster_id].i_FETCHEN())
-            pass
-
         #Clusters
         for cluster_id in range(num_clusters):
-            cluster_list[cluster_id].o_NARROW_SOC(instr_router.i_INPUT())
+            cluster_list[cluster_id].o_NARROW_SOC(narrow_axi.i_INPUT())
             pass
 
         #Synchornization bus
@@ -143,7 +146,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             x_id = int(node_id%arch.num_cluster_x)
             y_id = int(node_id/arch.num_cluster_x)
             cluster_list[node_id].o_WIDE_SOC(noc.i_CLUSTER_INPUT(x_id, y_id))
-            noc.o_MAP(hbm_list[node_id].i_INPUT(), base=arch.hbm_start_base+node_id*arch.cluster_tcdm_size, size=arch.cluster_tcdm_size,x=x_id+1, y=y_id+1)
+            noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote+node_id*arch.cluster_tcdm_size, size=arch.cluster_tcdm_size,x=x_id+1, y=y_id+1)
             pass
 
 

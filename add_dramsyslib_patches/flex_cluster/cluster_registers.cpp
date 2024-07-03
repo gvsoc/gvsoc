@@ -115,6 +115,10 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
 
     data[0] = _this->cluster_id;
 
+    if(offset == 4){
+        data[0] = 1;
+    }
+
     if (is_write && _this->global_barrier_query == NULL)
     {
         if (_this->global_barrier_mutex == 1)
@@ -146,6 +150,7 @@ void ClusterRegisters::global_barrier_sync(vp::Block *__this, bool value)
     }else{
         _this->global_barrier_mutex = 0;
         _this->global_barrier_query->get_resp_port()->resp(_this->global_barrier_query);
+        _this->global_barrier_query = NULL;
     }
 
 }

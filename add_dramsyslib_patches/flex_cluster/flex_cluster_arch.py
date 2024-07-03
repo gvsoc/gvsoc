@@ -27,9 +27,10 @@ class FlexClusterArch:
 
         self.cluster_tcdm_base       = 0x00000000
         self.cluster_tcdm_size       = 0x00020000
+        self.cluster_tcdm_remote     = 0x30000000
 
         self.cluster_stack_base      = 0x10000000
-        self.cluster_stack_size      = 0x00020000
+        self.cluster_stack_size      = 0x00080000
 
         self.cluster_reg_base        = 0x20000000
         self.cluster_reg_size        = 0x00020000
@@ -37,9 +38,8 @@ class FlexClusterArch:
         #HBM
         self.hbm_start_base          = 0xc0000000
         self.hbm_interleave          = 0x00100000
-        self.num_hbm_channle         = 4
         self.num_hbm_ch_per_node     = 1
-        self.hbm_place_order         = [1,2,3,4]
+        self.hbm_placement           = [4,4,4,4]
 
         #NoC
         self.noc_link_width          = 512

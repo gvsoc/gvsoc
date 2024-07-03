@@ -28,6 +28,7 @@ from pulp.cluster.l1_interleaver import L1_interleaver
 import gvsoc.runner
 import math
 from pulp.snitch.sequencer import Sequencer
+import utils.loader.loader
 
 
 GAPY_TARGET = True
@@ -43,7 +44,7 @@ class Area:
 
 
 class ClusterArch:
-    def __init__(self, nb_core_per_cluster, base, cluster_id, tcdm_size, stack_base, stack_size, reg_base, reg_size, sync_base, sync_size ,auto_fetch=False, boot_addr=0x8000_0650):
+    def __init__(self, nb_core_per_cluster, base, cluster_id, tcdm_size, stack_base, stack_size, reg_base, reg_size, sync_base, sync_size, insn_base, insn_size ,auto_fetch=False, boot_addr=0x8000_0650):
         self.nb_core        = nb_core_per_cluster
         self.base           = base
         self.cluster_id     = cluster_id
@@ -55,6 +56,7 @@ class ClusterArch:
         self.stack_area     = Area(stack_base, stack_size)
         self.sync_area      = Area(sync_base, sync_size)
         self.reg_area       = Area(reg_base, reg_size)
+        self.insn_area      = Area(insn_base, insn_size);
 
     class Tcdm:
         def __init__(self, base, nb_masters, tcdm_size):
@@ -74,8 +76,7 @@ class ClusterTcdm(gvsoc.systree.Component):
         banks = []
         nb_banks = arch.nb_superbanks * arch.nb_banks_per_superbank
         for i in range(0, nb_banks):
-            banks.append(memory.Memory(self, f'bank_{i}', size=arch.bank_size, atomics=True,
-                width_log2=int(math.log2(arch.bank_width))))
+            banks.append(memory.Memory(self, f'bank_{i}', size=arch.bank_size, atomics=True)) # width_log2=int(math.log2(arch.bank_width))))
 
         interleaver = L1_interleaver(self, 'interleaver', nb_slaves=nb_banks,
             nb_masters=arch.nb_masters, interleaving_bits=int(math.log2(arch.bank_width)))
@@ -109,17 +110,26 @@ class ClusterTcdm(gvsoc.systree.Component):
 
 class ClusterUnit(gvsoc.systree.Component):
 
-    def __init__(self, parent, name, arch, entry=0, auto_fetch=True):
+    def __init__(self, parent, name, arch, binary, entry=0, auto_fetch=True):
         super().__init__(parent, name)
 
         #
         # Components
         #
 
+        #Loader
+        loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
+
+        #Instruction memory
+        instr_mem = memory.Memory(self, 'instr_mem', size=arch.insn_area.size, atomics=True)
+
+        #Instruction router
+        instr_router = router.Router(self, 'instr_router', bandwidth=8)
+
         # Main router
         wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm', bandwidth=64)
         wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma', bandwidth=64)
-        narrow_axi = router.Router(self, 'narrow_axi')
+        narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
 
         # Dedicated router for dma to TCDM
         tcdm_dma_ico = router.Router(self, 'tcdm_dma_ico', bandwidth=64)
@@ -165,6 +175,13 @@ class ClusterUnit(gvsoc.systree.Component):
         # Bindings
         #
 
+        #Binary loader
+        loader.o_OUT(instr_router.i_INPUT())
+        loader.o_START(self.i_FETCHEN())
+
+        #Instruction router
+        instr_router.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
+
         # Narrow router for cores data accesses
         self.o_NARROW_INPUT(narrow_axi.i_INPUT())
         narrow_axi.o_MAP(self.i_NARROW_SOC())
@@ -177,6 +194,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
         #binding to cluster registers
         narrow_axi.o_MAP(cluster_registers.i_INPUT(), base=arch.reg_area.base, size=arch.reg_area.size, rm_base=True)
+
+        #binding back to instruction memory if access needs
+        narrow_axi.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
 
         #binding to synchronization bus
         narrow_axi.o_MAP(sync_router.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size, rm_base=False)
@@ -203,7 +223,7 @@ class ClusterUnit(gvsoc.systree.Component):
             cores_ico[core_id].o_MAP(tcdm.i_INPUT(core_id), base=arch.tcdm.area.base,
                 size=arch.tcdm.area.size, rm_base=True)
             cores_ico[core_id].o_MAP(narrow_axi.i_INPUT())
-            cores[core_id].o_FETCH(narrow_axi.i_INPUT())
+            cores[core_id].o_FETCH(instr_router.i_INPUT())
 
         for core_id in range(0, arch.nb_core):
             fp_cores[core_id].o_DATA( cores_ico[core_id].i_INPUT() )
