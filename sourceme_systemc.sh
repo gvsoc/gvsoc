@@ -11,4 +11,6 @@ export PYTHONPATH=$SDK_HOME/install/python:$PYTHONPATH
 ##############################################################################
 ## 				Envirment Parameters for DRAMSys Integration 				##
 ##############################################################################
+export SYSTEMC_HOME=$SDK_HOME/third_party/systemc_install
+export LD_LIBRARY_PATH=${SYSTEMC_HOME}/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SDK_HOME/third_party/DRAMSys:$LD_LIBRARY_PATH
