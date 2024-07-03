@@ -42,9 +42,15 @@ class FlexMeshNoC(FlooNoc2dMesh):
         Number of clusters on the X direction. This should not include the targets on the borders.
     nb_y_clusters: int
         Number of clusters on the Y direction. This should not include the targets on the borders.
+    ni_outstanding_reqs: int
+        Number of outstanding requests each network interface can inject to the routers. This should
+        be increased when the size of the noc increases.
+    router_input_queue_size: int
+        Size of the routers input queues. This gives the number of requests which can be buffered
+        before the source output queue is stalled.
     """
     def __init__(self, parent: gvsoc.systree.Component, name, width: int, nb_x_clusters: int,
-            nb_y_clusters: int, ni_outstanding_reqs: int=256, router_input_queue_size: int=256):
+            nb_y_clusters: int, ni_outstanding_reqs: int=2, router_input_queue_size: int=2):
         # The total grid contains 1 more node on each direction for the targets
         super(FlexMeshNoC, self).__init__(parent, name, width, dim_x=nb_x_clusters+2, dim_y=nb_y_clusters+2,
                                           ni_outstanding_reqs=ni_outstanding_reqs, router_input_queue_size=router_input_queue_size)

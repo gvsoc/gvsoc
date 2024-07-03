@@ -10,8 +10,8 @@ int main()
     flex_global_barrier();
 
     if (snrt_is_dm_core()){
-        size_t size = 4096;
-        flex_dma_pattern_round_shift_right(0, size, size);
+        size_t size = ARCH_CLUSTER_TCDM_SIZE/2;
+        flex_dma_pattern_all_to_one(0, size, size);
     }
 
     flex_global_barrier();

@@ -42,6 +42,7 @@ class FlexClusterArch:
         self.hbm_placement           = [4,4,4,4]
 
         #NoC
+        self.noc_outstanding         = 2
         self.noc_link_width          = 512
 
         #System

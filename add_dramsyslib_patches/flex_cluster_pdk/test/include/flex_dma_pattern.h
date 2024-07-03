@@ -42,4 +42,11 @@ void flex_dma_pattern_round_shift_left(uint32_t local_offset, uint32_t remote_of
     snrt_dma_wait_all(); // Wait for iDMA Finishing
 }
 
+//Pattern All-to-One
+void flex_dma_pattern_all_to_one(uint32_t local_offset, uint32_t remote_offset, size_t transfer_size){
+    FlexPosition pos = get_pos(flex_get_cluster_id());
+    snrt_dma_start_1d(local(local_offset),remote_xy(0,0,remote_offset), transfer_size); //Start iDMA
+    snrt_dma_wait_all(); // Wait for iDMA Finishing
+}
+
 #endif
