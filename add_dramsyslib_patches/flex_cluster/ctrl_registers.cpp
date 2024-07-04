@@ -70,14 +70,14 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
     uint64_t size = req->get_size();
     bool is_write = req->get_is_write();
 
-    _this->trace.msg("Control registers access (offset: 0x%x, size: 0x%x, is_write: %d, data:%x)\n", offset, size, is_write, *(uint32_t *)data);
+    // _this->trace.msg("Control registers access (offset: 0x%x, size: 0x%x, is_write: %d, data:%x)\n", offset, size, is_write, *(uint32_t *)data);
 
     if (is_write && size == 4)
     {
         uint32_t value = *(uint32_t *)data;
         if (offset == 0)
         {
-            std::cout << "EOC register return value: 0x" << std::hex << ((value - 1) >> 1) << std::endl;
+            // std::cout << "EOC register return value: 0x" << std::hex << ((value - 1) >> 1) << std::endl;
             _this->time.get_engine()->quit(value >> 1);
         }
         if (offset == 4)

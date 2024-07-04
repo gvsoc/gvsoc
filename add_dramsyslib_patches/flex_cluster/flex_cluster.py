@@ -44,6 +44,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         arch            = FlexClusterArch()
         num_clusters    = arch.num_cluster_x * arch.num_cluster_y
+        arch.noc_outstanding = (arch.num_cluster_x + arch.num_cluster_y)
 
         # Get Binary
         binary = None
