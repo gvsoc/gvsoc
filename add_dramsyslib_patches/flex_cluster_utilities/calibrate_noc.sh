@@ -10,7 +10,7 @@ source sourceme.sh
 ####################
 results_folder="result/dialog"
 mkdir -p ${results_folder}
-sed -i "14s/.*/        flex_dma_pattern_dialog_to_dialog(0, size, size);/" add_dramsyslib_patches/flex_cluster_pdk/test/src/test.c
+sed -i "14s/.*/        flex_dma_pattern_dialog_to_dialog(0, size, size);/" add_dramsyslib_patches/flex_cluster_sdk/test/src/test.c
 
 for dim in ${noc_dim_list[@]}; do
     sed -i "24s/.*/        self.num_cluster_x           = ${dim}/" pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
@@ -25,7 +25,7 @@ done
 ####################
 results_folder="result/all_to_one"
 mkdir -p ${results_folder}
-sed -i "14s/.*/        flex_dma_pattern_all_to_one(0, size, size);/" add_dramsyslib_patches/flex_cluster_pdk/test/src/test.c
+sed -i "14s/.*/        flex_dma_pattern_all_to_one(0, size, size);/" add_dramsyslib_patches/flex_cluster_sdk/test/src/test.c
 
 for dim in ${noc_dim_list[@]}; do
     sed -i "24s/.*/        self.num_cluster_x           = ${dim}/" pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
@@ -40,7 +40,7 @@ done
 ####################
 results_folder="result/round_shift_left"
 mkdir -p ${results_folder}
-sed -i "14s/.*/        flex_dma_pattern_round_shift_left(0, size, size);/" add_dramsyslib_patches/flex_cluster_pdk/test/src/test.c
+sed -i "14s/.*/        flex_dma_pattern_round_shift_left(0, size, size);/" add_dramsyslib_patches/flex_cluster_sdk/test/src/test.c
 
 for dim in ${noc_dim_list[@]}; do
     sed -i "24s/.*/        self.num_cluster_x           = ${dim}/" pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
