@@ -98,26 +98,30 @@ class FlexClusterSystem(gvsoc.systree.Component):
             sync_mem_list.append(memory.memory.Memory(self, f'sync_mem{cluster_id}', size=arch.sync_interleave, atomics=True))
             pass
 
-        # #HBM channels
-        # hbm_list_west = []
-        # for hbm_ch in range(arch.hbm_placement[0]):
-        #     hbm_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}'))
-        #     pass
+        #HBM channels
+        hbm_list_west = []
+        for hbm_ch in range(arch.hbm_placement[0]):
+            hbm_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}'))
+            pass
+        hbm_west_router = router.Router(self, 'hbm_west_router')
 
-        # hbm_list_north = []
-        # for hbm_ch in range(arch.hbm_placement[1]):
-        #     hbm_list_north.append(memory.dramsys.Dramsys(self, f'north_hbm_chan_{hbm_ch}'))
-        #     pass
+        hbm_list_north = []
+        for hbm_ch in range(arch.hbm_placement[1]):
+            hbm_list_north.append(memory.dramsys.Dramsys(self, f'north_hbm_chan_{hbm_ch}'))
+            pass
+        hbm_north_router = router.Router(self, 'hbm_north_router')
 
-        # hbm_list_east = []
-        # for hbm_ch in range(arch.hbm_placement[2]):
-        #     hbm_list_east.append(memory.dramsys.Dramsys(self, f'east_hbm_chan_{hbm_ch}'))
-        #     pass
+        hbm_list_east = []
+        for hbm_ch in range(arch.hbm_placement[2]):
+            hbm_list_east.append(memory.dramsys.Dramsys(self, f'east_hbm_chan_{hbm_ch}'))
+            pass
+        hbm_east_router = router.Router(self, 'hbm_east_router')
 
-        # hbm_list_south = []
-        # for hbm_ch in range(arch.hbm_placement[3]):
-        #     hbm_list_south.append(memory.dramsys.Dramsys(self, f'south_hbm_chan_{hbm_ch}'))
-        #     pass
+        hbm_list_south = []
+        for hbm_ch in range(arch.hbm_placement[3]):
+            hbm_list_south.append(memory.dramsys.Dramsys(self, f'south_hbm_chan_{hbm_ch}'))
+            pass
+        hbm_south_router = router.Router(self, 'hbm_south_router')
 
         #NoC
         noc = FlexMeshNoC(self, 'noc', width=arch.noc_link_width/8,
@@ -159,6 +163,57 @@ class FlexClusterSystem(gvsoc.systree.Component):
             cluster_list[node_id].o_WIDE_SOC(noc.i_CLUSTER_INPUT(x_id, y_id))
             noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote+node_id*arch.cluster_tcdm_size, size=arch.cluster_tcdm_size,x=x_id+1, y=y_id+1)
             pass
+
+        #HBM connection
+        hbm_edge_start_base = arch.hbm_start_base
+
+        ## west
+        for node_id in range(arch.num_cluster_y):
+            noc.o_MAP(hbm_west_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=0, y=node_id+1)
+            pass
+
+        for hbm_ch in range(arch.hbm_placement[0]):
+            hbm_west_channel_interleave = (arch.hbm_node_interleave * arch.num_cluster_y)/arch.hbm_placement[0]
+            hbm_west_router.add_mapping(f'hbm_chan_{hbm_ch}', base=hbm_ch*hbm_west_channel_interleave, size=hbm_west_channel_interleave)
+            self.bind(hbm_west_router, f'hbm_chan_{hbm_ch}', hbm_list_west[hbm_ch], 'input')
+            pass
+        hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_interleave
+
+        ## north
+        for node_id in range(arch.num_cluster_x):
+            noc.o_MAP(hbm_north_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=0)
+            pass
+
+        for hbm_ch in range(arch.hbm_placement[1]):
+            hbm_north_channel_interleave = (arch.hbm_node_interleave * arch.num_cluster_x)/arch.hbm_placement[1]
+            hbm_north_router.add_mapping(f'hbm_chan_{hbm_ch}', base=hbm_ch*hbm_north_channel_interleave, size=hbm_north_channel_interleave)
+            self.bind(hbm_north_router, f'hbm_chan_{hbm_ch}', hbm_list_north[hbm_ch], 'input')
+            pass
+        hbm_edge_start_base += arch.num_cluster_x*arch.hbm_node_interleave
+
+        ## east
+        for node_id in range(arch.num_cluster_y):
+            noc.o_MAP(hbm_east_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=arch.num_cluster_x+1, y=node_id+1)
+            pass
+
+        for hbm_ch in range(arch.hbm_placement[2]):
+            hbm_east_channel_interleave = (arch.hbm_node_interleave * arch.num_cluster_y)/arch.hbm_placement[2]
+            hbm_east_router.add_mapping(f'hbm_chan_{hbm_ch}', base=hbm_ch*hbm_east_channel_interleave, size=hbm_east_channel_interleave)
+            self.bind(hbm_east_router, f'hbm_chan_{hbm_ch}', hbm_list_east[hbm_ch], 'input')
+            pass
+        hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_interleave
+
+        ## south
+        for node_id in range(arch.num_cluster_x):
+            noc.o_MAP(hbm_south_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=arch.num_cluster_y+1)
+            pass
+
+        for hbm_ch in range(arch.hbm_placement[3]):
+            hbm_south_channel_interleave = (arch.hbm_node_interleave * arch.num_cluster_x)/arch.hbm_placement[3]
+            hbm_south_router.add_mapping(f'hbm_chan_{hbm_ch}', base=hbm_ch*hbm_south_channel_interleave, size=hbm_south_channel_interleave)
+            self.bind(hbm_south_router, f'hbm_chan_{hbm_ch}', hbm_list_south[hbm_ch], 'input')
+            pass
+
 
 
 class FlexClusterBoard(gvsoc.systree.Component):

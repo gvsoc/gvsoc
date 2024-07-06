@@ -49,9 +49,9 @@ class FlexClusterArch:
 
         #HBM
         self.hbm_start_base          = 0xc0000000
-        self.hbm_interleave          = 0x00100000
+        self.hbm_node_interleave     = 0x00010000
         self.num_hbm_ch_per_node     = 1
-        self.hbm_placement           = [4,4,4,4]
+        self.hbm_placement           = [1,0,0,0]
 
         #NoC
         self.noc_outstanding         = 2
