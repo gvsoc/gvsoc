@@ -20,6 +20,7 @@ import memory.memory as memory
 import interco.router as router
 import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
+from pulp.chips.flex_cluster.light_redmule import LightRedmule
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
 from pulp.snitch.zero_mem import ZeroMem
 from elftools.elf.elffile import *
@@ -44,27 +45,43 @@ class Area:
 
 
 class ClusterArch:
-    def __init__(self, nb_core_per_cluster, base, cluster_id, tcdm_size, stack_base, stack_size, reg_base, reg_size, sync_base, sync_size, insn_base, insn_size ,auto_fetch=False, boot_addr=0x8000_0650):
-        self.nb_core        = nb_core_per_cluster
-        self.base           = base
-        self.cluster_id     = cluster_id
+    def __init__(self,  nb_core_per_cluster, base, cluster_id, tcdm_size,
+                        stack_base,         stack_size,
+                        reg_base,           reg_size,
+                        sync_base,          sync_size,
+                        insn_base,          insn_size,
+                        nb_tcdm_banks,      tcdm_bank_width,
+                        redmule_ce_height,  redmule_ce_width, redmule_ce_pipe,
+                        redmule_elem_size,  redmule_queue_depth,
+                        redmule_reg_base,   redmule_reg_size,
+                        auto_fetch=False,   boot_addr=0x8000_0650):
 
-        self.boot_addr      = boot_addr
-        self.auto_fetch     = auto_fetch
-        self.barrier_irq    = 19
-        self.tcdm           = ClusterArch.Tcdm(base, self.nb_core, tcdm_size)
-        self.stack_area     = Area(stack_base, stack_size)
-        self.sync_area      = Area(sync_base, sync_size)
-        self.reg_area       = Area(reg_base, reg_size)
-        self.insn_area      = Area(insn_base, insn_size);
+        self.nb_core                = nb_core_per_cluster
+        self.base                   = base
+        self.cluster_id             = cluster_id
+        self.boot_addr              = boot_addr
+        self.auto_fetch             = auto_fetch
+        self.barrier_irq            = 19
+        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width)
+        self.stack_area             = Area(stack_base, stack_size)
+        self.sync_area              = Area(sync_base, sync_size)
+        self.reg_area               = Area(reg_base, reg_size)
+        self.insn_area              = Area(insn_base, insn_size)
+
+        #RedMule
+        self.redmule_ce_height      = redmule_ce_height
+        self.redmule_ce_width       = redmule_ce_width
+        self.redmule_ce_pipe        = redmule_ce_pipe
+        self.redmule_elem_size      = redmule_elem_size
+        self.redmule_queue_depth    = redmule_queue_depth
+        self.redmule_area           = Area(redmule_reg_base, redmule_reg_size);
 
     class Tcdm:
-        def __init__(self, base, nb_masters, tcdm_size):
+        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width):
             self.area = Area( base, tcdm_size)
-            self.nb_banks_per_superbank = 8
-            self.bank_width = 8
-            self.nb_superbanks = 4
-            self.bank_size = self.area.size / self.nb_superbanks / self.nb_banks_per_superbank
+            self.nb_tcdm_banks = nb_tcdm_banks
+            self.bank_width = tcdm_bank_width
+            self.bank_size = self.area.size / self.nb_tcdm_banks
             self.nb_masters = nb_masters
 
 
@@ -74,7 +91,7 @@ class ClusterTcdm(gvsoc.systree.Component):
         super().__init__(parent, name)
 
         banks = []
-        nb_banks = arch.nb_superbanks * arch.nb_banks_per_superbank
+        nb_banks = arch.nb_tcdm_banks
         for i in range(0, nb_banks):
             banks.append(memory.Memory(self, f'bank_{i}', size=arch.bank_size, atomics=True, width_log2=int(math.log2(arch.bank_width))))
 
@@ -87,15 +104,20 @@ class ClusterTcdm(gvsoc.systree.Component):
         bus_interleaver = DmaInterleaver(self, 'bus_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
+        hwpe_interleaver = DmaInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
+            nb_banks, arch.bank_width)
+
         for i in range(0, nb_banks):
             self.bind(interleaver, 'out_%d' % i, banks[i], 'input')
             self.bind(dma_interleaver, 'out_%d' % i, banks[i], 'input')
             self.bind(bus_interleaver, 'out_%d' % i, banks[i], 'input')
+            self.bind(hwpe_interleaver, 'out_%d' % i, banks[i], 'input')
 
         for i in range(0, arch.nb_masters):
             self.bind(self, f'in_{i}', interleaver, f'in_{i}')
             self.bind(self, f'dma_input', dma_interleaver, f'input')
             self.bind(self, f'bus_input', bus_interleaver, f'input')
+            self.bind(self, f'hwpe_input', hwpe_interleaver, f'input')
 
     def i_INPUT(self, port: int) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'in_{port}', signature='io')
@@ -105,6 +127,9 @@ class ClusterTcdm(gvsoc.systree.Component):
 
     def i_BUS_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'bus_input', signature='io')
+
+    def i_HWPE_INPUT(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, f'hwpe_input', signature='io')
 
 
 
@@ -157,6 +182,16 @@ class ClusterUnit(gvsoc.systree.Component):
 
             cores_ico.append(router.Router(self, f'pe{core_id}_ico', bandwidth=arch.tcdm.bank_width))
 
+        # RedMule
+        redmule = LightRedmule(self, 'redmule',
+                                    tcdm_bank_width     = arch.tcdm.bank_width,
+                                    tcdm_bank_number    = arch.tcdm.nb_tcdm_banks,
+                                    elem_size           = arch.redmule_elem_size,
+                                    ce_height           = arch.redmule_ce_height,
+                                    ce_width            = arch.redmule_ce_width,
+                                    ce_pipe             = arch.redmule_ce_pipe,
+                                    queue_depth         = arch.redmule_queue_depth)
+
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers', nb_cores=arch.nb_core,
             boot_addr=entry, cluster_id=arch.cluster_id)
@@ -195,12 +230,20 @@ class ClusterUnit(gvsoc.systree.Component):
         #binding to cluster registers
         narrow_axi.o_MAP(cluster_registers.i_INPUT(), base=arch.reg_area.base, size=arch.reg_area.size, rm_base=True)
 
+        #binding to redmule
+        narrow_axi.o_MAP(redmule.i_INPUT(), base=arch.redmule_area.base, size=arch.redmule_area.size, rm_base=True)
+
         #binding back to instruction memory if access needs
         narrow_axi.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
 
         #binding to synchronization bus
         narrow_axi.o_MAP(sync_router.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size, rm_base=False)
         sync_router.o_MAP(self.i_SYNC_OUTPUT())
+
+
+        #RedMule to TCDM
+        redmule.o_TCDM(tcdm.i_HWPE_INPUT())
+
 
         # Wire router for DMA and instruction caches
         self.o_WIDE_INPUT(wide_axi_goto_tcdm.i_INPUT())

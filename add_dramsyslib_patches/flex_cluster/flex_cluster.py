@@ -70,7 +70,16 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         sync_base           =   arch.sync_base,
                                         sync_size           =   arch.num_cluster_x*arch.num_cluster_y*arch.sync_interleave,
                                         insn_base           =   arch.instruction_mem_base,
-                                        insn_size           =   arch.instruction_mem_size)
+                                        insn_size           =   arch.instruction_mem_size,
+                                        nb_tcdm_banks       =   arch.cluster_tcdm_bank_nb,
+                                        tcdm_bank_width     =   arch.cluster_tcdm_bank_width,
+                                        redmule_ce_height   =   arch.redmule_ce_height,
+                                        redmule_ce_width    =   arch.redmule_ce_width,
+                                        redmule_ce_pipe     =   arch.redmule_ce_pipe,
+                                        redmule_elem_size   =   arch.redmule_elem_size,
+                                        redmule_queue_depth =   arch.redmule_queue_depth,
+                                        redmule_reg_base    =   arch.redmule_reg_base,
+                                        redmule_reg_size    =   arch.redmule_reg_size)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 

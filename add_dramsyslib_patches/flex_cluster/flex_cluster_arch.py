@@ -20,10 +20,13 @@ class FlexClusterArch:
 
     def __init__(self):
 
-        #cluster
-        self.num_cluster_x           = 2
-        self.num_cluster_y           = 2
+        #Cluster
+        self.num_cluster_x           = 1
+        self.num_cluster_y           = 1
         self.num_core_per_cluster    = 2
+
+        self.cluster_tcdm_bank_width = 8
+        self.cluster_tcdm_bank_nb    = 32
 
         self.cluster_tcdm_base       = 0x00000000
         self.cluster_tcdm_size       = 0x00020000
@@ -33,7 +36,16 @@ class FlexClusterArch:
         self.cluster_stack_size      = 0x00020000
 
         self.cluster_reg_base        = 0x20000000
-        self.cluster_reg_size        = 0x00020000
+        self.cluster_reg_size        = 0x00000200
+
+        #RedMule
+        self.redmule_ce_height       = 4
+        self.redmule_ce_width        = 1
+        self.redmule_ce_pipe         = 3
+        self.redmule_elem_size       = 2
+        self.redmule_queue_depth     = 32
+        self.redmule_reg_base        = 0x20020000
+        self.redmule_reg_size        = 0x00000200
 
         #HBM
         self.hbm_start_base          = 0xc0000000
