@@ -11,7 +11,8 @@ int main()
 
     if (flex_is_dm_core()){
         size_t size = ARCH_CLUSTER_TCDM_SIZE/2;
-        flex_dma_pattern_round_shift_left(0, size, size);
+        // flex_dma_pattern_round_shift_left(0, size, size);
+        flex_dma_pattern_access_west_hbm(0, 0, size);
     }
 
     if (flex_is_first_core())
