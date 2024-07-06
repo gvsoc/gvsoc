@@ -1,8 +1,18 @@
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..31ac75b 100644
+index 50cb4ac..bc110bf 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
-@@ -173,7 +173,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+     for (int i=0; i<5; i++)
+     {
+         vp::Queue *queue = _this->input_queues[queue_index];
+-        if (!queue->empty())
++        // if (!queue->empty())
++        if (queue->size())
+         {
+             vp::IoReq *req = (vp::IoReq *)queue->head();
+ 
+@@ -173,7 +174,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Since we removed a request, check in next cycle if there is another one to handle
              _this->fsm_event.enqueue();
  
@@ -11,3 +21,12 @@ index 50cb4ac..31ac75b 100644
          }
  
          // If we didn't any ready request, try with next queue
+@@ -204,7 +205,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+         req->status = result;
+         this->noc->handle_request_end(req);
+     }
+-    else if (vp::IO_REQ_DENIED)
++    else if (result == vp::IO_REQ_DENIED)
+     {
+         int queue = this->get_req_queue(pos_x, pos_y);
+ 
