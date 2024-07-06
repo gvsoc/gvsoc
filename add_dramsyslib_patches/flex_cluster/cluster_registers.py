@@ -21,12 +21,14 @@ import regmap.regmap_c_header
 
 class ClusterRegisters(gvsoc.systree.Component):
 
-    def __init__(self, parent, name, boot_addr=0, nb_cores=1, cluster_id=0, binary=None):
+    def __init__(self, parent, name, num_cluster_x, num_cluster_y, boot_addr=0, nb_cores=1, cluster_id=0, binary=None):
         super(ClusterRegisters, self).__init__(parent, name)
 
         self.add_sources(['pulp/chips/flex_cluster/cluster_registers.cpp'])
 
         self.add_properties({
+            'num_cluster_x': num_cluster_x,
+            'num_cluster_y': num_cluster_y,
             'boot_addr': boot_addr,
             'nb_cores': nb_cores,
             'cluster_id': cluster_id,

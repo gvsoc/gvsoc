@@ -53,6 +53,8 @@ private:
     int nb_cores;
     uint32_t cluster_id;
     vp::reg_32 barrier_status;
+    uint32_t num_cluster_x;
+    uint32_t num_cluster_y;
 
     std::vector<vp::WireSlave<bool>> barrier_req_itf;
     vp::WireMaster<bool> barrier_ack_itf;
@@ -76,6 +78,8 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
     this->bootaddr = this->get_js_config()->get("boot_addr")->get_int();
     this->nb_cores = this->get_js_config()->get("nb_cores")->get_int();
     this->cluster_id = this->get_js_config()->get("cluster_id")->get_int();
+    this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
+    this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
 
     this->global_barrier_req_itf.set_sync_meth(&ClusterRegisters::global_barrier_sync);
     this->new_slave_port("global_barrier_req", &this->global_barrier_req_itf);
@@ -117,6 +121,18 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
 
     if(offset == 4){
         data[0] = 1;
+    }
+
+    if(offset == 8){
+        data[0] = _this->num_cluster_x * _this->num_cluster_y;
+    }
+
+    if(offset == 12){
+        data[0] = _this->num_cluster_x;
+    }
+
+    if(offset == 16){
+        data[0] = _this->num_cluster_y;
     }
 
     if (is_write && _this->global_barrier_query == NULL)

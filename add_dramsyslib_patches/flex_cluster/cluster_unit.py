@@ -54,6 +54,8 @@ class ClusterArch:
                         redmule_ce_height,  redmule_ce_width, redmule_ce_pipe,
                         redmule_elem_size,  redmule_queue_depth,
                         redmule_reg_base,   redmule_reg_size,
+                        idma_outstand_txn,  idma_outstand_burst,
+                        num_cluster_x,      num_cluster_y,
                         auto_fetch=False,   boot_addr=0x8000_0650):
 
         self.nb_core                = nb_core_per_cluster
@@ -74,7 +76,15 @@ class ClusterArch:
         self.redmule_ce_pipe        = redmule_ce_pipe
         self.redmule_elem_size      = redmule_elem_size
         self.redmule_queue_depth    = redmule_queue_depth
-        self.redmule_area           = Area(redmule_reg_base, redmule_reg_size);
+        self.redmule_area           = Area(redmule_reg_base, redmule_reg_size)
+
+        #IDMA
+        self.idma_outstand_txn      = idma_outstand_txn
+        self.idma_outstand_burst    = idma_outstand_burst
+
+        #Global Information
+        self.num_cluster_x          = num_cluster_x
+        self.num_cluster_y          = num_cluster_y
 
     class Tcdm:
         def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width):
@@ -193,12 +203,13 @@ class ClusterUnit(gvsoc.systree.Component):
                                     queue_depth         = arch.redmule_queue_depth)
 
         # Cluster peripherals
-        cluster_registers = ClusterRegisters(self, 'cluster_registers', nb_cores=arch.nb_core,
+        cluster_registers = ClusterRegisters(self, 'cluster_registers',
+            num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, nb_cores=arch.nb_core,
             boot_addr=entry, cluster_id=arch.cluster_id)
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
-            tcdm_width=64)
+            tcdm_width=64, transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
 
         #stack memory
         stack_mem = memory.Memory(self, 'stack_mem', size=arch.stack_area.size)

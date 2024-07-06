@@ -9,6 +9,10 @@
 #define remote_cid(cid,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cid*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_xy(x,y,offset)       (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(x,y)*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_pos(pos,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(pos.x,pos.y)*ARCH_CLUSTER_TCDM_SIZE+offset)
+#define hbm_west(hid,offset)        (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_INTERLEAVE+offset)
+#define hbm_north(hid,offset)       (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_INTERLEAVE+ARCH_HBM_NODE_INTERLEAVE*ARCH_NUM_CLUSTER_Y+offset)
+#define hbm_east(hid,offset)        (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_INTERLEAVE+ARCH_HBM_NODE_INTERLEAVE*(ARCH_NUM_CLUSTER_Y+ARCH_NUM_CLUSTER_X)+offset)
+#define hbm_south(hid,offset)       (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_INTERLEAVE+ARCH_HBM_NODE_INTERLEAVE*2*ARCH_NUM_CLUSTER_Y+ARCH_HBM_NODE_INTERLEAVE*ARCH_NUM_CLUSTER_X+offset)
 
 /*******************
 * Cluster Position *
@@ -69,6 +73,10 @@ uint32_t flex_get_cluster_id(){
     return *cluster_reg;
 }
 
+/*******************
+*  Core Position   *
+*******************/
+
 uint32_t flex_is_dm_core(){
     uint32_t hartid;
     asm("csrr %0, mhartid" : "=r"(hartid));
@@ -90,12 +98,15 @@ uint32_t flex_get_barrier_amo_value(){
     return *amo_reg;
 }
 
+uint32_t flex_get_barrier_num_cluster(){
+    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+8;
+    return *amo_reg;
+}
+
 void flex_barrier_init(){
     uint32_t * barrier      = ARCH_SYNC_BASE;
     uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
     uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
-
-    snrt_cluster_hw_barrier();
 
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
@@ -107,8 +118,6 @@ void flex_barrier_init(){
     }
 
     snrt_cluster_hw_barrier();
-    snrt_cluster_hw_barrier();
-    snrt_cluster_hw_barrier();
 }
 
 void flex_global_barrier(){
@@ -119,7 +128,7 @@ void flex_global_barrier(){
     snrt_cluster_hw_barrier();
 
     if (flex_is_dm_core()){
-        if ((ARCH_NUM_CLUSTER - 1) == __atomic_fetch_add(barrier, flex_get_barrier_amo_value(), __ATOMIC_RELAXED)) {
+        if ((flex_get_barrier_num_cluster() - 1) == __atomic_fetch_add(barrier, flex_get_barrier_amo_value(), __ATOMIC_RELAXED)) {
             __atomic_store_n(barrier, 0, __ATOMIC_RELAXED);
             *wakeup_reg = 1;
         }
