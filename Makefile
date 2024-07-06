@@ -111,6 +111,7 @@ clean_dramsys_preparation:
 update:
 	rm -rf add_dramsyslib_patches/flex_cluster
 	cp -rf pulp/pulp/chips/flex_cluster/ add_dramsyslib_patches/flex_cluster
+	cd pulp && git diff > ../add_dramsyslib_patches/gvsoc_pulp.patch
 
 config:
 	python3 add_dramsyslib_patches/flex_cluster_utilities/config.py
