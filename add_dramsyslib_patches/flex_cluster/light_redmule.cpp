@@ -16,6 +16,9 @@
 
 /*
  * Author: Chi     Zhang , ETH Zurich (chizhang@iis.ee.ethz.ch)
+ * Note:
+ *      Here we ignore real calculation for matrix multiply
+ *      in order to accelerate simulation
  */
 
 #include <vp/vp.hpp>
@@ -29,8 +32,8 @@
 
 //Function declearation
 std::vector<std::vector<int>> initialize_timing_array(int rows, int cols, int buffer_h, int buffer_w, int tcdms_bw);
-int cube_unit_access_block(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size);
-int cube_unit_runtime(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size);
+int redmule_access_block(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size);
+int redmule_runtime(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size);
 
 
 enum redmule_state {
@@ -159,7 +162,7 @@ vp::IoReqStatus LightRedmule::req(vp::Block *__this, vp::IoReq *req)
 
         //Trigger FSM
         _this->state.set(IDLE);
-        _this->tcdm_block_total =   cube_unit_access_block(
+        _this->tcdm_block_total =   redmule_access_block(
                                         _this->ce_height,       /*cube_height*/
                                         _this->ce_width,        /*cube_width*/
                                         _this->ce_pipe,         /*cube_pipeline*/
@@ -266,7 +269,7 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
             //Jump
             if ((_this->fsm_counter >= _this->tcdm_block_total) && (_this->pending_req_queue.size() == 0))
             {
-                int modeled_runtime = cube_unit_runtime(
+                int modeled_runtime = redmule_runtime(
                                         _this->ce_height,       /*cube_height*/
                                         _this->ce_width,        /*cube_width*/
                                         _this->ce_pipe,         /*cube_pipeline*/
@@ -341,7 +344,7 @@ std::vector<std::vector<int>> initialize_timing_array(int rows, int cols, int bu
     return timing_array;
 }
 
-int cube_unit_access_block(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size) {
+int redmule_access_block(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size) {
     int buffer_h = cube_height;
     int buffer_w = cube_width * (cube_pipeline + 1);
     int tcdms_bw = tcdm_bank_width_byte * nb_tcdm_banks / cube_elem_size_byte;
@@ -444,7 +447,7 @@ int cube_unit_access_block(int cube_height, int cube_width, int cube_pipeline, i
 }
 
 
-int cube_unit_runtime(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size) {
+int redmule_runtime(int cube_height, int cube_width, int cube_pipeline, int cube_elem_size_byte, int tcdm_bank_width_byte, int nb_tcdm_banks, int m_size, int n_size, int k_size) {
     int buffer_h = cube_height;
     int buffer_w = cube_width * (cube_pipeline + 1);
     int tcdms_bw = tcdm_bank_width_byte * nb_tcdm_banks / cube_elem_size_byte;
@@ -541,9 +544,9 @@ int cube_unit_runtime(int cube_height, int cube_width, int cube_pipeline, int cu
     for (int row = 0; row < z_row_tiles; row++) {
         for (int col = 0; col < z_col_tiles; col++) {
             for (int i = 0; i < x_row_tiles; i++) {
-                int cube_unit_mac_time = buffer_w * (cube_pipeline + 1);
+                int redmule_mac_time = buffer_w * (cube_pipeline + 1);
 
-                int cube_unit_access_time = 0;
+                int redmule_access_time = 0;
 
                 int _row = row;
                 int _col = col;
@@ -558,33 +561,33 @@ int cube_unit_runtime(int cube_height, int cube_width, int cube_pipeline, int cu
                 }
 
                 if (_row < z_row_tiles) {
-                    cube_unit_access_time = x_access_timing_array[_col][_i] + w_access_timing_array[_i][_row];
+                    redmule_access_time = x_access_timing_array[_col][_i] + w_access_timing_array[_i][_row];
                     if (_i == 0) {
-                        cube_unit_access_time += y_access_timing_array[_col][_row];
+                        redmule_access_time += y_access_timing_array[_col][_row];
                     }
                 }
 
                 if (i == 0 && (row != 0 || col != 0)) {
-                    cube_unit_access_time += z_store_time;
+                    redmule_access_time += z_store_time;
                     z_store_time = z_access_timing_array[col][row];
                 }
 
-                if (cube_unit_mac_time >= cube_unit_access_time) {
-                    runtime += cube_unit_mac_time;
+                if (redmule_mac_time >= redmule_access_time) {
+                    runtime += redmule_mac_time;
                 } else {
-                    runtime += cube_unit_access_time;
+                    runtime += redmule_access_time;
                 }
             }
         }
     }
 
     int final_store_time = 0;
-    int cube_unit_store_time_limit = buffer_w;
-    int cube_unit_store_time = z_access_timing_array[z_col_tiles - 1][z_row_tiles - 1];
-    if (cube_unit_store_time > cube_unit_store_time_limit) {
-        final_store_time += cube_unit_store_time;
+    int redmule_store_time_limit = buffer_w;
+    int redmule_store_time = z_access_timing_array[z_col_tiles - 1][z_row_tiles - 1];
+    if (redmule_store_time > redmule_store_time_limit) {
+        final_store_time += redmule_store_time;
     } else {
-        final_store_time += cube_unit_store_time_limit;
+        final_store_time += redmule_store_time_limit;
     }
     runtime += final_store_time;
 

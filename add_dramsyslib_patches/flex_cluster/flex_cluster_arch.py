@@ -21,8 +21,8 @@ class FlexClusterArch:
     def __init__(self):
 
         #Cluster
-        self.num_cluster_x           = 2
-        self.num_cluster_y           = 2
+        self.num_cluster_x           = 32
+        self.num_cluster_y           = 32
         self.num_core_per_cluster    = 2
 
         self.cluster_tcdm_bank_width = 8
@@ -72,4 +72,4 @@ class FlexClusterArch:
 
         #Synchronization
         self.sync_base               = 0x40000000
-        self.sync_interleave         = 0x00000010
+        self.sync_interleave         = 0x00000040

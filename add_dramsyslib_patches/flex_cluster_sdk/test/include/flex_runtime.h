@@ -103,6 +103,32 @@ uint32_t flex_get_barrier_num_cluster(){
     return *amo_reg;
 }
 
+uint32_t flex_get_barrier_num_cluster_x(){
+    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+12;
+    return *amo_reg;
+}
+
+uint32_t flex_get_barrier_num_cluster_y(){
+    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+16;
+    return *amo_reg;
+}
+
+void flex_reset_barrier(uint32_t* barrier){
+    //Note: the floonoc model can not forward atomic correctly, here
+    //      we use a specific memory to do synchronization:
+    //          when read  x    => return x & x=x+1
+    //          when write x    => x = 0
+    *barrier = 0;
+}
+
+uint32_t flex_amo_add(uint32_t* barrier){
+    //Note: the floonoc model can not forward atomic correctly, here
+    //      we use a specific memory to do synchronization:
+    //          when read  x    => return x & x=x+1
+    //          when write x    => x = 0
+    return (*barrier);
+}
+
 void flex_barrier_init(){
     uint32_t * barrier      = ARCH_SYNC_BASE;
     uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
@@ -111,7 +137,8 @@ void flex_barrier_init(){
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
         {
-            __atomic_store_n(barrier, 0, __ATOMIC_RELAXED);
+            // __atomic_store_n(barrier, 0, __ATOMIC_RELAXED);
+            flex_reset_barrier(barrier);
             *wakeup_reg = 1;
         }
         *cluster_reg = 1;
@@ -128,8 +155,8 @@ void flex_global_barrier(){
     snrt_cluster_hw_barrier();
 
     if (flex_is_dm_core()){
-        if ((flex_get_barrier_num_cluster() - 1) == __atomic_fetch_add(barrier, flex_get_barrier_amo_value(), __ATOMIC_RELAXED)) {
-            __atomic_store_n(barrier, 0, __ATOMIC_RELAXED);
+        if ((flex_get_barrier_num_cluster() - 1) == flex_amo_add(barrier)) {
+            flex_reset_barrier(barrier);
             *wakeup_reg = 1;
         }
         *cluster_reg = 1;
@@ -142,41 +169,49 @@ void flex_barrier_xy_init(){
     FlexPosition pos        = get_pos(flex_get_cluster_id());
     uint32_t   pos_x_middel = (ARCH_NUM_CLUSTER_X)/2;
     uint32_t   pos_y_middel = (ARCH_NUM_CLUSTER_Y)/2;
-    uint32_t * barrier_x    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8;
-    uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
-
-    snrt_cluster_hw_barrier();
-
-    if (flex_is_dm_core()){
-        __atomic_store_n(barrier_x, 0, __ATOMIC_RELAXED);
-        __atomic_store_n(barrier_y, 0, __ATOMIC_RELAXED);
-    }
-
-    snrt_cluster_hw_barrier();
-    snrt_cluster_hw_barrier();
-    snrt_cluster_hw_barrier();
-}
-
-void flex_global_barrier_xy(){
-    FlexPosition pos        = get_pos(flex_get_cluster_id());
-    uint32_t   pos_x_middel = (ARCH_NUM_CLUSTER_X)/2;
-    uint32_t   pos_y_middel = (ARCH_NUM_CLUSTER_Y)/2;
-    uint32_t * barrier_x    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8;
     uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
     uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
     uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
 
+    if (flex_is_dm_core()){
+        if (flex_get_cluster_id() == 0)
+        {
+            flex_reset_barrier(barrier_y);
+            for (int i = 0; i < ARCH_NUM_CLUSTER_Y; ++i)
+            {
+                uint32_t * barrier_x = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,i)*ARCH_SYNC_INTERLEAVE)+8;
+                flex_reset_barrier(barrier_x);
+            }
+            *wakeup_reg = 1;
+        }
+        *cluster_reg = 1;
+    }
+
+    snrt_cluster_hw_barrier();
+}
+
+void flex_global_barrier_xy(){
+
     snrt_cluster_hw_barrier();
 
-    if (snrt_is_dm_core()){
+    if (flex_is_dm_core()){
+
+        FlexPosition pos        = get_pos(flex_get_cluster_id());
+        uint32_t   pos_x_middel = (flex_get_barrier_num_cluster_x())/2;
+        uint32_t   pos_y_middel = (flex_get_barrier_num_cluster_y())/2;
+        uint32_t * barrier_x    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8;
+        uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
+        uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
+        uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+
         //First Barrier X
-        if ((ARCH_NUM_CLUSTER_X - 1) == __atomic_fetch_add(barrier_x, flex_get_barrier_amo_value(), __ATOMIC_RELAXED)) {
-            __atomic_store_n(barrier_x, 0, __ATOMIC_RELAXED);
+        if ((flex_get_barrier_num_cluster_x() - 1) == flex_amo_add(barrier_x)) {
+            flex_reset_barrier(barrier_x);
 
             //For cluster synced X, then sync Y
-            if ((ARCH_NUM_CLUSTER_Y - 1) == __atomic_fetch_add(barrier_y, flex_get_barrier_amo_value(), __ATOMIC_RELAXED))
+            if ((flex_get_barrier_num_cluster_y() - 1) == flex_amo_add(barrier_y))
             {
-                __atomic_store_n(barrier_y, 0, __ATOMIC_RELAXED);
+                flex_reset_barrier(barrier_y);
                 *wakeup_reg = 1;
             }
         }

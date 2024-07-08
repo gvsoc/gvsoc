@@ -28,6 +28,7 @@ from pulp.chips.flex_cluster.cluster_unit import ClusterUnit, ClusterArch
 from pulp.chips.flex_cluster.ctrl_registers import CtrlRegisters
 from pulp.chips.flex_cluster.flex_cluster_arch import FlexClusterArch
 from pulp.chips.flex_cluster.flex_mesh_noc import FlexMeshNoC
+from pulp.chips.flex_cluster.flex_sync_mem import FlexSyncMem
 import memory.dramsys
 
 GAPY_TARGET = True
@@ -94,12 +95,14 @@ class FlexClusterSystem(gvsoc.systree.Component):
         csr = CtrlRegisters(self, 'ctrl_registers')
 
         #Synchronization bus
-        sync_bus = router.Router(self, 'sync_bus', bandwidth=4)
+        sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,
+                nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters)
 
         #Synchronization memory
         sync_mem_list = []
         for cluster_id in range(num_clusters):
-            sync_mem_list.append(memory.memory.Memory(self, f'sync_mem{cluster_id}', size=arch.sync_interleave, atomics=True))
+            sync_mem_list.append(FlexSyncMem(self, f'sync_mem{cluster_id}', size=arch.sync_interleave))
             pass
 
         #HBM channels
@@ -152,10 +155,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #Synchornization bus
         for node_id in range(num_clusters):
-            cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_INPUT())
-            sync_bus.o_MAP(sync_mem_list[node_id].i_INPUT(), base=arch.sync_base+node_id*arch.sync_interleave, size=arch.sync_interleave, rm_base=True)
+            x_id = int(node_id%arch.num_cluster_x)
+            y_id = int(node_id/arch.num_cluster_x)
+            cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_CLUSTER_INPUT(x_id, y_id))
+            sync_bus.o_MAP(sync_mem_list[node_id].i_INPUT(), base=arch.sync_base+node_id*arch.sync_interleave, size=arch.sync_interleave, x=x_id+1, y=y_id+1)
             pass
-        
 
         #NoC
         for node_id in range(num_clusters):
