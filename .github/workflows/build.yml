@@ -36,6 +36,7 @@ jobs:
       - name: Run examples
         run: |
           source sourceme.sh
+          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/snitch_cluster/fp32_computation_scalar.elf image flash run 
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
