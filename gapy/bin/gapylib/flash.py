@@ -488,6 +488,8 @@ class FlashSection():
         # for now, overcommit_size is not implemented
         section_desc["overcommit_size"] = self.get_size()
         section_desc["image_file"] = self.get_image_name()
+        section_desc["is_empty"] = self.is_empty()
+        section_desc["flash_offset"] = self.get_offset()
 
         return section_desc
 
@@ -654,7 +656,7 @@ class Flash():
 
         section_descriptions = []
         for section in self.sections.values():
-            if not section.is_empty() and not (is_app and (section.get_partition_type() == 0x2)):
+            if not (is_app and (section.get_partition_type() == 0x2)):
                 section_desc = section.dump_section_description()
                 if pem_path is not None:
                     section_desc['signature'] = f'{section_desc["image_file"]}' + '.sig'
@@ -675,7 +677,7 @@ class Flash():
 
     def __dump_sections(self, is_app: bool, pem_path : str, dgst='sha256'):
         for section in self.sections.values():
-            if not section.is_empty() and not (is_app and (section.get_partition_type() == 0x2)):
+            if not (is_app and (section.get_partition_type() == 0x2)):
                 image = section.get_image()
 
                 section_path = section.get_image_path()
@@ -714,17 +716,20 @@ class Flash():
         print (table)
 
 
-    def dump_image(self):
+    def dump_image(self, first: int=None, last: int=None):
         """Dump the content of the flash in binary form to the specified file.
+        May dump only a subset if first and last are parameters are used.
 
         Parameters
         ----------
-        fd
-            File descriptor
+        first
+            First section to be dumped
+        last
+            Last section to be dumped
         """
         try:
             with open(self.get_image_path(), 'wb') as file_desc:
-                file_desc.write(self.get_image())
+                file_desc.write(self.get_image(first,last))
         except OSError as exc:
             raise RuntimeError('Unable to open flash image for '
                                'writing ' + str(exc)) from exc

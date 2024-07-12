@@ -24,6 +24,7 @@
 
 import traceback
 import argparse
+import inspect
 import os
 import importlib
 import json
@@ -31,6 +32,7 @@ from collections import OrderedDict
 import sys
 import gapylib.flash
 from prettytable import PrettyTable
+import rich.table
 
 
 def get_target(target: str) -> 'Target':
@@ -51,13 +53,21 @@ def get_target(target: str) -> 'Target':
     """
     try:
         module = importlib.import_module(target)
+
     except ModuleNotFoundError as exc:
         raise RuntimeError(f'Invalid target specified: {target}') from exc
 
-    if not getattr(module, 'GAPY_TARGET', None):
-        raise RuntimeError(f'Invalid target specified: {target}')
+    if 'Target' in dir(module):
 
-    return getattr(module, 'Target', None)
+        target_class = getattr(module, 'Target', None)
+
+        # Check that the class comes from the module itself and not from an imported one
+        if inspect.isclass(target_class) and target_class.__module__ == module.__name__:
+
+            return target_class
+
+    raise RuntimeError(f'Could not find any Gapy Target class in target: {target}')
+
 
 
 class Property():
@@ -112,6 +122,9 @@ class Target():
         A list of options for the target.
     """
 
+    gapy_description = "Generic Gapy target"
+    is_gapy_target = True
+
     def __init__(self, parser, options: list=None):
 
         if parser is not None:
@@ -135,8 +148,8 @@ class Target():
             parser.add_argument("--binary", dest = "binary", default = None,
                 help = "Binary to execute on the target")
 
-            parser.add_argument("--debug-binary", dest = "debug_binary", action="append", default = None,
-                help = "Addiotional binaries to be laoded on the target")
+            parser.add_argument("--debug-binary", dest = "debug_binary", action="append",
+                default = None, help = "Additional binaries to be used for debug symbols in traces")
 
             parser.add_argument("--flash-property-override", dest = "flash_override", default = [],
                 action="append",
@@ -163,7 +176,6 @@ class Target():
         ]
 
         [args, _] = parser.parse_known_args()
-
         self.target_dirs = []
         self.flashes = {}
         self.work_dir = args.work_dir
@@ -263,7 +275,15 @@ class Target():
         execute the generic part of this command.
         """
         for flash in self.flashes.values():
-            flash.dump_image()
+            if not flash.is_empty():
+                sections = flash.get_sections()
+
+                first_index = 0
+                index_to_last= 0
+                while sections[-1 - index_to_last].is_empty():
+                    index_to_last+=1
+
+                flash.dump_image(first_index, len(sections)-1-index_to_last)
 
     def handle_command(self, cmd: str):
         """Handle a command.
@@ -391,6 +411,7 @@ class Target():
             properties = args.target_properties
 
             for property_desc_list in properties:
+                # Each property can actually be a list of form name=value,name=value
                 for property_desc in property_desc_list.split(','):
                     # Property format is name=value
                     try:
@@ -594,27 +615,40 @@ class Target():
 
 
     def __display_targets(self):
-        print ('Available targets:')
+
+        table = rich.table.Table(title='Available targets')
+        table.add_column('Name')
+        table.add_column('Description')
 
         targets = {}
 
+        # Go through all files from target directories and check which one is having a valid
+        # Gapy target
         for target_name in self.__get_target_files():
             try:
                 module = importlib.import_module(target_name)
-                if not getattr(module, 'GAPY_TARGET', None):
-                    continue
+
             except ModuleNotFoundError:
                 continue
 
-            target_class = getattr(module, 'Target', None)
+            # Gapy targets have a Target class inside the module
+            if 'Target' in dir(module):
 
-            if target_class is not None:
-                target = target_class(None, [])
+                target_class = getattr(module, 'Target', None)
 
-                if targets.get(target_name) is None:
-                    targets[target_name] = True
+                # Check that the class comes from the module itself and not from an imported one
+                if inspect.isclass(target_class) and target_class.__module__ == module.__name__:
 
-                    print(f'{target_name:16s} {target}')
+                    # And must have the is_gapy_target attribute
+                    if getattr(target_class, 'is_gapy_target') is True:
+
+                        if targets.get(target_name) is None:
+                            targets[target_name] = True
+
+                            table.add_row(target_name,
+                                f'{getattr(target_class, "gapy_description")}')
+
+        rich.print(table)
 
 
     def __extract_flash_properties(self, args_properties: list):
