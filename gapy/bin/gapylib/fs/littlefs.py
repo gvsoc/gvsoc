@@ -102,6 +102,8 @@ class LfsSection(FlashSection):
         # Size is a string to be converted if it comes from command-line
         if isinstance(self.size, str):
             self.size = int(self.size, 0)
+        if self.size == -1:
+            self.size = self.parent.get_size() - self.get_offset()
 
         block_size = self.parent.get_flash_attribute('littlefs_block_size')
 

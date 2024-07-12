@@ -46,11 +46,11 @@ parser.add_argument("--target", dest="target", default=None, help="specify the t
 parser.add_argument("--target-dir", dest="target_dirs", default=[], action="append",
     help="append the specified directory to the list of directories where to look for targets")
 
-parser.add_argument('--target-opt', dest='target_opt', action="append", default=[],
-    help='Specifies target options.')
-
 parser.add_argument("--target-property", dest="target_properties", default=[],
     action="append", help="specify the value of a target property")
+
+parser.add_argument('--target-opt', dest='target_opt', action="append", default=[],
+    help='Specifies target options.')
 
 parser.add_argument('--config-opt', dest='config_opt', action="append", default=[],
     help='Specifies target options (use only for backward-compatibility).')
@@ -62,8 +62,15 @@ parser.add_argument('--verbose', dest='verbose', type=str, default='critical', c
 parser.add_argument('--py-stack', dest='py_stack', action="store_true",
     help='Show python exception stack.')
 
+parser.add_argument("--model-dir", dest="install_dirs", action="append",
+    type=str, help="specify an installation path where to find models (only for GVSOC)")
+
 parser.add_argument('--work-dir',  dest='work_dir', default=None,
     help='Specifies working directory.')
+
+parser.add_argument("--platform", dest="platform", required=True,
+    choices=['fpga', 'board', 'rtl', 'gvsoc'],
+    type=str, help="specify the platform used for the target")
 
 # Do a first argument parse so that we can get the target and add more arguments, depending on
 # the target
@@ -72,7 +79,7 @@ parser.add_argument('--work-dir',  dest='work_dir', default=None,
 try:
 
     logging.basicConfig(level=getattr(logging, args.verbose.upper(), None),
-        format='%(levelname)s - %(message)s')
+        format='\033[94m[GAPY]\033[0m %(asctime)s - %(levelname)s - %(message)s')
 
     # Targets will be imported as python modules so the specified target directories must be
     # appended to the python path

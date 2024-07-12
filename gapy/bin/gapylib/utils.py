@@ -154,8 +154,7 @@ class CStructArray(CStructField):
         if level > 0:
             value = ''
             size = len(self.value)
-            if size > 1 << 10:
-                size = 1 << 10
+            size = min(size, 1 << 10)
             index = 0
             while size > 0:
                 iter_size = min(32, size)
