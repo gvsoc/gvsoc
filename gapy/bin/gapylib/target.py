@@ -54,8 +54,13 @@ def get_target(target: str) -> 'Target':
     try:
         module = importlib.import_module(target)
 
+
     except ModuleNotFoundError as exc:
-        raise RuntimeError(f'Invalid target specified: {target}') from exc
+        if exc.name == target:
+            raise RuntimeError(f'Invalid target specified: {target}') from exc
+
+        raise RuntimeError(f"Dependency '{exc.name}' of the target module '{target}' is"
+            " missing (add --py-stack for more information).") from exc
 
     if 'Target' in dir(module):
 
