@@ -69,6 +69,9 @@ public:
     uint32_t            fsm_counter;
     uint32_t            fsm_timestamp;
     std::queue<uint32_t> pending_req_queue;
+    int64_t             timer_start;
+    int64_t             total_runtime;
+    int64_t             num_matmul;
 
     //redmule configuration
     uint32_t            tcdm_bank_width;
@@ -137,6 +140,9 @@ LightRedmule::LightRedmule(vp::ComponentConf &config)
     this->tcdm_block_total  = 0;
     this->fsm_counter       = 0;
     this->fsm_timestamp     = 0;
+    this->timer_start       = 0;
+    this->total_runtime     = 0;
+    this->num_matmul        = 0; 
 }
 
 vp::IoReqStatus LightRedmule::req(vp::Block *__this, vp::IoReq *req)
@@ -148,12 +154,12 @@ vp::IoReqStatus LightRedmule::req(vp::Block *__this, vp::IoReq *req)
     uint64_t size = req->get_size();
     bool is_write = req->get_is_write();
 
-    _this->trace.msg("[LightRedmule] access (offset: 0x%x, size: 0x%x, is_write: %d, data:%x)\n", offset, size, is_write, *(uint32_t *)data);
+    _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] access (offset: 0x%x, size: 0x%x, is_write: %d, data:%x)\n", offset, size, is_write, *(uint32_t *)data);
 
     if ((is_write == 0) && (_this->redmule_query == NULL))
     {
         //Sanity Check
-        _this->trace.msg("[LightRedmule] redmule configuration (M-N-K): %d, %d, %d\n", _this->m_size, _this->n_size, _this->k_size);
+        _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] redmule configuration (M-N-K): %d, %d, %d\n", _this->m_size, _this->n_size, _this->k_size);
         if ((_this->m_size == 0)||(_this->n_size == 0)||(_this->k_size == 0))
         {
             _this->trace.fatal("[LightRedmule] INVALID redmule configuration (M-N-K): %d, %d, %d\n", _this->m_size, _this->n_size, _this->k_size);
@@ -174,8 +180,9 @@ vp::IoReqStatus LightRedmule::req(vp::Block *__this, vp::IoReq *req)
                                         _this->k_size);
         _this->fsm_counter      = 0;
         _this->fsm_timestamp    = 0;
+        _this->timer_start      = _this->time.get_time();
         _this->event_enqueue(_this->fsm_event, 1);
-        _this->trace.msg("[LightRedmule] Need to access %d tcdm blocks\n", _this->tcdm_block_total);
+        _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] Need to access %d tcdm blocks\n", _this->tcdm_block_total);
 
         //Save Query
         _this->redmule_query = req;
@@ -242,7 +249,7 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 
                 //Send request
                 vp::IoReqStatus err = _this->send_tcdm_req();
-                _this->trace.msg("[LightRedmule] --- Send TCDM req #%d\n",_this->fsm_counter);
+                _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] --- Send TCDM req #%d\n",_this->fsm_counter);
 
                 //Check error
                 if (err != vp::IO_REQ_OK) {
@@ -262,7 +269,7 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 
             //Recieve Process
             while((_this->pending_req_queue.size()!= 0) && (_this->pending_req_queue.front() <= _this->fsm_timestamp) ){
-                _this->trace.msg("[LightRedmule] ---                           Receive TCDM resp\n");
+                _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] ---                           Receive TCDM resp\n");
                 _this->pending_req_queue.pop();
             }
 
@@ -282,11 +289,11 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                 if (_this->fsm_timestamp >= modeled_runtime)
                 {
                     _this->state.set(FINISHED);
-                    _this->trace.msg("[LightRedmule] TCDM Access Time(%d) > Model Time(%d)\n", _this->fsm_timestamp, modeled_runtime);
+                    _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] TCDM Access Time(%d) > Model Time(%d)\n", _this->fsm_timestamp, modeled_runtime);
                 } else {
                     _this->state.set(COMPENSATION);
                     _this->fsm_counter = modeled_runtime - _this->fsm_timestamp;
-                    _this->trace.msg("[LightRedmule] Model Time(%d) > TCDM Access Time(%d)\n", modeled_runtime, _this->fsm_timestamp);
+                    _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] Model Time(%d) > TCDM Access Time(%d)\n", modeled_runtime, _this->fsm_timestamp);
                 }
             } else {
                 _this->state.set(ROUTINE);
@@ -313,7 +320,12 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
             {
                 _this->trace.fatal("[LightRedmule] INVALID RedMule Query\n");
             } else {
-                _this->trace.msg("[LightRedmule] Finished !!!!!!\n");
+                int64_t start_time_ns   = (_this->timer_start)/1000;
+                int64_t end_time_ns     = (_this->time.get_time())/1000;
+                int64_t period_ns       = end_time_ns - start_time_ns;
+                _this->total_runtime   += period_ns;
+                _this->num_matmul      += 1;
+                _this->trace.msg("[LightRedmule] Finished : %0d ns ---> %0d ns | period = %0d ns | runtime = %0d ns | matmul id = %0d\n", start_time_ns, end_time_ns, period_ns, _this->total_runtime, _this->num_matmul);
                 _this->redmule_query->get_resp_port()->resp(_this->redmule_query);
                 _this->redmule_query = NULL;
             }
