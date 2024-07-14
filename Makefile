@@ -23,9 +23,24 @@ build:
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
 	cd $(CURDIR) && $(CMAKE) --install build
 
+# Define the source and destination directories
+SRC_DIR := ./relative/path/to/src_folder
+DEST_DIR := ./relative/path/to/dest_folder
+
+# Include the tasks.mk file
+include tutorial/tasks.mk
+include tutorial/solutions.mk
+
+
 
 clean:
 	rm -rf build install
+
+run_neureka:
+	./install/bin/gvsoc --target=pulp-open --binary ./examples/pulp-open/neureka/BUILD/PULP/GCC_RISCV/test/test run
+
+run_hello:
+	./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
 
 
 
@@ -92,3 +107,15 @@ dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-confi
 
 clean_dramsys_preparation:
 	rm -rf third_party
+
+######################################################################
+## 				Snitch cluster testsuite			 				##
+######################################################################
+
+snitch_cluster:
+	git clone git@github.com:pulp-platform/snitch_cluster.git -b gvsoc-ci
+	cd snitch_cluster && git submodule update --recursive --init
+	cd snitch_cluster/target/snitch_cluster && make DEBUG=ON OPENOCD_SEMIHOSTING=ON BIST=ON sw
+
+snitch_cluster.test: snitch_cluster
+	cd snitch_cluster/target/snitch_cluster && ./util/run.py sw/run.yaml --simulator gvsoc -j
