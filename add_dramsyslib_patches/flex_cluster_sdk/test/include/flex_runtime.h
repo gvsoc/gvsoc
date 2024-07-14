@@ -226,8 +226,55 @@ void flex_global_barrier_xy(){
 *******************/
 
 void flex_eoc(uint32_t val){
-    uint32_t * eoc_reg = ARCH_SOC_REGISTER_EOC;
+    volatile uint32_t * eoc_reg = ARCH_SOC_REGISTER_EOC;
     *eoc_reg = val;
+}
+
+/*******************
+*   Perf Counter   *
+*******************/
+
+void flex_timer_start(){
+    volatile uint32_t * start_reg    = ARCH_SOC_REGISTER_EOC + 8;
+    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
+    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+
+    if (flex_is_dm_core()){
+        if (flex_get_cluster_id() == 0)
+        {
+            *start_reg = 1;
+            *wakeup_reg = 1;
+        }
+        *cluster_reg = 1;
+    }
+
+    snrt_cluster_hw_barrier();
+}
+
+void flex_timer_end(){
+    volatile uint32_t * end_reg = ARCH_SOC_REGISTER_EOC + 12;
+    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
+    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+
+    if (flex_is_dm_core()){
+        if (flex_get_cluster_id() == 0)
+        {
+            *end_reg = 1;
+            *wakeup_reg = 1;
+        }
+        *cluster_reg = 1;
+    }
+
+    snrt_cluster_hw_barrier();
+}
+
+/*******************
+*      Logging     *
+*******************/
+
+void flex_log(uint32_t data){
+    volatile uint32_t * log_reg = (volatile uint32_t *)(ARCH_SOC_REGISTER_EOC + 16);
+    *log_reg = data;
 }
 
 #endif
