@@ -14,6 +14,7 @@ GVSOC developer documentation
    interfaces
    models
    tutorials
+   src/hwpe/main
 
 
 

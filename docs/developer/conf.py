@@ -19,7 +19,8 @@ import sys
 
 project = 'GVSOC'
 copyright = '2019, ETH Zurich, University of Bologna and GreenWaves Technologies, SAS'
-author = 'Germain Haugou'
+authors = ['Germain Haugou', 'Arpan Suravi Prasad']
+author = ', '.join(authors)
 
 # Add gvsoc_control python module
 sys.path.insert(0, os.path.abspath('../engine/python/'))
@@ -52,7 +53,8 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = ['custom.css']
 
 html_use_smartypants = False
 smartquotes = False
