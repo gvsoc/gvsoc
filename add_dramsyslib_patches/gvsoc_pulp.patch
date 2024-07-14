@@ -30,3 +30,45 @@ index 50cb4ac..bc110bf 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
+diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
+index 867c0e2..371d7bb 100644
+--- a/pulp/idma/fe/idma_fe_xdma.cpp
++++ b/pulp/idma/fe/idma_fe_xdma.cpp
+@@ -46,6 +46,9 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
+ 
+     // Declare offload master interface for granting blocked transfers
+     idma->new_master_port("offload_grant", &this->offload_grant_itf, this);
++
++    // track transfer time
++    this->transfer_start_time = 0;
+ }
+ 
+ 
+@@ -133,6 +136,7 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+     this->next_transfer_id.set(transfer_id + 1);
+ 
+     this->trace.msg(vp::Trace::LEVEL_TRACE, "Allocated transfer ID (id: %d)\n", transfer_id);
++    this->transfer_start_time = this->time.get_time();
+ 
+     // Allocate a new transfer and fill it from registers
+     IdmaTransfer *transfer = new IdmaTransfer();
+@@ -170,6 +174,7 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+ void IDmaFeXdma::ack_transfer(IdmaTransfer *transfer)
+ {
+     this->completed_id.inc(1);
++    this->trace.msg("[iDMA] Finished : %0d ns ---> %0d ns | period = %0d ns\n", (this->transfer_start_time/1000), (this->time.get_time()/1000), (this->time.get_time() - this->transfer_start_time)/1000);
+     delete transfer;
+ }
+ 
+diff --git a/pulp/idma/fe/idma_fe_xdma.hpp b/pulp/idma/fe/idma_fe_xdma.hpp
+index 300ef51..aaf90b8 100644
+--- a/pulp/idma/fe/idma_fe_xdma.hpp
++++ b/pulp/idma/fe/idma_fe_xdma.hpp
+@@ -82,4 +82,7 @@ private:
+     vp::Signal<bool> do_transfer_grant;
+     // In case a transfer was blocked, gives the transfer which was blocked
+     IdmaTransfer *stalled_transfer;
++
++    //track iDMA transfer time
++    int64_t transfer_start_time;
+ };
