@@ -28,7 +28,6 @@ from pulp.chips.flex_cluster.cluster_unit import ClusterUnit, ClusterArch
 from pulp.chips.flex_cluster.ctrl_registers import CtrlRegisters
 from pulp.chips.flex_cluster.flex_cluster_arch import FlexClusterArch
 from pulp.chips.flex_cluster.flex_mesh_noc import FlexMeshNoC
-from pulp.chips.flex_cluster.flex_sync_mem import FlexSyncMem
 import memory.dramsys
 
 GAPY_TARGET = True
@@ -99,12 +98,6 @@ class FlexClusterSystem(gvsoc.systree.Component):
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
                 ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters)
 
-        #Synchronization memory
-        sync_mem_list = []
-        for cluster_id in range(num_clusters):
-            sync_mem_list.append(FlexSyncMem(self, f'sync_mem{cluster_id}', size=arch.sync_interleave))
-            pass
-
         #HBM channels
         hbm_list_west = []
         for hbm_ch in range(arch.hbm_placement[0]):
@@ -127,7 +120,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             pass
 
         #NoC
-        noc = FlexMeshNoC(self, 'noc', width=arch.noc_link_width/8,
+        data_noc = FlexMeshNoC(self, 'data_noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
                 ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters)
 
@@ -153,20 +146,14 @@ class FlexClusterSystem(gvsoc.systree.Component):
             cluster_list[cluster_id].o_NARROW_SOC(narrow_axi.i_INPUT())
             pass
 
-        #Synchornization bus
+        #Data NoC + Sync NoC
         for node_id in range(num_clusters):
             x_id = int(node_id%arch.num_cluster_x)
             y_id = int(node_id/arch.num_cluster_x)
+            cluster_list[node_id].o_WIDE_SOC(data_noc.i_CLUSTER_INPUT(x_id, y_id))
             cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_CLUSTER_INPUT(x_id, y_id))
-            sync_bus.o_MAP(sync_mem_list[node_id].i_INPUT(), base=arch.sync_base+node_id*arch.sync_interleave, size=arch.sync_interleave, x=x_id+1, y=y_id+1)
-            pass
-
-        #NoC
-        for node_id in range(num_clusters):
-            x_id = int(node_id%arch.num_cluster_x)
-            y_id = int(node_id/arch.num_cluster_x)
-            cluster_list[node_id].o_WIDE_SOC(noc.i_CLUSTER_INPUT(x_id, y_id))
-            noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote+node_id*arch.cluster_tcdm_size, size=arch.cluster_tcdm_size,x=x_id+1, y=y_id+1)
+            data_noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote  + node_id*arch.cluster_tcdm_size,   size=arch.cluster_tcdm_size,    x=x_id+1, y=y_id+1)
+            sync_bus.o_MAP(cluster_list[node_id].i_SYNC_INPUT(), base=arch.sync_base            + node_id*arch.sync_interleave,     size=arch.sync_interleave,      x=x_id+1, y=y_id+1)
             pass
 
         #HBM connection
@@ -187,7 +174,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             itf_router.add_mapping('output')
             if arch.hbm_placement[0] != 0:
                 self.bind(itf_router, 'output', hbm_list_west[int(node_id%arch.hbm_placement[0])], 'input')
-            noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=0, y=node_id+1)
+            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=0, y=node_id+1)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_interleave
 
@@ -197,7 +184,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             itf_router.add_mapping('output')
             if arch.hbm_placement[1] != 0:
                 self.bind(itf_router, 'output', hbm_list_west[int(node_id%arch.hbm_placement[1])], 'input')
-            noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=arch.num_cluster_y+1)
+            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=arch.num_cluster_y+1)
             pass
         hbm_edge_start_base += arch.num_cluster_x*arch.hbm_node_interleave
 
@@ -207,7 +194,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             itf_router.add_mapping('output')
             if arch.hbm_placement[2] != 0:
                 self.bind(itf_router, 'output', hbm_list_west[int(node_id%arch.hbm_placement[2])], 'input')
-            noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=arch.num_cluster_x+1, y=node_id+1)
+            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=arch.num_cluster_x+1, y=node_id+1)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_interleave
 
@@ -217,7 +204,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             itf_router.add_mapping('output')
             if arch.hbm_placement[3] != 0:
                 self.bind(itf_router, 'output', hbm_list_west[int(node_id%arch.hbm_placement[3])], 'input')
-            noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=0)
+            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_interleave, size=arch.hbm_node_interleave, x=node_id+1, y=0)
             pass
 
 

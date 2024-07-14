@@ -22,6 +22,7 @@ import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.chips.flex_cluster.light_redmule import LightRedmule
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
+from pulp.chips.flex_cluster.flex_sync_mem import FlexSyncMem
 from pulp.snitch.zero_mem import ZeroMem
 from elftools.elf.elffile import *
 from pulp.idma.snitch_dma import SnitchDma
@@ -64,7 +65,7 @@ class ClusterArch:
         self.boot_addr              = boot_addr
         self.auto_fetch             = auto_fetch
         self.barrier_irq            = 19
-        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width)
+        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size)
         self.stack_area             = Area(stack_base, stack_size)
         self.sync_area              = Area(sync_base, sync_size)
         self.reg_area               = Area(reg_base, reg_size)
@@ -87,12 +88,13 @@ class ClusterArch:
         self.num_cluster_y          = num_cluster_y
 
     class Tcdm:
-        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width):
+        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size):
             self.area = Area( base, tcdm_size)
             self.nb_tcdm_banks = nb_tcdm_banks
             self.bank_width = tcdm_bank_width
             self.bank_size = self.area.size / self.nb_tcdm_banks
             self.nb_masters = nb_masters
+            self.sync_size = sync_size
 
 
 class ClusterTcdm(gvsoc.systree.Component):
@@ -117,6 +119,8 @@ class ClusterTcdm(gvsoc.systree.Component):
         hwpe_interleaver = DmaInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
+        tcdm_sync_mem = FlexSyncMem(self, 'sync_mem', size=arch.sync_size)
+
         for i in range(0, nb_banks):
             self.bind(interleaver, 'out_%d' % i, banks[i], 'input')
             self.bind(dma_interleaver, 'out_%d' % i, banks[i], 'input')
@@ -129,6 +133,8 @@ class ClusterTcdm(gvsoc.systree.Component):
             self.bind(self, f'bus_input', bus_interleaver, f'input')
             self.bind(self, f'hwpe_input', hwpe_interleaver, f'input')
 
+        self.bind(self, f'sync_input', tcdm_sync_mem, f'input')
+
     def i_INPUT(self, port: int) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'in_{port}', signature='io')
 
@@ -140,6 +146,9 @@ class ClusterTcdm(gvsoc.systree.Component):
 
     def i_HWPE_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'hwpe_input', signature='io')
+
+    def i_SYNC_INPUT(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, f'sync_input', signature='io')
 
 
 
@@ -308,7 +317,7 @@ class ClusterUnit(gvsoc.systree.Component):
             cluster_registers.o_EXTERNAL_IRQ(core_id, cores[core_id].i_IRQ(arch.barrier_irq))
 
         #Global Synchronization
-        # self.o_SYNC_IRQ(cluster_registers.i_GLOBAL_REQ())
+        self.o_SYNC_INPUT(tcdm.i_SYNC_INPUT())
         self.bind(self, 'sync_irq', cluster_registers, 'global_barrier_req')
 
         # Cluster DMA
@@ -350,6 +359,12 @@ class ClusterUnit(gvsoc.systree.Component):
 
     def o_SYNC_OUTPUT(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('sync_output', itf, signature='io')
+
+    def i_SYNC_INPUT(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, f'sync_input', signature='io')
+
+    def o_SYNC_INPUT(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('sync_input', itf, signature='io', composite_bind=True)
 
     def i_SYNC_IRQ(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'sync_irq', signature='wire<bool>')
