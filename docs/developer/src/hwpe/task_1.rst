@@ -1,36 +1,36 @@
 1 - Create a new target on the top of pulp-open
 ................................................
-In this section, you will create a new Hardware Target ``HwpeTarget`` which is a replica of the pulp-open consisting of a pulp-cluster. Later we will develop on the ``HwpeTarget`` to add our accelerator. 
+In this section, you will create a new Hardware Target ``pulp-open-hwpe`` which is a replica of the pulp-open consisting of a pulp-cluster. Later we will develop on the ``pulp-open-hwpe`` to add our accelerator. 
 
 Please go through the README to install gvsoc. 
 
-Let's create a new gvsoc target ``HwpeTarget`` at ``gvsoc/pulp/`` by copying the pulp-open target.
+Let's create a new gvsoc target ``pulp-open-hwpe`` at ``gvsoc/pulp/`` by copying the pulp-open target.
 
-.. admonition:: Task - 1.1 Create HwpeTarget 
+.. admonition:: Task - 1.1 Create pulp-open-hwpe 
    :class: task
 
    .. code-block:: bash
 
       $ cd gvsoc/pulp
-      $ cp pulp-open.py hwpe-target.py
+      $ cp pulp-open.py pulp-open-hwpe.py
 
 
-The new target should work like the pulp-open because it is a copy of the pulp-open. To verify the working, build the gvsoc using TARGET=hwpe-target and run the same hello binary with this target.
+The new target should work like the pulp-open because it is a copy of the pulp-open. To verify the working, build the gvsoc using TARGET=pulp-open-hwpe and run the same hello binary with this target.
 
 .. admonition:: Verify - 1.1 
    :class: solution
    
    .. code-block:: bash
       
-      $ make all TARGETS=hwpe-target
-      $ ./install/bin/gvsoc --target=hwpe-target --binary examples/pulp-open/hello image flash run
+      $ make all TARGETS=pulp-open-hwpe
+      $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary examples/pulp-open/hello image flash run
 
 You should see the Hello code passing successfully. 
 
-.. admonition:: Task-1.2.1 Familiarize the contents of hwpe-target.py
+.. admonition:: Task-1.2.1 Familiarize the contents of pulp-open-hwpe.py
    :class: task
    
-   Open the newly created ``hwpe-target.py`` and familiarise yourself. What are your observation?
+   Open the newly created ``pulp-open-hwpe.py`` and familiarise yourself. What are your observation?
 
 Next we will create a dedicated SoC with a pulp-cluster using the pulp-open template. It is a `GAPY_TARGET`. It relies on the imports from the `pulp/chips/pulp_open` folder. 
 
@@ -53,7 +53,7 @@ In the next create a dedicated folder by copying the the contents of the pulp_op
 Even though we created new hwpe_target folder, the hwpe_target.py still points to the pulp_open folder. 
 The next part is to change the dependencies to point to the new hwpe_target files by replacing the correcting path for the model imports. 
  
-.. admonition:: Task-1.2.3 Fix the dependencies for HwpeTarget
+.. admonition:: Task-1.2.3 Fix the dependencies for pulp-open-hwpe
    :class: task
    
    .. code-block:: python
@@ -78,12 +78,12 @@ and running the hello application again by executing the following commands:
    
    .. code-block:: bash
       
-      $ make build TARGETS=hwpe-target
-      $ ./install/bin/gvsoc --target=hwpe-target --binary examples/pulp-open/hello image flash run
+      $ make build TARGETS=pulp-open-hwpe
+      $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary examples/pulp-open/hello image flash run
 
 The test should pass without any issue. How do you know if your changes are reflected correctly?
 
 .. admonition:: Information
    :class: explanation
    
-   GVSoC generates a ``gvsoc_config.json`` file in the ``/gvsoc`` folder when an application is executed. This is a tool generated file and you can find all the address maps as well as the component connections. Now we can see the changes such as ``cluster_config_file: pulp/chips/hwpe-target/cluster.json`` in the generated ``gvsoc_config.json`` file.
+   GVSoC generates a ``gvsoc_config.json`` file in the ``/gvsoc`` folder when an application is executed. This is a tool generated file and you can find all the address maps as well as the component connections. Now we can see the changes such as ``cluster_config_file: pulp/chips/pulp-open-hwpe/cluster.json`` in the generated ``gvsoc_config.json`` file.
