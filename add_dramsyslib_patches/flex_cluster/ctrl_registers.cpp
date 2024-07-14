@@ -39,6 +39,7 @@ private:
     vp::IoSlave input_itf;
     vp::WireMaster<bool> barrier_ack_itf;
     vp::ClockEvent * wakeup_event;
+    int64_t timer_start;
 };
 
 
@@ -52,6 +53,7 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
     this->new_slave_port("input", &this->input_itf);
     this->new_master_port("barrier_ack", &this->barrier_ack_itf);
     this->wakeup_event = this->event_new(&CtrlRegisters::wakeup_event_handler);
+    this->timer_start = 0;
 }
 
 void CtrlRegisters::wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event) {
@@ -77,12 +79,26 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
         uint32_t value = *(uint32_t *)data;
         if (offset == 0)
         {
-            // std::cout << "EOC register return value: 0x" << std::hex << ((value - 1) >> 1) << std::endl;
-            _this->time.get_engine()->quit(value >> 1);
+            // std::cout << "EOC register return value: 0x" << std::hex << value << std::endl;
+            _this->time.get_engine()->quit(0);
         }
         if (offset == 4)
         {
             _this->event_enqueue(_this->wakeup_event, 1);
+        }
+        if (offset == 8)
+        {
+            _this->timer_start = _this->time.get_time();
+        }
+        if (offset == 12)
+        {
+            int64_t period = _this->time.get_time() - _this->timer_start;
+            std::cout << "[Performance Counter]: Execution period is " << period/1000 << " ns" << std::endl;
+            _this->timer_start = _this->time.get_time();
+        }
+        if (offset == 16)
+        {
+            std::cout << "[Print]: " << value << std::endl;
         }
     }
 
