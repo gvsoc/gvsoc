@@ -83,6 +83,12 @@ uint32_t flex_is_dm_core(){
     return (hartid == ARCH_NUM_CORE_PER_CLUSTER-1);
 }
 
+uint32_t flex_is_dm2_core(){
+    uint32_t hartid;
+    asm("csrr %0, mhartid" : "=r"(hartid));
+    return (hartid == ARCH_NUM_CORE_PER_CLUSTER-2);
+}
+
 uint32_t flex_is_first_core(){
     uint32_t hartid;
     asm("csrr %0, mhartid" : "=r"(hartid));
