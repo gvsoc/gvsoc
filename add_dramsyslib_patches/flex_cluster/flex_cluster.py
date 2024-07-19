@@ -86,7 +86,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         idma_outstand_burst =   arch.idma_outstand_burst,
                                         num_cluster_x       =   arch.num_cluster_x,
                                         num_cluster_y       =   arch.num_cluster_y,
-                                        data_bandwidth      =   arch.noc_link_width/8)
+                                        data_bandwidth      =   arch.noc_link_width/8,
+                                        num_redmule         =   arch.num_redmule_per_cluster)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 

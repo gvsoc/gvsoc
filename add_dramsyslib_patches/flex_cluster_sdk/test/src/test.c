@@ -21,7 +21,7 @@ int main()
     // llm_mlp_matmul(10, 64, 2);
     // llm_mlp_test(2048);
     // llm_mlp_inter_cluster_test_hbm(128,2);
-    llm_mlp_inter_cluster_matmul(1024,2,ARCH_NUM_CLUSTER_X);
+    // llm_mlp_inter_cluster_matmul(1024,2,ARCH_NUM_CLUSTER_X);
     // llm_mlp_inter_cluster_matmul_optimize_hbm(1024,2,ARCH_NUM_CLUSTER_X);
     // llm_mlp_test(1024,2,ARCH_NUM_CLUSTER_X);
 
