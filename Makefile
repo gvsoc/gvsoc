@@ -102,6 +102,12 @@ third_party/occamy:
 	sed -i -e '29,52d' -e '63,67d' -e '79,91d' deps/snitch_cluster/sw/snRuntime/src/start.c; \
 	cd target/sim; make DEBUG=ON sw
 
+rebuild_sw:
+	cd third_party/occamy; \
+	rm -rf target/sim/sw/device/apps/blas/test; \
+	cp -rfv ../../add_dramsyslib_patches/flex_cluster_sdk/test target/sim/sw/device/apps/blas; \
+	cd target/sim; make DEBUG=ON sw
+
 clean_sw:
 	rm -rf third_party/occamy
 
@@ -119,7 +125,7 @@ config:
 iter:
 	make config
 	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
-	make clean_sw && make sw
+	make rebuild_sw
 
 run:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary third_party/occamy/target/sim/sw/device/apps/blas/test/build/test.elf run --trace=/chip/cluster_0/redmule
