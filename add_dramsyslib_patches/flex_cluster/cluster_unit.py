@@ -52,12 +52,12 @@ class ClusterArch:
                         sync_base,          sync_size,
                         insn_base,          insn_size,
                         nb_tcdm_banks,      tcdm_bank_width,
-                        redmule_ce_height,  redmule_ce_width, redmule_ce_pipe,
+                        redmule_ce_height,  redmule_ce_width,   redmule_ce_pipe,
                         redmule_elem_size,  redmule_queue_depth,
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
-                        auto_fetch=False,   boot_addr=0x8000_0650):
+                        data_bandwidth,     auto_fetch=False,   boot_addr=0x8000_0650):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base
@@ -82,6 +82,7 @@ class ClusterArch:
         #IDMA
         self.idma_outstand_txn      = idma_outstand_txn
         self.idma_outstand_burst    = idma_outstand_burst
+        self.data_bandwidth         = data_bandwidth
 
         #Global Information
         self.num_cluster_x          = num_cluster_x
@@ -171,12 +172,12 @@ class ClusterUnit(gvsoc.systree.Component):
         instr_router = router.Router(self, 'instr_router', bandwidth=8)
 
         # Main router
-        wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm', bandwidth=64)
-        wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma', bandwidth=64)
+        wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm', bandwidth=arch.data_bandwidth)
+        wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma', bandwidth=arch.data_bandwidth)
         narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
 
         # Dedicated router for dma to TCDM
-        tcdm_dma_ico = router.Router(self, 'tcdm_dma_ico', bandwidth=64)
+        tcdm_dma_ico = router.Router(self, 'tcdm_dma_ico', bandwidth=arch.data_bandwidth)
 
         # L1 Memory
         tcdm = ClusterTcdm(self, 'tcdm', arch.tcdm)
@@ -218,7 +219,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
-            tcdm_width=64, transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
+            tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
 
         #stack memory
         stack_mem = memory.Memory(self, 'stack_mem', size=arch.stack_area.size)
@@ -271,7 +272,7 @@ class ClusterUnit(gvsoc.systree.Component):
         wide_axi_from_idma.o_MAP(self.i_WIDE_SOC())
         
 
-        # Cores
+        # iDMA connection
         cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
         idma.o_OFFLOAD_GRANT(cores[arch.nb_core-1].i_OFFLOAD_GRANT())
 
