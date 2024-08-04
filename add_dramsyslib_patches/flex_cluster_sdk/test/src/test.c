@@ -22,8 +22,15 @@ int main()
     // llm_mlp_test(2048);
     // llm_mlp_inter_cluster_test_hbm(128,2);
     // llm_mlp_inter_cluster_matmul(1024,2,ARCH_NUM_CLUSTER_X);
-    // llm_mlp_inter_cluster_matmul_optimize_hbm(1024,2,ARCH_NUM_CLUSTER_X);
+    // llm_mlp_inter_cluster_matmul_optimize_hbm(32,2,ARCH_NUM_CLUSTER_X);
     // llm_mlp_test(1024,2,ARCH_NUM_CLUSTER_X);
+    if (flex_is_first_core())
+    {
+        flex_redmule_set_M(32);
+        flex_redmule_set_N(128);
+        flex_redmule_set_K(32);
+        flex_redmule_trigger_block();
+    }
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
