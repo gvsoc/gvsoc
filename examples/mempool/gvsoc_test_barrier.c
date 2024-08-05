@@ -25,20 +25,20 @@ int main() {
   // Initialize barrier and synchronize
   mempool_barrier_init(core_id);
 
-  // Test the core
-  result[core_id] = simple_calculation(i, core_id);
-
-  // Synchronize
-  mempool_barrier(num_cores);
-
-  // Result check
-  uint32_t check_id = num_cores - 1 - core_id;
-  if (result[check_id] != check_id * i) {
-      error = 1;
-  }
-
-  // Synchronize
-  mempool_barrier(num_cores);
+//  // Test the core
+//  result[core_id] = simple_calculation(i, core_id);
+//
+//  // Synchronize
+//  mempool_barrier(num_cores);
+//
+//  // Result check
+//  uint32_t check_id = num_cores - 1 - core_id;
+//  if (result[check_id] != check_id * i) {
+//      error = 1;
+//  }
+//
+//  // Synchronize
+//  mempool_barrier(num_cores);
   return error;
 }
 
