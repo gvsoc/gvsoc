@@ -53,14 +53,15 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
   uint8_t *data = req->get_data(); 
   uint32_t addr = req->get_addr();
   
-  _this->trace.msg("Received request (addr: 0x%x, size: 0x%x, is_write: %d, data: 0x%x\n", req->get_addr(), req->get_size(), req->get_is_write(), *(uint32_t *)(req->get_data()));
+  _this->trace.msg("Received request (addr: 0x%x, size: 0x%x, is_write: %d, data: 0x%x)\n", req->get_addr(), req->get_size(), req->get_is_write(), *(uint32_t *)(req->get_data()));
   
   // Dispatch the register file access to the correct function
   if(req->get_is_write()) {
     //The write could be to special reigsters or the configuration registers
     if(addr == HWPE_REG_COMMIT_AND_TRIGGER) {
       ////////////////////////////////////////   TASK - 2  //////////////////////////////////////// 
-      // Enqueue the first event on the fsm_start_event with a latency = 1
+      // Enqueue the first event on the fsm_start_event with a latency = 1 and uncomment the trace below
+      // _this->trace.msg("********************* First event enqueued *********************\n");
     }
     else if(addr == HWPE_REG_SOFT_CLEAR) {
       _this->clear();

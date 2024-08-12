@@ -1,7 +1,7 @@
 1. Getting Familiar with the HWPE model 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's have a look at the folder ``simple_hwpe``. It is very simple and useless at the moment, but we
+Let's have a look at the folder ``simple_hwpe``. It is very simple and models nothing useful at the moment, but we
 will start building the Hwpe model by adding the necessary functional elements. The folder structure
 looks like the following:
 
@@ -17,11 +17,11 @@ looks like the following:
         ├── CMakeLists.txt
         └── hwpe.py
 
-    - **/simple_hwpe**: Code base for the simple HWPE.
-    - **/inc/hwpe.hpp**: Instantiation of the Hwpe class.
-    - **/src/hwpe.cpp**: Behavioral description of the Hwpe.
-    - **CMakeLists.txt**: Compilation file requirements for the simple HWPE.
-    - **hwpe.py**: Python generator to instantiate the Hwpe as used in the ``Cluster.py`` in Section 3.3.
+    - **/simple_hwpe**: code base for the simple HWPE.
+    - **/inc/hwpe.hpp**: instantiation of the Hwpe class.
+    - **/src/hwpe.cpp**: behavioral description of the Hwpe.
+    - **CMakeLists.txt**: compilation file requirements for the simple HWPE.
+    - **hwpe.py**: python generator to instantiate the Hwpe as used in the ``cluster.py`` in Section 2.1.2
 
 .. admonition:: Task - 3.1.1 Getting familiar with hwpe.hpp file
    :class: task
@@ -45,12 +45,12 @@ Below is an example of a C++ class definition for Hwpe. This class inherits from
         static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
     };
 
-- **Hwpe Class**: Definition of Hwpe class inherited from ``vp::Component``.
-- **Hwpe(vp::ComponentConf &config)**: Constructor initializes the Hwpe with a configuration.
-- **vp::IoMaster tcdm_port**: Master port for the TCDM access.
-- **vp::Trace trace**: A trace object for logging and debugging.
-- **vp::IoSlave cfg_port_**: I/O slave port for configuration.
-- **static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req)**: A static method for handling I/O requests to the cfg port.
+- **Hwpe Class**: definition of Hwpe class inherited from ``vp::Component``.
+- **Hwpe(vp::ComponentConf &config)**: constructor initializes the Hwpe with a configuration.
+- **vp::IoMaster tcdm_port**: master port for the TCDM access.
+- **vp::Trace trace**: a trace object for logging and debugging.
+- **vp::IoSlave cfg_port_**: an I/O slave port for configuration.
+- **static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req)**: a static method for handling I/O requests to the cfg port.
 
 .. admonition:: Task - 3.1.2 Getting familiar with hwpe.cpp file
    :class: task
@@ -82,9 +82,9 @@ Below is an example of a C++ class definition for Hwpe. This class inherits from
         return new Hwpe(config);
     }
 
-- **#include "hwpe.hpp"**: Includes the header file for the Hwpe class.
-- **Hwpe::Hwpe(vp::ComponentConf &config)**: Constructor initializes the Hwpe components:
-  - It creates the master and slave ports and assigns them to the respective references.
-  - A new trace object is created and referenced to the trace variable declared in the header.
-- **hwpe_slave method**: Models an access to the HWPE slave interface.
+- **#include "hwpe.hpp"**: includes the header file for the Hwpe class.
+- **Hwpe::Hwpe(vp::ComponentConf &config)**: constructor initializes the Hwpe components:
+  - it creates the master and slave ports and assigns them to the respective references.
+  - a new trace object is created and referenced to the trace variable declared in the header.
+- **hwpe_slave method**: models an access to the HWPE slave interface.
 

@@ -70,5 +70,5 @@ If everything is implemented correctly, you should see in the traces the Hello m
    
    .. code-block:: none
     
-        2383531636: 171699: [/chip/cluster/hwpe/trace] Received request (addr: 0x14, size: 0x4, is_write: 1, data: 0x0)2383531636: 171699: [/chip/cluster/hwpe/trace] Hello from the clear function()
-        2383920332: 171727: [/chip/cluster/hwpe/trace] Received request (addr: 0x20, size: 0x4, is_write: 1, data: 0x1000001c)2383920332: 171727: [/chip/cluster/hwpe/trace] Setting Register offset: 0 data: 1000001c
+        2349062630: 169216: [/chip/cluster/hwpe/trace                                     ] Received request (addr: 0x14, size: 0x4, is_write: 1, data: 0x0)
+        2349062630: 169216: [/chip/cluster/hwpe/trace                                     ] Hello from the clear function()

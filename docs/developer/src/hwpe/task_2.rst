@@ -1,7 +1,9 @@
 2 - Integrating a HWPE target to the hwpe-target  
 ................................................
 
-Adding a HWPE target requires a functional model written in C++ and Python generators connected to the system. We will use the functional model located in the ``gvsoc/pulp/pulp/simple_hwpe`` directory. Our focus will be on integrating the existing simple hwpe into the newly created target ``hwpe-target``. Details of the simple hwpe will be discussed in Section XYZ. Let's begin the setup for this tutorial by copying the relevant source files for pulp open hwpe. These are the same files as before, with additional comments to guide you through the process.
+Adding a HWPE target requires a functional model written in C++ and Python generators to integrate to the SoC. We will use the functional model located in the ``gvsoc/pulp/pulp/simple_hwpe`` directory. Our focus in this section will be on integrating the existing simple_hwpe into the newly created target ``pulp_open_hwpe``. Details of the simple_hwpe will be discussed in Section 3, where the model is extended with relevant features. 
+
+Let's begin the setup for this task by copying the relevant source files for pulp_open_hwpe. These are the same files as before, with additional comments to guide you through the process.
 
 .. admonition:: Task - 2.1 Setup 
    :class: task
@@ -48,7 +50,7 @@ After the ``hwpe`` is instantiated in ``cluster.json``, the hwpe model needs to 
         hwpe = Hwpe(self, 'hwpe')
 
 
-Now the HWPE instantiated in the cluster. However, there are no connections made to the other components in the cluster! First, we will start connecting the peripheral interconnect to the configuration port of the ``Hwpe`` This involves two steps. First, create an entry in the peripheral interconnect to accommodate the ``Hwpe`` This is where we can make use of the ``Hwpe`` entry in the ``cluster.json``. 
+Now the HWPE instantiated in the cluster. However, there are no connections made to the other components in the cluster! First, we will start connecting the peripheral interconnect to the configuration port of the ``Hwpe`` This involves two steps. First, create an entry in the peripheral interconnect to accommodate the ``Hwpe`` This is where we can make use of the ``Hwpe`` entry in the ``cluster.json``. Secondly, the port binding is made between the peripheral interconnect and the HWPE. 
 
 .. admonition:: Task - 2.1.3 Connection of Hwpe with the Peripheral interconnect
    :class: task

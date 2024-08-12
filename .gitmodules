@@ -1,6 +1,6 @@
 [submodule "core"]
 	path = core
-	url = https://github.com/arpansur/gvsoc-core-test.git
+	url = https://github.com/gvsoc/gvsoc-core.git
 [submodule "pulp"]
 	path = pulp
-	url = https://github.com/arpansur/gvsoc-pulp-test.git
+	url = https://github.com/gvsoc/gvsoc-pulp.git

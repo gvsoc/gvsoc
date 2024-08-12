@@ -41,14 +41,14 @@ You should see the Hello code passing successfully.
    
    Open the newly created ``pulp-open-hwpe.py`` and familiarise yourself. What are your observation?
 
-Next we will create a dedicated SoC with a pulp-cluster using the pulp-open template. It is a `GAPY_TARGET`. It relies on the imports from the `pulp/chips/pulp_open` folder. 
+It is a `GAPY_TARGET`. It relies on the imports from the `pulp/chips/pulp_open` folder. Next we will create a dedicated SoC with a pulp-cluster using the pulp-open template. 
 
 .. code-block:: python
     
     from pulp.chips.pulp_open.pulp_open_board import Pulp_open_board
     import gvsoc.runner as gvsoc
 
-In the next create a dedicated folder by copying the the contents of the pulp_open to pulp_open_hwpe. Then in the later exercises we will change the contents of the pulp_open_hwpe folder.
+In the next task create a dedicated folder by copying the the contents of the pulp_open to pulp_open_hwpe. Then in the later exercises we will change the contents of the pulp_open_hwpe folder.
 
 .. admonition:: Task-1.2.2 Create a replica of pulp_open_board
    :class: task

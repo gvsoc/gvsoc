@@ -32,7 +32,7 @@ Code Explanation:
         $ make build TARGETS=pulp-open-hwpe
         $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task4/test run --trace="hwpe"
 
-**Warning! It may lead to an infinite loop. Remember to terminate the process.**
+**Warning! It will lead to an infinite loop. Remember to terminate the process.**
 
 What prints do you see from the trace? Does the prints looks like the ones below?
 

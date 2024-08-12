@@ -41,12 +41,6 @@ int run_test() {
     //Clear the hardware 
     HWPE_WRITE_CMD(HWPE_SOFT_CLEAR, HWPE_SOFT_CLEAR_ALL);
 
-    //Set the register values 
-    HWPE_WRITE_REG(HWPE_REG_INPUT_PTR,     &(input[0]));
-    HWPE_WRITE_REG(HWPE_REG_WEIGHT_PTR,    &(weight[0]));
-    HWPE_WRITE_REG(HWPE_REG_OUTPUT_PTR,    &(output[0]));
-    HWPE_WRITE_REG(HWPE_REG_WEIGHT_OFFS,    -128); // setting the woffset to -128
-
     return 0;
 }
 

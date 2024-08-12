@@ -46,7 +46,9 @@ class L1_subsystem(st.Component):
         l1_bank_size = int(cluster.get_property('l1/mapping/size', int) / nb_l1_banks)
 
 #### SOLUTION-6 -- Add one more port for the hwpe
-        l1_interleaver_nb_masters = nb_pe + 4 + 1 + 1# 1 port per PE + 4 for DMA + 1 for NE16
+
+        l1_interleaver_nb_masters = nb_pe + 4 + 1 + 1 # 1 port per PE + 4 for DMA + 1 for NE16 + 1 for HWPE
+
         first_external_pcer = 12
         power_models = cluster.get_property('l1/power_models')
 
@@ -84,48 +86,49 @@ class L1_subsystem(st.Component):
         for i in range(0, nb_pe):
             self.bind(self, 'data_pe_%d' % i, pe_icos[i], 'input')
 
-            pe_icos[i].add_mapping('l1', **cluster._reloc_mapping(cluster.get_property('l1/mapping')), id=0)
+            pe_icos[i].add_mapping('l1', **cluster._reloc_mapping(cluster.get_property('l1/mapping')))
             self.bind(pe_icos[i], 'l1', interleaver, 'in_%d' % i)
             
-            pe_icos[i].add_mapping('l1_alias', **cluster._reloc_mapping_alias(cluster.get_property('l1/mapping')), id=0)
+            pe_icos[i].add_mapping('l1_alias', **cluster._reloc_mapping_alias(cluster.get_property('l1/mapping')))
             self.bind(pe_icos[i], 'l1_alias', interleaver, 'in_%d' % i)
             
-            pe_icos[i].add_mapping('l1_ts', **cluster._reloc_mapping(cluster.get_property('l1/ts_mapping')), id=0)
+            pe_icos[i].add_mapping('l1_ts', **cluster._reloc_mapping(cluster.get_property('l1/ts_mapping')))
             self.bind(pe_icos[i], 'l1_ts', interleaver, 'ts_in_%d' % i)
             
-            pe_icos[i].add_mapping('l1_ts_alias', **cluster._reloc_mapping_alias(cluster.get_property('l1/ts_mapping')), id=0)
+            pe_icos[i].add_mapping('l1_ts_alias', **cluster._reloc_mapping_alias(cluster.get_property('l1/ts_mapping')))
             self.bind(pe_icos[i], 'l1_ts_alias', interleaver, 'ts_in_%d' % i)
             
-            pe_icos[i].add_mapping('dma', **cluster._reloc_mapping(cluster.get_property('demux_peripherals/dma/mapping')), id=1)
+            pe_icos[i].add_mapping('dma', **cluster._reloc_mapping(cluster.get_property('demux_peripherals/dma/mapping')))
             self.bind(pe_icos[i], 'dma', self, 'dma_%d' % i)
             
-            pe_icos[i].add_mapping('dma_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/dma/mapping')), id=1)
+            pe_icos[i].add_mapping('dma_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/dma/mapping')))
             self.bind(pe_icos[i], 'dma_alias', self, 'dma_%d' % i)
 
-            pe_icos[i].add_mapping('event_unit', **cluster._reloc_mapping(cluster.get_property('demux_peripherals/event_unit/mapping')), id=1)
+            pe_icos[i].add_mapping('event_unit', **cluster._reloc_mapping(cluster.get_property('demux_peripherals/event_unit/mapping')))
             self.bind(pe_icos[i], 'event_unit', self, 'event_unit_%d' % i)
             
-            pe_icos[i].add_mapping('event_unit_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/event_unit/mapping')), id=1)
+            pe_icos[i].add_mapping('event_unit_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/event_unit/mapping')))
             self.bind(pe_icos[i], 'event_unit_alias', self, 'event_unit_%d' % i)
 
-            pe_icos[i].add_mapping('event_unit_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/event_unit/mapping')), id=1)
+            pe_icos[i].add_mapping('event_unit_alias', **cluster._reloc_mapping_alias(cluster.get_property('demux_peripherals/event_unit/mapping')))
             self.bind(pe_icos[i], 'event_unit_alias', self, 'event_unit_%d' % i)
 
-            pe_icos[i].add_mapping('cluster_ico', id=1)
+            pe_icos[i].add_mapping('cluster_ico')
             self.bind(pe_icos[i], 'cluster_ico', self, 'cluster_ico')
 
-            self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 0), pe_icos[i], 'nb_read[1]')
-            self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 1), pe_icos[i], 'nb_write[1]')
-            self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 2), pe_icos[i], 'read_stalls[1]')
-            self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 3), pe_icos[i], 'write_stalls[1]')
-            self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 4), pe_icos[i], 'stalls[0]')
+            # self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 0), pe_icos[i], 'nb_read[1]')
+            # self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 1), pe_icos[i], 'nb_write[1]')
+            # self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 2), pe_icos[i], 'read_stalls[1]')
+            # self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 3), pe_icos[i], 'write_stalls[1]')
+            # self.bind(self, 'ext_counter_%d[%d]' % (i, first_external_pcer + 4), pe_icos[i], 'stalls[0]')
 
         # L1 interleaver
         for i in range(0, nb_l1_banks):
             self.bind(interleaver, 'out_%d' % i, l1_banks[i], 'input')
 
 #### SOLUTION-7 -- Bind it with hwpe port name and attach it with correct index of the L1 subsystem's interleaver. Hint: (nb_pe + 5) connection
-        self.bind(self, 'hwpe', interleaver, 'in_%d' % (nb_pe + 5))    
+
+        self.bind(self, 'hwpe', interleaver, 'in_%d' % (nb_pe + 5))
         self.bind(self, 'ne16_in', interleaver, 'in_%d' % (nb_pe + 4))
 
         for i in range(0, 4):

@@ -38,7 +38,7 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
 {
   Hwpe *_this = (Hwpe *)__this;
-  _this->trace.msg("Received request (addr: 0x%x, size: 0x%x, is_write: %d, data: 0x%x\n", req->get_addr(), req->get_size(), req->get_is_write(), *(uint32_t *)(req->get_data()));
+  _this->trace.msg("Received request (addr: 0x%x, size: 0x%x, is_write: %d, data: 0x%x)\n", req->get_addr(), req->get_size(), req->get_is_write(), *(uint32_t *)(req->get_data()));
   return vp::IO_REQ_OK;
 }
 

@@ -83,7 +83,7 @@ int Hwpe::fsm() {
       break;
     case LOAD_INPUT:
       //////////////////////////////// SOLUTION - 3 ///////////////////////////
-      // Call input_load() function 
+      // Call input_load() function with return value stored to latency  
       latency = this->input_load();
       if(this->input.iteration == this->input.count)
         state_next = WEIGHT_OFFSET; 
