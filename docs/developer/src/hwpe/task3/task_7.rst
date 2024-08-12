@@ -10,12 +10,19 @@ Start the source setup by running:
         $ make model_hwpe_task7
 
 
-Build the model and run the ``task4`` application. You will notice that both ``LOAD INPUT`` and ``COMPUTE`` are finished with a latency of 4 instead of 1.
+Build the model and run the ``task4`` application. You will notice that both ``LOAD_INPUT`` and ``COMPUTE`` are finished with a latency of 4 instead of 1.
 
-.. admonition:: Task - 3.7.1 Fix latency issue
+.. admonition:: Task - 3.7.1 Fix LOAD_INPUT latency issue
    :class: task
    
    To address this issue, uncomment ``#define EFFICIENT_IMPLEMENTATION`` in ``input_load.cpp``.
+
+.. admonition:: Task - 3.7.2 Fix LOAD_WEIGHT latency issue
+   :class: task
+
+   Adapt the weight load in the ``weight_load.cpp`` file for efficient memory access.
+   Hint! Take inspiration from ``input_load``
+
 
 Use the same application ``task4`` located at ``/tutorial/model_hwpe/application/task4/test``.
 

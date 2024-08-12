@@ -10,7 +10,9 @@
         $ make build TARGETS=pulp-open-hwpe
         $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task8/test run --trace="hwpe"
 
-Warning! This command will hang because the core will be stuck at ``HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD)``. To resolve this issue, we should use the ``irq`` port connected to the event unit.
+
+**Warning! This command will hang because the core will be stuck at ``HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD)``.**
+To resolve this issue, we should use the ``irq`` port connected to the event unit.
 
 .. admonition:: Task - 3.8.2 Fix FsmEndHandler
    :class: task

@@ -37,6 +37,7 @@ int64_t Hwpe::input_load()
     this->io_req.set_size(1);
     this->io_req.set_data(&data[i]);
     this->io_req.set_is_write(0);
+    this->io_req.set_debug(true);
     int err = this->tcdm_port.req(&this->io_req);
     if (err == vp::IO_REQ_OK) {
       int64_t latency = this->io_req.get_latency();
@@ -66,6 +67,8 @@ int64_t Hwpe::input_load()
     this->io_req.set_size(4);
     this->io_req.set_data(data+i*4);
     this->io_req.set_is_write(0);
+    this->io_req.set_debug(true);
+
     int err = this->tcdm_port.req(&this->io_req);
     if (err == vp::IO_REQ_OK) {
       int64_t latency = this->io_req.get_latency();
