@@ -28,6 +28,7 @@ SRC_DIR := ./relative/path/to/src_folder
 DEST_DIR := ./relative/path/to/dest_folder
 
 # Include the tasks.mk file
+include tutorial/helpers.mk
 include tutorial/tasks.mk
 include tutorial/solutions.mk
 

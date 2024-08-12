@@ -58,8 +58,8 @@ This brings us to the next task. Initialize the values correctly. If you remembe
    
    .. code-block:: cpp
     
-        this->input.iteration = 0
-        this->input.count = 8
+        this->input.iteration = 0;
+        this->input.count = 8;
 
 Now the initial values are set correctly. But we also have to ensure ``input.iteration`` is incremented as expected. Have a look at the ``input_load.cpp`` file. You will see it instantiates the ``input_load()`` function that takes care of the data load where ``input.iteration`` is also incremented.
 

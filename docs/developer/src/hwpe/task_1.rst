@@ -4,6 +4,15 @@ In this section, you will create a new Hardware Target ``pulp-open-hwpe`` which 
 
 Please go through the README to install gvsoc. 
 
+After the installation is done, Setup the source files to add inline comments to help in performing the tasks.
+
+.. admonition:: Task - 1.0 setup the source files  
+   :class: task
+
+   .. code-block:: bash
+
+      $ make create_target_task1
+
 Let's create a new gvsoc target ``pulp-open-hwpe`` at ``gvsoc/pulp/`` by copying the pulp-open target.
 
 .. admonition:: Task - 1.1 Create pulp-open-hwpe 
@@ -39,7 +48,7 @@ Next we will create a dedicated SoC with a pulp-cluster using the pulp-open temp
     from pulp.chips.pulp_open.pulp_open_board import Pulp_open_board
     import gvsoc.runner as gvsoc
 
-In the next create a dedicated folder by copying the the contents of the pulp_open to hwpe_target. Then in the later exercises we will change the contents of the hwpe_target folder.
+In the next create a dedicated folder by copying the the contents of the pulp_open to pulp_open_hwpe. Then in the later exercises we will change the contents of the pulp_open_hwpe folder.
 
 .. admonition:: Task-1.2.2 Create a replica of pulp_open_board
    :class: task
@@ -47,25 +56,25 @@ In the next create a dedicated folder by copying the the contents of the pulp_op
    .. code-block:: bash
 
       $ cd gvsoc/pulp/pulp/chips
-      $ mkdir hwpe_target 
+      $ mkdir pulp_open_hwpe 
       $ cp pulp_open/* . -r 
 
-Even though we created new hwpe_target folder, the hwpe_target.py still points to the pulp_open folder. 
-The next part is to change the dependencies to point to the new hwpe_target files by replacing the correcting path for the model imports. 
+Even though we created new pulp_open_hwpe folder, the pulp-open-hwpe.py still points to the pulp_open folder. 
+The next part is to change the dependencies to point to the new pulp_open_hwpe files by replacing the correcting path for the model imports. 
  
 .. admonition:: Task-1.2.3 Fix the dependencies for pulp-open-hwpe
    :class: task
    
    .. code-block:: python
       
-      from pulp.chips.hwpe_target.pulp_open_board import Pulp_open_board
+      from pulp.chips.pulp_open_hwpe.pulp_open_board import Pulp_open_board
       import gvsoc.runner as gvsoc
 
    Similiarly, the references in the following files needs to be modified. Look for the inline hints. 
    
    .. code-block:: text
 
-       /gvsoc/pulp/pulp/chips/hwpe_target
+       /gvsoc/pulp/pulp/chips/pulp_open_hwpe
        ├── pulp_open_board.py
        ├── pulp_open.py
        └── cluster.py

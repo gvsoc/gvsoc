@@ -13,18 +13,18 @@ Adding a HWPE target requires a functional model written in C++ and Python gener
 
 All the necessary modifications are to be done in ``gvsoc/pulp/pulp/chips/pulp_open/cluster.json``. To include the new HWPE accelerator in the PULP system, an entry of the cluster needs to be updated in ``cluster.json``. The entry needs to be added below the ``dma`` entry as its base address comes next.
 
-.. admonition:: Task - 2.1.1 Add HWPE entery to address map
+.. admonition:: Task - 2.1.1 Add HWPE entry to address map
    :class: task
 
-   The base address 0x10201000 and a size of 0x400 is reserved for the registers of the new HWPE accelerator. The JSON entry is the following:
+   The base address 0x10201c00 and a size of 0x400 is reserved for the registers of the new HWPE accelerator. The JSON entry is the following:
 
    .. code-block:: json
 
       "hwpe": {
           "mapping": {
-              "base": "0x10201000",
+              "base": "0x10201c00",
               "size": "0x00000400",
-              "remove_offset": "0x10200000"
+              "remove_offset": "0x10201c00"
           }
       },
 
@@ -110,12 +110,12 @@ The last part of the integration is to connect the event signal ``irq`` of the H
    
    .. code-block:: bash
       
-      $ make build TARGETS=hwpe-target
-      $ ./install/bin/gvsoc --target=hwpe-target --binary examples/pulp-open/hello image flash run
+      $ make build TARGETS=pulp-open-hwpe
+      $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary examples/pulp-open/hello image flash run
 
 
 .. admonition:: Fixing failing build
    :class: task
    
    Search for hwpe in the gvsoc config.json file. What went wrong?
-   Add the simple hwpe folder in gvsoc/pulp/pulp/CMakeLists.txt. Then rebuild the model and run the hello application as done previously.
+   Add the simple_hwpe folder in gvsoc/pulp/pulp/CMakeLists.txt. Then rebuild the model and run the hello application as done previously.

@@ -1,7 +1,7 @@
 3 - Intrinsics of the Hwpe development
 ......................................
 This section is devoted to the implementation details of the C++ model of the Hwpe. We will also club
-it with the software infrastructure as they are necessary to verify the software infrastructure. A brief
+it with the software infrastructure as they are necessary to verify the hardware infrastructure. A brief
 introduction of the software is given below.
 
 .. toctree::
