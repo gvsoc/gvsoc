@@ -8,7 +8,7 @@
         
         $ make model_hwpe_task8
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task8/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task8/test run --trace="hwpe"
 
 
 **Warning! This command will hang because the core will be stuck at ``HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD)``.**
@@ -20,7 +20,7 @@ To resolve this issue, we should use the ``irq`` port connected to the event uni
    Open ``hwpe_fsm.cpp`` and in ``FsmEndHandler``, uncomment the line ``irq.sync(true)``.
 
 
-Use the ``task8`` application located at ``/tutorial/model_hwpe/application/task8/test``.
+Use the ``task8`` application located at ``/docs/developer/tutorials/hwpe/model_hwpe/application/task8/test``.
 
 Build and execute the application:
 

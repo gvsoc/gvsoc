@@ -20,9 +20,7 @@
 #include "hwpe.hpp"
 #define VERBOSE
 
-//////////////////////////   TASK-1 //////////////////////////////////
-// Uncomment the following 
-// #define EFFICIENT_IMPLEMNTATION 
+#define EFFICIENT_IMPLEMNTATION 
 
 #ifndef EFFICIENT_IMPLEMNTATION 
 int64_t Hwpe::input_load()
@@ -43,7 +41,7 @@ int64_t Hwpe::input_load()
       int64_t latency = this->io_req.get_latency();
       max_latency = max_latency > latency ? max_latency : latency;
 #ifdef VERBOSE
-      this->trace.msg("input lod max_latency=%d, latency=%d, addr=0x%x, data=0x%x\n", max_latency, latency, (addr), data[i]);
+      this->trace.msg("input load max_latency=%d, latency=%d, addr=0x%x, data=0x%x\n", max_latency, latency, (addr), data[i]);
 #endif
     } else {
       this->trace.fatal("Unsupported access\n");
@@ -66,14 +64,13 @@ int64_t Hwpe::input_load()
     this->io_req.set_size(4);
     this->io_req.set_data(data+i*4);
     this->io_req.set_is_write(0);
-    this->io_req.set_debug(true);
     int err = this->tcdm_port.req(&this->io_req);
     if (err == vp::IO_REQ_OK) {
       int64_t latency = this->io_req.get_latency();
       max_latency = max_latency > latency ? max_latency : latency;
 #ifdef VERBOSE
       uint32_t data_word = ((*(data+i*4)) & 0xFF) + (((*(data+i*4+1)) & 0xFF)<<8) + (((*(data+i*4+2)) & 0xFF)<<16) + (((*(data+i*4+3)) & 0xFF)<<24);
-      this->trace.msg("input load max_latency=%d, latency=%d, addr=%d, data=0x%x\n", max_latency, latency, (addr), data_word);
+      this->trace.msg("input load max_latency=%d, latency=%d, addr=0x%x, data=0x%x\n", max_latency, latency, (addr), data_word);
 #endif
     } else {
       this->trace.fatal("Unsupported access\n");

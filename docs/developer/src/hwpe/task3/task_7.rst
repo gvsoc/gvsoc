@@ -24,7 +24,7 @@ Build the model and run the ``task4`` application. You will notice that both ``L
    Hint! Take inspiration from ``input_load``
 
 
-Use the same application ``task4`` located at ``/tutorial/model_hwpe/application/task4/test``.
+Use the same application ``task4`` located at ``/docs/developer/tutorials/hwpe/model_hwpe/application/task4/test``.
 
 .. admonition:: Verify - 3.7 Build and Execute
    :class: solution
@@ -32,7 +32,7 @@ Use the same application ``task4`` located at ``/tutorial/model_hwpe/application
    .. code-block:: bash
     
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task4/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task4/test run --trace="hwpe"
 
 If you have implemented the modification correctly, the output trace should resemble the following:
 

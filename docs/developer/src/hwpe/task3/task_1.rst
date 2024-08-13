@@ -1,6 +1,6 @@
 2. SW execution including HWPE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In this task, we execute a basic application on RISC-V to configure the HWPE model. The application files reside at ``/gvsoc/tutorial/model_hwpe/application/task1``. Here, the RISC-V cluster core writes ``0x12345678`` to the 0th configuration address via the ``cfg`` port, which is handled by the ``Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)`` function.
+In this task, we execute a basic application on RISC-V to configure the HWPE model. The application files reside at ``/gvsoc/docs/developer/tutorials/hwpe/model_hwpe/application/task1``. Here, the RISC-V cluster core writes ``0x12345678`` to the 0th configuration address via the ``cfg`` port, which is handled by the ``Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)`` function.
 
 .. admonition:: Verify - 3.2.1 Enable Traces
    :class: solution
@@ -10,7 +10,7 @@ In this task, we execute a basic application on RISC-V to configure the HWPE mod
    .. code-block:: bash
         
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary tutorial/model_hwpe/application/task1/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task1/test run --trace="hwpe"
 
 Ideally, a trace related to Hwpe configuration should appear. If not, the issue may be in ``hwpe.cpp``, where there could be a missing link between the ``cfg`` port and the callback function. The model needs to associate the ``cfg`` port with the callback function ``vp::IoReqStatus Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)``. Let's address this issue!
 

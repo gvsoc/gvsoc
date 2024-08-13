@@ -50,7 +50,7 @@ How do we verify when the event is executed? For simplicity add a Trace to the `
    .. code-block:: bash
         
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary tutorial/model_hwpe/application/task3/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task3/test run --trace="hwpe"
    
 
 .. admonition:: Task - 3.4.4 Expected traces

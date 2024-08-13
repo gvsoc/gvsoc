@@ -56,7 +56,7 @@ Next, we move on to the computation task. We need to accumulate the value from t
         this->output_buffer_.WriteAtIndex(this->compute.iteration, 1, sum);
 
 
-Use the same application ``task4`` located at ``/tutorial/model_hwpe/application/task4/test`` to verify the implementation.
+Use the same application ``task4`` located at ``/docs/developer/tutorials/hwpe/model_hwpe/application/task4/test`` to verify the implementation.
 
 .. admonition:: Verify - 3.6 Build and execute the application
    :class: solution
@@ -64,7 +64,7 @@ Use the same application ``task4`` located at ``/tutorial/model_hwpe/application
    .. code-block:: bash
     
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task4/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task4/test run --trace="hwpe"
 
 If your code is correct, the output trace should resemble the following:
 

@@ -16,9 +16,9 @@
 
 import gvsoc.systree as st
 
-#### TASK - Change the path from pulp.chips.pulp_open.pulp_open to pulp.chips.pulp_open_hwpe.pulp_open
+#### SOLUTION - Change the path from pulp.chips.pulp_open.pulp_open to pulp.chips.pulp_open_hwpe.pulp_open
 
-from pulp.chips.pulp_open.pulp_open import Pulp_open
+from pulp.chips.pulp_open_hwpe.pulp_open import Pulp_open
 from devices.hyperbus.hyperflash import Hyperflash
 from devices.spiflash.spiflash import Spiflash
 from devices.spiflash.atxp032 import Atxp032

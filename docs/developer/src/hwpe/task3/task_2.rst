@@ -17,7 +17,7 @@ Additionally, we require four registers for HWPE functional execution, starting 
 .. admonition:: Task - 3.3 Getting familiar with the SW application
    :class: task
    
-   Examine ``hal.h`` and ``test.c`` in ``tutorial/model_hwpe/application/task2``. What differences do you notice compared to task1?
+   Examine ``hal.h`` and ``test.c`` in ``./docs/developer/tutorials/hwpe/model_hwpe/application/task2``. What differences do you notice compared to task1?
 
 We introduced special and configuration registers in ``hal.h``. In ``test.c``, we wrote a small application that clears and sets the configuration register. To handle this, we need to update the model. Currently, the register configuration function only prints the trace. In this task, we'll add functionality to the callback function ``hwpe_slave``.
 
@@ -60,7 +60,7 @@ It's time to build and verify the output.
    .. code-block:: bash
         
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary tutorial/model_hwpe/application/task2/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task2/test run --trace="hwpe"
 
 
 If everything is implemented correctly, you should see in the traces the Hello message from ``clear()``.

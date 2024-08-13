@@ -30,7 +30,7 @@ Code Explanation:
    .. code-block:: bash
     
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task4/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task4/test run --trace="hwpe"
 
 **Warning! It will lead to an infinite loop. Remember to terminate the process.**
 

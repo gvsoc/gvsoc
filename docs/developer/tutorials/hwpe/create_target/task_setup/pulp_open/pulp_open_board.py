@@ -16,9 +16,9 @@
 
 import gvsoc.systree as st
 
-#### SOLUTION - Change the path from pulp.chips.pulp_open.pulp_open to pulp.chips.pulp_open_hwpe.pulp_open
+#### TASK - Change the path from pulp.chips.pulp_open.pulp_open to pulp.chips.pulp_open_hwpe.pulp_open
 
-from pulp.chips.pulp_open_hwpe.pulp_open import Pulp_open
+from pulp.chips.pulp_open.pulp_open import Pulp_open
 from devices.hyperbus.hyperflash import Hyperflash
 from devices.spiflash.spiflash import Spiflash
 from devices.spiflash.atxp032 import Atxp032
@@ -40,16 +40,7 @@ class Pulp_open_board(st.Component):
 
         # Flash
         hyperflash = Hyperflash(self, 'hyperflash')
-        spiflash = Spiflash(self, 'spiflash')
         hyperram = Hyperram(self, 'ram')
-
-        self.register_flash(
-            DefaultFlashRomV2(self, 'flash', image_name=spiflash.get_image_path(),
-                flash_attributes={
-                    "flash_type": 'spi'
-                },
-                size=8*1024*1024
-            ))
 
         self.register_flash(
             DefaultFlashRomV2(self, 'hyperflash', image_name=hyperflash.get_image_path(),
@@ -58,9 +49,6 @@ class Pulp_open_board(st.Component):
                 },
                 size=8*1024*1024
             ))
-
-        self.bind(pulp, 'spim0_cs0', spiflash, 'cs')
-        self.bind(pulp, 'spim0_cs0_data', spiflash, 'input')
 
         self.bind(pulp, 'hyper0_cs1_data', hyperflash, 'input')
 
