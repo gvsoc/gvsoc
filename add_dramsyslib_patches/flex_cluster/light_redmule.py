@@ -23,19 +23,22 @@ class LightRedmule(gvsoc.systree.Component):
     def __init__(self,
                 parent: gvsoc.systree.Component,
                 name: str,
+                redmule_id: int,
                 tcdm_bank_width: int,
                 tcdm_bank_number: int,
                 elem_size: int,
                 ce_height: int,
                 ce_width: int,
                 ce_pipe: int,
-                queue_depth: int=128):
+                queue_depth: int=128,
+                fold_tiles_mapping: int=0):
 
         super().__init__(parent, name)
 
         self.add_sources(['pulp/chips/flex_cluster/light_redmule.cpp'])
 
         self.add_properties({
+            'redmule_id'        : redmule_id,
             'tcdm_bank_width'   : tcdm_bank_width,
             'tcdm_bank_number'  : tcdm_bank_number,
             'elem_size'         : elem_size,
@@ -43,6 +46,7 @@ class LightRedmule(gvsoc.systree.Component):
             'ce_width'          : ce_width,
             'ce_pipe'           : ce_pipe,
             'queue_depth'       : queue_depth,
+            'fold_tiles_mapping': fold_tiles_mapping,
         })
 
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:

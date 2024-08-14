@@ -21,15 +21,15 @@ class FlexClusterArch:
     def __init__(self):
 
         #Cluster
-        self.num_cluster_x           = 2
-        self.num_cluster_y           = 2
+        self.num_cluster_x           = 32
+        self.num_cluster_y           = 32
         self.num_core_per_cluster    = 3
 
-        self.cluster_tcdm_bank_width = 8
+        self.cluster_tcdm_bank_width = 2
         self.cluster_tcdm_bank_nb    = 32
 
         self.cluster_tcdm_base       = 0x00000000
-        self.cluster_tcdm_size       = 0x0000a000
+        self.cluster_tcdm_size       = 0x00010000
         self.cluster_tcdm_remote     = 0x30000000
 
         self.cluster_stack_base      = 0x10000000
@@ -44,19 +44,19 @@ class FlexClusterArch:
         self.redmule_ce_width        = 8
         self.redmule_ce_pipe         = 3
         self.redmule_elem_size       = 2
-        self.redmule_queue_depth     = 32
+        self.redmule_queue_depth     = 1
         self.redmule_reg_base        = 0x20020000
         self.redmule_reg_size        = 0x00000200
 
         #IDMA
         self.idma_outstand_txn       = 16
-        self.idma_outstand_burst     = 256
+        self.idma_outstand_burst     = 2
 
         #HBM
         self.hbm_start_base          = 0xc0000000
-        self.hbm_node_interleave     = 0x00040000
-        self.num_hbm_ch_per_node     = 2
-        self.hbm_placement           = [2,0,0,0]
+        self.hbm_node_interleave     = 0x00010000
+        self.num_hbm_ch_per_node     = 1
+        self.hbm_placement           = [16,0,0,16]
 
         #NoC
         self.noc_outstanding         = 64
@@ -74,3 +74,4 @@ class FlexClusterArch:
         #Synchronization
         self.sync_base               = 0x40000000
         self.sync_interleave         = 0x00000040
+        self.sync_special_mem        = 0x00000020

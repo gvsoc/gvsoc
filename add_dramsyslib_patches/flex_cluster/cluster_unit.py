@@ -21,6 +21,7 @@ import interco.router as router
 import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.chips.flex_cluster.light_redmule import LightRedmule
+from pulp.chips.flex_cluster.hwpe_interleaver import HWPEInterleaver
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
 from pulp.chips.flex_cluster.flex_sync_mem import FlexSyncMem
 from pulp.snitch.zero_mem import ZeroMem
@@ -49,7 +50,7 @@ class ClusterArch:
     def __init__(self,  nb_core_per_cluster, base, cluster_id, tcdm_size,
                         stack_base,         stack_size,
                         reg_base,           reg_size,
-                        sync_base,          sync_size,
+                        sync_base,          sync_size,          sync_special_mem,
                         insn_base,          insn_size,
                         nb_tcdm_banks,      tcdm_bank_width,
                         redmule_ce_height,  redmule_ce_width,   redmule_ce_pipe,
@@ -66,7 +67,7 @@ class ClusterArch:
         self.boot_addr              = boot_addr
         self.auto_fetch             = auto_fetch
         self.barrier_irq            = 19
-        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size)
+        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
         self.stack_area             = Area(stack_base, stack_size)
         self.sync_area              = Area(sync_base, sync_size)
         self.reg_area               = Area(reg_base, reg_size)
@@ -91,13 +92,14 @@ class ClusterArch:
         self.num_cluster_y          = num_cluster_y
 
     class Tcdm:
-        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size):
+        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem):
             self.area = Area( base, tcdm_size)
             self.nb_tcdm_banks = nb_tcdm_banks
             self.bank_width = tcdm_bank_width
             self.bank_size = self.area.size / self.nb_tcdm_banks
             self.nb_masters = nb_masters
             self.sync_size = sync_size
+            self.sync_special_mem = sync_special_mem
 
 
 class ClusterTcdm(gvsoc.systree.Component):
@@ -119,10 +121,10 @@ class ClusterTcdm(gvsoc.systree.Component):
         bus_interleaver = DmaInterleaver(self, 'bus_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
-        hwpe_interleaver = DmaInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
+        hwpe_interleaver = HWPEInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
-        tcdm_sync_mem = FlexSyncMem(self, 'sync_mem', size=arch.sync_size)
+        tcdm_sync_mem = FlexSyncMem(self, 'sync_mem', size=arch.sync_size, special_mem_base=arch.sync_special_mem)
 
         for i in range(0, nb_banks):
             self.bind(interleaver, 'out_%d' % i, banks[i], 'input')
@@ -174,12 +176,9 @@ class ClusterUnit(gvsoc.systree.Component):
         instr_router = router.Router(self, 'instr_router', bandwidth=8)
 
         # Main router
-        wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm', bandwidth=arch.data_bandwidth)
-        wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma', bandwidth=arch.data_bandwidth)
+        wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm')
+        wide_axi_from_idma = router.Router(self, 'wide_axi_from_idma')
         narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
-
-        # Dedicated router for dma to TCDM
-        tcdm_dma_ico = router.Router(self, 'tcdm_dma_ico', bandwidth=arch.data_bandwidth)
 
         # L1 Memory
         tcdm = ClusterTcdm(self, 'tcdm', arch.tcdm)
@@ -208,8 +207,9 @@ class ClusterUnit(gvsoc.systree.Component):
         redmule_list = []
         for redmule_id in range(0, arch.num_redmule):
             redmule = LightRedmule(self, f'redmule_{redmule_id}',
+                                        redmule_id          = redmule_id,
                                         tcdm_bank_width     = arch.tcdm.bank_width,
-                                        tcdm_bank_number    = arch.tcdm.nb_tcdm_banks,
+                                        tcdm_bank_number    = (arch.tcdm.nb_tcdm_banks / arch.num_redmule),
                                         elem_size           = arch.redmule_elem_size,
                                         ce_height           = arch.redmule_ce_height,
                                         ce_width            = arch.redmule_ce_width,
@@ -225,6 +225,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
+            tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
+
+        idma2 = SnitchDma(self, 'idma2', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
             tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
 
         #stack memory
@@ -286,6 +289,9 @@ class ClusterUnit(gvsoc.systree.Component):
         cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
         idma.o_OFFLOAD_GRANT(cores[arch.nb_core-1].i_OFFLOAD_GRANT())
 
+        cores[arch.nb_core-2].o_OFFLOAD(idma2.i_OFFLOAD())
+        idma2.o_OFFLOAD_GRANT(cores[arch.nb_core-2].i_OFFLOAD_GRANT())
+
         # Cores
         for core_id in range(0, arch.nb_core):
             self.__o_FETCHEN( cores[core_id].i_FETCHEN() )
@@ -334,6 +340,9 @@ class ClusterUnit(gvsoc.systree.Component):
         # Cluster DMA
         idma.o_AXI(wide_axi_from_idma.i_INPUT())
         idma.o_TCDM(tcdm.i_DMA_INPUT())
+
+        idma2.o_AXI(wide_axi_from_idma.i_INPUT())
+        idma2.o_TCDM(tcdm.i_DMA_INPUT())
 
     def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'fetchen', signature='wire<bool>')

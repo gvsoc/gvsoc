@@ -17,10 +17,10 @@ void llm_mlp_matmul_routine(uint32_t M, uint32_t N, uint32_t K, uint32_t tile_si
 
 	if (flex_is_first_core())
     {
-        flex_redmule_set_M(M);
-        flex_redmule_set_N(N);
-        flex_redmule_set_K(K);
-        flex_redmule_trigger_block();
+        flex_redmule_set_M(0, M);
+        flex_redmule_set_N(0, N);
+        flex_redmule_set_K(0, K);
+        flex_redmule_trigger_block(0);
     }
 }
 
@@ -36,10 +36,10 @@ void llm_mlp_matmul_final_compute(uint32_t M, uint32_t N, uint32_t K)
 {
     if (flex_is_first_core())
     {
-        flex_redmule_set_M(M);
-        flex_redmule_set_N(N);
-        flex_redmule_set_K(K);
-        flex_redmule_trigger_block();
+        flex_redmule_set_M(0, M);
+        flex_redmule_set_N(0, N);
+        flex_redmule_set_K(0, K);
+        flex_redmule_trigger_block(0);
     }
 }
 

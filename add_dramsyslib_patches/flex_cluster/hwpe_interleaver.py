@@ -16,18 +16,17 @@
 
 import gvsoc.systree
 
-class FlexSyncMem(gvsoc.systree.Component):
+class HWPEInterleaver(gvsoc.systree.Component):
 
-    def __init__(self, parent: gvsoc.systree.Component, name: str, size: int, special_mem_base: int):
+    def __init__(self, parent, slave, nb_master_ports, nb_banks, bank_width):
 
-        super().__init__(parent, name)
+        super(HWPEInterleaver, self).__init__(parent, slave)
 
-        self.add_sources(['pulp/chips/flex_cluster/flex_sync_mem.cpp'])
+        self.add_sources(
+            ['pulp/chips/flex_cluster/hwpe_interleaver.cpp']
+        )
 
         self.add_properties({
-            "size"              : size,
-            "special_mem_base"   : special_mem_base,
+            'nb_banks': nb_banks,
+            'bank_width': bank_width
         })
-
-    def i_INPUT(self) -> gvsoc.systree.SlaveItf:
-        return gvsoc.systree.SlaveItf(self, 'input', signature='io')

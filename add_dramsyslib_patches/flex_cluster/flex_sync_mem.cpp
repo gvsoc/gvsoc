@@ -36,6 +36,7 @@ public:
     vp::Trace           trace;
     vp::IoSlave         input_itf;
     uint32_t  			size;
+    uint32_t            special_mem_base;
     uint8_t *    		sync_mem;
 };
 
@@ -54,6 +55,7 @@ FlexSyncMem::FlexSyncMem(vp::ComponentConf &config)
     
     //Initialize memory
     this->size = this->get_js_config()->get("size")->get_int();
+    this->special_mem_base = this->get_js_config()->get("special_mem_base")->get_int();
     this->sync_mem = (uint8_t *)calloc(size, 1);
     if (this->sync_mem == NULL) throw std::bad_alloc();
 }
@@ -70,12 +72,30 @@ vp::IoReqStatus FlexSyncMem::req(vp::Block *__this, vp::IoReq *req)
     _this->trace.msg("[FlexSyncMem] access (offset: 0x%x, size: 0x%x, is_write: %d)\n", offset, size, is_write);
 
     uint32_t * mem_ptr = (uint32_t *)(_this->sync_mem + offset);
-    if ((is_write == 1))
+    if (offset >= _this->special_mem_base)
     {
-       *mem_ptr = 0;
+        // _this->trace.fatal("[FlexSyncMem] access special memory region\n");
+        if ((is_write == 1))
+        {
+            if (*data == 0)
+            {
+                *mem_ptr = 0;
+                _this->trace.msg("[FlexSyncMem] reset speical barrier\n");
+            } else {
+                *mem_ptr = (*mem_ptr) + 1;
+                _this->trace.msg("[FlexSyncMem] amo add speical barrier\n");
+            }
+        } else {
+           data[0] = *mem_ptr;
+        }
     } else {
-       data[0] = *mem_ptr;
-       *mem_ptr = (*mem_ptr) + 1;
+        if ((is_write == 1))
+        {
+           *mem_ptr = 0;
+        } else {
+           data[0] = *mem_ptr;
+           *mem_ptr = (*mem_ptr) + 1;
+        }
     }
 
     return vp::IO_REQ_OK;
