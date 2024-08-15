@@ -112,7 +112,7 @@ void flex_dma_pattern_access_west_hbm(uint32_t local_offset, uint32_t remote_off
 }
 
 //Pattern Systolic-like Shifting
-void flex_dma_pattern_systolic_shift_west_south(uint32_t local_offset, uint32_t remote_offset, size_t transfer_size){
+void flex_dma_pattern_systolic_shift_west_south_dual_idma(uint32_t local_offset, uint32_t remote_offset, size_t transfer_size){
     FlexPosition pos = get_pos(flex_get_cluster_id());
     flex_push_stack();
 
@@ -137,6 +137,34 @@ void flex_dma_pattern_systolic_shift_west_south(uint32_t local_offset, uint32_t 
             /* clusters on-chip transfer*/
             snrt_dma_start_1d(local(local_offset),remote_pos(bottom_pos(pos),remote_offset), transfer_size);
         }
+    }
+
+    snrt_dma_wait_all(); // Wait for iDMA Finishing
+    flex_pull_stack();
+}
+
+
+//Pattern Systolic-like Shifting
+void flex_dma_pattern_systolic_shift_west_south(uint32_t local_offset, uint32_t remote_offset, size_t transfer_size){
+    flex_push_stack();
+
+    FlexPosition pos = get_pos(flex_get_cluster_id());
+
+    if(pos.x == 0){
+        /* clusters at west edge hbm transfer*/
+        snrt_dma_start_1d(local(local_offset),hbm_west(pos.y,remote_offset), transfer_size);
+    } else {
+        /* clusters on-chip transfer*/
+        snrt_dma_start_1d(local(local_offset),remote_pos(left_pos(pos),remote_offset), transfer_size);
+    }
+
+    if (pos.y == 0)
+    {
+        /* clusters at south edge hbm transfer*/
+        snrt_dma_start_1d(local(local_offset),hbm_south(pos.x,remote_offset), transfer_size);
+    } else {
+        /* clusters on-chip transfer*/
+        snrt_dma_start_1d(local(local_offset),remote_pos(bottom_pos(pos),remote_offset), transfer_size);
     }
 
     snrt_dma_wait_all(); // Wait for iDMA Finishing

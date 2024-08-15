@@ -34,7 +34,7 @@ int main()
     // }
     // multi_redmule_prepare(8, 128, 2, 16);
     // multi_redmule_trigger();
-    llm_mlp_inter_cluster_matmul_systolic(64,2,ARCH_NUM_CLUSTER_X);
+    llm_mlp_inter_cluster_matmul_optimize_hbm_west_south_placement(256,2,ARCH_NUM_CLUSTER_X);
     // flex_barrier_neighbor_init();
 
     /**************************************/
