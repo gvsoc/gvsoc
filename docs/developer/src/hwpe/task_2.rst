@@ -34,6 +34,7 @@ All the necessary modifications are to be done in ``gvsoc/pulp/pulp/chips/pulp_o
 After the ``hwpe`` is instantiated in ``cluster.json``, the hwpe model needs to be instantiated in the ``cluster.py`` file taking into account the architecture specific to the cluster. To instantiate the HWPE in the cluster, you have to first import the python generator of the ``hwpe.py`` located in the ``simple_hwpe`` folder.
 
 
+
 .. admonition:: Task - 2.1.2 Instantiate HWPE in the Cluster
    :class: task
 
@@ -50,7 +51,14 @@ After the ``hwpe`` is instantiated in ``cluster.json``, the hwpe model needs to 
         hwpe = Hwpe(self, 'hwpe')
 
 
-Now the HWPE instantiated in the cluster. However, there are no connections made to the other components in the cluster! First, we will start connecting the peripheral interconnect to the configuration port of the ``Hwpe`` This involves two steps. First, create an entry in the peripheral interconnect to accommodate the ``Hwpe`` This is where we can make use of the ``Hwpe`` entry in the ``cluster.json``. Secondly, the port binding is made between the peripheral interconnect and the HWPE. 
+Now the HWPE instantiated in the cluster. However, there are no connections made to the other components in the cluster! 
+A brief overview of the connection is given in the below picture. A pulp-cluster template consists of a cluster of RISC-V cores connected to a Multibank 
+shared Tightly coupled data memory(TCDM). The HWPE could be configured by an of the RISC-V core in the cluster through the peripheral interconnect connected to the 
+configuration port of the HWPE. The HWPE consists of the streamers, to access the L1 memory to load/store the processed data.
+
+.. image:: ../../images/hwpe/integrate.png
+
+First, we will start connecting the peripheral interconnect to the configuration port of the ``Hwpe`` This involves two steps. First, create an entry in the peripheral interconnect to accommodate the ``Hwpe`` This is where we can make use of the ``Hwpe`` entry in the ``cluster.json``. Secondly, the port binding is made between the peripheral interconnect and the HWPE. 
 
 .. admonition:: Task - 2.1.3 Connection of Hwpe with the Peripheral interconnect
    :class: task
