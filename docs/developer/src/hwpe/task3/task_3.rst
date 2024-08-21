@@ -12,13 +12,13 @@ Start by setting up the source for this task:
 
 Open ``hwpe.cpp`` file. Do you notice any difference compared to Task - 3.3?
 
-In ``hwpe.cpp``, you will notice constructors for creating new events, such as ``fsm start event`` and ``fsm_event``, are already attached to their respective callback functions (``FsmStartHandler`` and ``FsmHandler``). However, the connection between ``fsm_end_event`` and ``FsmEndHandler`` is missing.
+In ``hwpe.cpp``, you will notice constructors for creating new events, such as ``fsm_start_event`` and ``fsm_event``, are already attached to their respective callback functions (``FsmStartHandler`` and ``FsmHandler``). However, the connection between ``fsm_end_event`` and ``FsmEndHandler`` is missing.
 
 .. admonition:: Task - 3.4.2 Fix the missing connection 
    :class: task
    
    Create the connection between ``fsm_end_event`` and ``FsmEndHandler``.
-   Hint: Use ``fsm start event`` and ``fsm_event`` as reference.
+   Hint: Use ``fsm_start_event`` and ``fsm_event`` as reference.
 
 Next, let's handle the start of ``Hwpe`` execution. When ``HWPE_REG_COMMIT_AND_TRIGGER`` is set, the Hwpe execution should begin. Start by enqueueing the first event.
 
