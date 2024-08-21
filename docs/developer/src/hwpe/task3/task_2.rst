@@ -37,7 +37,7 @@ The first task is to handle the software clear request in the ``hwpe.cpp`` file.
 .. admonition:: Task - 3.3.2 Fix the configuration to handle clear command
    :class: task
    
-   call the clear() function and add the following trace inside the ``clear()`` function.
+   Call the clear() function and add the following trace inside the ``clear()`` function.
 
    .. code-block:: cpp
         

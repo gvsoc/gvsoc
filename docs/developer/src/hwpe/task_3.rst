@@ -2,7 +2,7 @@
 ......................................
 The HWPE (Hardware Processing Engine) we are modeling today is a basic module designed to perform pointwise convolution. The execution steps are illustrated in the diagram below.
 
-Initially, the HWPE's finite state machine (FSM) is in the IDLE state. Configuration of the HWPE is done by one of the RISC-V cores within the cluster through memory-mapped registers. These registers are used to set the input pointer, weight pointer, output pointer, and other necessary parameters. Once the execution is triggered, the HWPE begins with ``load input`` loading the input features into the input buffer. During the ``weight offset`` phase, any negative weights are adjusted. The FSM then transitions to the ``compute`` phase, where the weights are loaded using the streamer, and partial sums are computed. Finally, the output is stored in the L1 memory using the streamer in ``store output`` phase . 
+Initially, the HWPE's finite state machine (FSM) is in the IDLE state. Configuration of the HWPE is done by one of the RISC-V cores within the cluster through memory-mapped registers. These registers are used to set the input pointer, weight pointer, output pointer, and other necessary parameters. Once the execution is triggered, the HWPE begins with ``load input`` loading the input features into the input buffer. During the ``weight offset`` phase, any negative weights are adjusted. The FSM then transitions to the ``compute`` phase, where the weights are loaded using the streamer, and partial sums are computed. Finally, the output is stored in the L1 memory using the streamer in ``store output`` phase.
 
 .. image:: ../../images/hwpe/fsm.png
 
