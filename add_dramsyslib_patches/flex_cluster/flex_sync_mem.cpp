@@ -69,7 +69,7 @@ vp::IoReqStatus FlexSyncMem::req(vp::Block *__this, vp::IoReq *req)
     bool is_write = req->get_is_write();
     uint32_t *data = (uint32_t *) req->get_data();
 
-    _this->trace.msg("[FlexSyncMem] access (offset: 0x%x, size: 0x%x, is_write: %d)\n", offset, size, is_write);
+    // _this->trace.msg("[FlexSyncMem] access (offset: 0x%x, size: 0x%x, is_write: %d)\n", offset, size, is_write);
 
     uint32_t * mem_ptr = (uint32_t *)(_this->sync_mem + offset);
     if (offset >= _this->special_mem_base)
@@ -80,13 +80,14 @@ vp::IoReqStatus FlexSyncMem::req(vp::Block *__this, vp::IoReq *req)
             if (*data == 0)
             {
                 *mem_ptr = 0;
-                _this->trace.msg("[FlexSyncMem] reset speical barrier\n");
+                _this->trace.msg("[FlexSyncMem] reset speical barrier at 0x%x\n", offset);
             } else {
                 *mem_ptr = (*mem_ptr) + 1;
-                _this->trace.msg("[FlexSyncMem] amo add speical barrier\n");
+                _this->trace.msg("[FlexSyncMem] amo add speical barrier at 0x%x\n", offset);
             }
         } else {
-           data[0] = *mem_ptr;
+            _this->trace.msg("[FlexSyncMem] check speical barrier at 0x%x\n", offset);
+            data[0] = *mem_ptr;
         }
     } else {
         if ((is_write == 1))

@@ -34,8 +34,12 @@ int main()
     // }
     // multi_redmule_prepare(8, 128, 2, 16);
     // multi_redmule_trigger();
-    llm_mlp_inter_cluster_matmul_optimize_hbm_west_south_placement(256,2,ARCH_NUM_CLUSTER_X);
-    // flex_barrier_neighbor_init();
+    // llm_mlp_inter_cluster_matmul_optimize_hbm_west_south_placement(256,2,ARCH_NUM_CLUSTER_X);
+    flex_barrier_neighbor_init();
+    for (int i = 0; i < 10; ++i)
+    {
+        flex_neighbor_barrier();
+    }
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
