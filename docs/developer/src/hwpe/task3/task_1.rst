@@ -43,3 +43,5 @@ If the code is implemented correctly, the trace should resemble the following:
         0: 0: [/chip/cluster/hwpe/comp] Reset (active: 1)
         0: 0: [/chip/cluster/hwpe/comp] Reset (active: 0)
         2380435950: 171476: [/chip/cluster/hwpe/trace] Received request (addr: 0x0, size: 0x4, is_write: 1, data: 0x12345678)
+
+Should you encounter any issues, refer to the inline comments in the source files for guidance. Make sure you placed the `hwpe` configuration mapping correctly. Refer the `ne16` component as an example.
