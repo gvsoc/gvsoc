@@ -47,6 +47,4 @@ int64_t Hwpe::weight_load()
     this->weight.iteration++;
   }
   return max_latency+1;
-
-    return 0;
 }
