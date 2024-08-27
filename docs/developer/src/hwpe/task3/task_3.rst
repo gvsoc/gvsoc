@@ -25,7 +25,7 @@ Next, let's handle the start of ``Hwpe`` execution. When ``HWPE_REG_COMMIT_AND_T
 .. admonition:: Task - 3.4.3 Enqueue the first event 
    :class: task
    
-   Enqueue an event with a latency of 1.
+   Enqueue an event with a latency of 1. Make sure to check whether we are actually in the first event case.
 
    .. code-block:: cpp
         
