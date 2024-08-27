@@ -30,7 +30,7 @@ Build and execute the application:
    .. code-block:: bash
     
         $ make build TARGETS=pulp-open-hwpe
-        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./tutorial/model_hwpe/application/task8/test run --trace="hwpe"
+        $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task8/test run --trace="hwpe"
 
 If implemented correctly, the output trace should resemble the following:
 
