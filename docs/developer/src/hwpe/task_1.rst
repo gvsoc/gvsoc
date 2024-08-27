@@ -57,7 +57,7 @@ In the next task create a dedicated folder by copying the the contents of the pu
 
       $ cd gvsoc/pulp/pulp/chips
       $ mkdir pulp_open_hwpe 
-      $ cp pulp_open/* . -r 
+      $ cp pulp_open/* pulp_open_hwpe -r
 
 Even though we created new pulp_open_hwpe folder, the pulp-open-hwpe.py still points to the pulp_open folder. 
 The next part is to change the dependencies to point to the new pulp_open_hwpe files by replacing the correcting path for the model imports. 
