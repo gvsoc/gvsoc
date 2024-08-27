@@ -28,7 +28,7 @@ We introduced special and configuration registers in ``hal.h``. In ``test.c``, w
         
         $ make model_hwpe_task2
         
-    The Task - 3.3 source files are built on top of Task - 3.2. Did you notice any additional files compared to Task - 3.2?
+The Task - 3.3 source files are built on top of Task - 3.2. Did you notice any additional files compared to Task - 3.2 in the ``simple_hwpe`` component?
 
 The main difference is the addition of ``params.hpp`` and ``regconfig_manager.hpp`` in the ``inc`` folder. As the names suggest, ``params.hpp`` contains hardware-related parameters, similar to ``hal.h``. Similarly, ``regconfig_manager.hpp`` includes helper functions for register read and write operations, supporting modularity and potential future enhancements for debugging and control. Now we focus on handling the configuration requests. There are two tasks in this section.
 

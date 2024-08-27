@@ -38,7 +38,7 @@ After the ``hwpe`` is instantiated in ``cluster.json``, the hwpe model needs to 
 .. admonition:: Task - 2.1.2 Instantiate HWPE in the Cluster
    :class: task
 
-   Import the Hwpe Python wrapper into cluster.py. Use the import from NE16 as a reference:
+   Import the Hwpe Python wrapper into ``cluster.py`` of the ``pulp_open_hwpe`` module. Use the import from NE16 as a reference:
 
    .. code-block:: python
         
