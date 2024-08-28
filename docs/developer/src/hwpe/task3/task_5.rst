@@ -1,8 +1,8 @@
-6. Memory Load Operation - Weight Port
+5. Memory Load Operation - Weight Port
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Start the source setup by running:
 
-.. admonition:: Task - 3.6.1 Setup task source files 
+.. admonition:: Task - 3.5.1 Setup task source files 
    :class: task
    
    .. code-block:: bash
@@ -10,15 +10,15 @@ Start the source setup by running:
         $ make model_hwpe_task5
 
 
-.. admonition:: Task - 3.6.2 Complete the weight load operation  
+.. admonition:: Task - 3.5.2 Complete the weight load operation  
    :class: task
    
    Implement the ``weight_load()`` function located in ``weight_load.cpp`` file. 
    Hint! Take inspiration from the ``input_load()`` function.
 
-Once the implementation is complete verify the implementation, using the same test used in Task - 5.
+Once the implementation is complete verify the implementation, using the same test used in Task - 4.
 
-.. admonition:: Verify - 3.6 Build and execute the application
+.. admonition:: Verify - 3.5 Build and execute the application
    :class: solution
    
    .. code-block:: bash
@@ -28,7 +28,7 @@ Once the implementation is complete verify the implementation, using the same te
 
 If your implementation is correct, you will see the Traces 
 
-.. admonition:: Task - 3.6 Expected Traces
+.. admonition:: Task - 3.5 Expected Traces
    :class: explanation
    
    .. code-block:: none

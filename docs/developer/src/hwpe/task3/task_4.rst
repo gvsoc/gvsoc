@@ -1,9 +1,9 @@
-5. Introducing the FSM
+4. Introducing the FSM
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Start by setting up the source for this task:
 
-.. admonition:: Task - 3.5.1 Setup task source files 
+.. admonition:: Task - 3.4.1 Setup task source files 
    :class: task
    
    .. code-block:: bash
@@ -11,7 +11,7 @@ Start by setting up the source for this task:
         $ make model_hwpe_task4
 
 
-Open ``hwpe_fsm.cpp`` file. Do you notice any difference compared to Task - 3.4?
+Open ``hwpe_fsm.cpp`` file. Do you notice any difference compared to Task - 3.3?
 
 We added a register, ``vp::reg32 state``, to the ``hwpe.hpp`` file. The state is set to ``START`` in ``FsmStartHandler`` defined in ``hwpe_fsm.cpp``. The type declaration of ``HwpeState`` can be found in ``datatype.hpp``, and the ``state`` variable is declared in ``hwpe.hpp``.
 
@@ -22,7 +22,7 @@ Code Explanation:
    - The FSM is updated with helper functions and debug messages to print the states using ``HwpeStateToString``.
 
 
-.. admonition:: Task - 3.5.2 Build and Run
+.. admonition:: Task - 3.4.2 Build and Run
    :class: task
    
    Run the GVSoC model by executing:
@@ -42,7 +42,7 @@ What prints do you see from the trace? Does the prints looks like the ones below
    2384919836: 171799: [/chip/cluster/hwpe/trace] (fsm state) current state LOAD_INPUT finished with latency : 0 cycles
 
 
-.. admonition:: Task - 3.5.3 Reasoning about non-terminating code
+.. admonition:: Task - 3.4.3 Reasoning about non-terminating code
    :class: task
    
    Can you guess what just happened? The FSM is stuck in an infinite loop. Why is this the case?
@@ -51,7 +51,7 @@ What prints do you see from the trace? Does the prints looks like the ones below
 
 This brings us to the next task. Initialize the values correctly. If you remember in Section 3.3, we discussed about the ``clear()`` function that we will implement in later tasks. Now is the time!
 
-.. admonition:: Task - 3.5.3 Fix the initialization
+.. admonition:: Task - 3.4.3 Fix the initialization
    :class: task
    
    Open the ``hwpe.cpp`` and assign
@@ -63,7 +63,7 @@ This brings us to the next task. Initialize the values correctly. If you remembe
 
 Now the initial values are set correctly. But we also have to ensure ``input.iteration`` is incremented as expected. Have a look at the ``input_load.cpp`` file. You will see it instantiates the ``input_load()`` function that takes care of the data load where ``input.iteration`` is also incremented.
 
-.. admonition:: Task - 3.5.4 Fix the non-terminating code
+.. admonition:: Task - 3.4.4 Fix the non-terminating code
    :class: task
    
    Open ``hwpe_fsm.cpp`` and add a call to ``input_load()`` in the modified ``LOAD_INPUT`` case in the FSM. The code should look like the following
@@ -88,7 +88,7 @@ Now the initial values are set correctly. But we also have to ensure ``input.ite
         $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task4/test run --trace="hwpe"
 
 
-.. admonition:: Task - 3.5 Expected Traces
+.. admonition:: Task - 3.4 Expected Traces
    :class: explanation
 
         .. code-block:: none

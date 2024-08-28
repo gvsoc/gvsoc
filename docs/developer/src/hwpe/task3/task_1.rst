@@ -1,8 +1,8 @@
-2. SW execution including HWPE
+1. SW execution including HWPE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In this task, we execute a basic application on RISC-V to configure the HWPE model. The application files reside at ``/gvsoc/docs/developer/tutorials/hwpe/model_hwpe/application/task1``. Here, the RISC-V cluster core writes ``0x12345678`` to the 0th configuration address via the ``cfg`` port, which is handled by the ``Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)`` function.
 
-.. admonition:: Verify - 3.2.1 Enable Traces
+.. admonition:: Verify - 3.1.1 Enable Traces
    :class: solution
    
    To enable tracing for HWPE and view prints, append --trace="hwpe"
@@ -14,7 +14,7 @@ In this task, we execute a basic application on RISC-V to configure the HWPE mod
 
 Ideally, a trace related to Hwpe configuration should appear. If not, the issue may be in ``hwpe.cpp``, where there could be a missing link between the ``cfg`` port and the callback function. The model needs to associate the ``cfg`` port with the callback function ``vp::IoReqStatus Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)``. Let's address this issue!
 
-.. admonition:: Task - 3.2.2 Fix the trace issue
+.. admonition:: Task - 3.1.2 Fix the trace issue
    :class: task
 
    Setup the source files with inline comments to guide solving the issue.
@@ -33,7 +33,7 @@ Ideally, a trace related to Hwpe configuration should appear. If not, the issue 
 After making this change, rebuild the ``gvsoc`` model and run the application located in ``task1``.
 If the code is implemented correctly, the trace should resemble the following:
 
-.. admonition:: Task - 3.2.2 Expected Traces
+.. admonition:: Task - 3.1.2 Expected Traces
    :class: explanation
 
    .. code-block:: none

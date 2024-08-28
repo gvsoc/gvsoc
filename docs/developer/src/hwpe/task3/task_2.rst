@@ -1,4 +1,4 @@
-3. Handle Configuration Requests
+2. Handle Configuration Requests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Next, we extend the ``Hwpe`` model to handle configuration registers, including special and general configuration registers. For simplicity, we have reduced the list of special registers for this tutorial. Here is an overview of the registers and their usage.
@@ -14,27 +14,27 @@ Additionally, we require four registers for HWPE functional execution, starting 
 3. **HWPE_REG_OUTPUT_PTR** - A software-read-write hardware-read (SWR-HR) register that holds the pointer to the output data.
 4. **HWPE_REG_WEIGHT_OFFS** - A software-read-write hardware-read (SWR-HR) register that specifies the weight offset value.
 
-.. admonition:: Task - 3.3 Getting familiar with the SW application
+.. admonition:: Task - 3.2 Getting familiar with the SW application
    :class: task
    
    Examine ``hal.h`` and ``test.c`` in ``./docs/developer/tutorials/hwpe/model_hwpe/application/task2``. What differences do you notice compared to task1?
 
 We introduced special and configuration registers in ``hal.h``. In ``test.c``, we wrote a small application that clears and sets the configuration register. To handle this, we need to update the model. Currently, the register configuration function only prints the trace. In this task, we'll add functionality to the callback function ``hwpe_slave``.
 
-.. admonition:: Task - 3.3.1 Setup task source files 
+.. admonition:: Task - 3.2.1 Setup task source files 
    :class: task
    
    .. code-block:: bash
         
         $ make model_hwpe_task2
         
-The Task - 3.3 source files are built on top of Task - 3.2. Did you notice any additional files compared to Task - 3.2 in the ``simple_hwpe`` component?
+The Task - 3.2 source files are built on top of Task - 3.2. Did you notice any additional files compared to Task - 3.2 in the ``simple_hwpe`` component?
 
 The main difference is the addition of ``params.hpp`` and ``regconfig_manager.hpp`` in the ``inc`` folder. As the names suggest, ``params.hpp`` contains hardware-related parameters, similar to ``hal.h``. Similarly, ``regconfig_manager.hpp`` includes helper functions for register read and write operations, supporting modularity and potential future enhancements for debugging and control. Now we focus on handling the configuration requests. There are two tasks in this section.
 
 The first task is to handle the software clear request in the ``hwpe.cpp`` file. Add a call to the ``clear()`` function at the appropriate placeholder. In the current stage ``clear()`` function which is empty. But we will fill the function in later part of the tutorial. Optionally you can also add a trace, and adding a trace would enable more debug info.
 
-.. admonition:: Task - 3.3.2 Fix the configuration to handle clear command
+.. admonition:: Task - 3.2.2 Fix the configuration to handle clear command
    :class: task
    
    call the clear() function and add the following trace inside the ``clear()`` function.
@@ -44,7 +44,7 @@ The first task is to handle the software clear request in the ``hwpe.cpp`` file.
         this->trace.msg("Hello from the clear function()\n");
 
 
-.. admonition:: Task - 3.3.3 Assign the register content to the data
+.. admonition:: Task - 3.2.3 Assign the register content to the data
    :class: task
    
    .. code-block:: cpp
@@ -54,7 +54,7 @@ The first task is to handle the software clear request in the ``hwpe.cpp`` file.
 
 It's time to build and verify the output. 
 
-.. admonition:: Verify - 3.3 Handling Configuration
+.. admonition:: Verify - 3.2 Handling Configuration
    :class: solution
    
    .. code-block:: bash
@@ -65,7 +65,7 @@ It's time to build and verify the output.
 
 If everything is implemented correctly, you should see in the traces the Hello message from ``clear()``.
 
-.. admonition:: Task - 3.3 Expected Traces
+.. admonition:: Task - 3.2 Expected Traces
    :class: explanation
    
    .. code-block:: none

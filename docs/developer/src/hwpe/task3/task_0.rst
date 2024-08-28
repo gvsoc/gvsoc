@@ -1,4 +1,4 @@
-1. Getting Familiar with the HWPE model 
+0. Getting Familiar with the HWPE model 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Let's have a look at the folder ``simple_hwpe``. It is very simple and models nothing useful at the moment, but we
@@ -23,7 +23,7 @@ looks like the following:
     - **CMakeLists.txt**: compilation file requirements for the simple HWPE.
     - **hwpe.py**: python generator to instantiate the Hwpe as used in the ``cluster.py`` in Section 2.1.2
 
-.. admonition:: Task - 3.1.1 Getting familiar with hwpe.hpp file
+.. admonition:: Task - 3.0.1 Getting familiar with hwpe.hpp file
    :class: task
    
    Have a look at the ``hwpe.hpp`` file and get familiar with it. 
@@ -52,7 +52,7 @@ Below is an example of a C++ class definition for Hwpe. This class inherits from
 - **vp::IoSlave cfg_port_**: an I/O slave port for configuration.
 - **static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req)**: a static method for handling I/O requests to the cfg port.
 
-.. admonition:: Task - 3.1.2 Getting familiar with hwpe.cpp file
+.. admonition:: Task - 3.0.2 Getting familiar with hwpe.cpp file
    :class: task
    
    Have a look at the ``hwpe.cpp`` file and get familiar with it. 
