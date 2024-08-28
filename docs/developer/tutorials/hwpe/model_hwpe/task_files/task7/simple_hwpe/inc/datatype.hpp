@@ -34,18 +34,18 @@ struct Regconfig{
 };
 
 enum HwpeState {
-    IDLE,
-    START,
-    LOAD_INPUT, 
+    IDLE         ,
+    START        ,
+    LOAD_INPUT   , 
     WEIGHT_OFFSET,
-    LOAD_WEIGHT, 
-    COMPUTE, 
-    STORE_OUTPUT,
+    LOAD_WEIGHT  , 
+    COMPUTE      , 
+    STORE_OUTPUT ,
     END
 };
 
 struct Iterator{
-    int count;
+    int count    ;
     int iteration;
 };
 

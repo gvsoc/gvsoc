@@ -25,12 +25,12 @@
 Hwpe::Hwpe(vp::ComponentConf &config)
     : vp::Component(config)
 {
-  this->traces.new_trace("trace", &this->trace, vp::DEBUG);
-  this->new_slave_port("config", &this->cfg_port_); 
-  this->new_master_port("irq", &this->irq);
-  this->new_master_port("tcdm", &this->tcdm_port );
-  this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave);
+  this->traces.new_trace ("trace" , &this->trace    , vp::DEBUG);
+  this->new_slave_port   ("config", &this->cfg_port_           ); 
+  this->new_master_port  ("irq"   , &this->irq                 );
+  this->new_master_port  ("tcdm"  , &this->tcdm_port           );
   
+  this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave);
   // contructor of the RegConfigManager class with access to the Hwpe
   this->regconfig_manager_instance = RegConfigManager<Hwpe>(this);
 }
@@ -44,9 +44,9 @@ void Hwpe::clear(){
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface
 vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
 {
-  Hwpe *_this = (Hwpe *)__this;
-  uint8_t *data = req->get_data(); 
-  uint32_t addr = req->get_addr();
+  Hwpe*     _this = (Hwpe *)__this ;
+  uint8_t*  data  = req->get_data(); 
+  uint32_t  addr  = req->get_addr();
   
   _this->trace.msg("Received request (addr: 0x%x, size: 0x%x, is_write: %d, data: 0x%x)\n", req->get_addr(), req->get_size(), req->get_is_write(), *(uint32_t *)(req->get_data()));
   

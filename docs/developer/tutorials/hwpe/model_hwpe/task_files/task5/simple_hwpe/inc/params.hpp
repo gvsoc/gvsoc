@@ -21,12 +21,12 @@
 #ifndef __HWPE_REG_PARAMS_H
 #define __HWPE_REG_PARAMS_H
 
-#define HWPE_REG_INPUT_PTR   0
-#define HWPE_REG_WEIGHT_PTR  1
-#define HWPE_REG_OUTPUT_PTR  2
-#define HWPE_REG_WEIGHT_OFFS 3
-
-#define HWPE_NB_REG          4
+#define HWPE_REG_INPUT_PTR          0
+#define HWPE_REG_WEIGHT_PTR         1
+#define HWPE_REG_OUTPUT_PTR         2
+#define HWPE_REG_WEIGHT_OFFS        3
+       
+#define HWPE_NB_REG                 4
 
 #define HWPE_REG_COMMIT_AND_TRIGGER 0x00
 #define HWPE_REG_STATUS             0x0c

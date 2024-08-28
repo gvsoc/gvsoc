@@ -22,12 +22,15 @@
 int64_t Hwpe::weight_offset()
 {
   this->input_layout();
-  std::array<std::array<bool, BINCONV_PER_COLUMN>, COLUMN_PER_PE> enable;
-  std::array<std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight;
-  std::array<OutputType, COLUMN_PER_PE> sum_array;
-  std::array<WeightType, COLUMN_PER_PE> shift;
+ 
+  std::array <std::array<bool      , BINCONV_PER_COLUMN>, COLUMN_PER_PE> enable   ;
+  std::array <std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight   ;
+  std::array <OutputType,                                 COLUMN_PER_PE> sum_array;
+  std::array <WeightType,                                 COLUMN_PER_PE> shift    ;
+ 
   std::fill(sum_array.begin(), sum_array.end(), 0);
-  std::fill(shift.begin(), shift.end(), 0);
+  std::fill(shift.begin()    , shift.end()    , 0);
+ 
   OutputType sum = 0;
   for(int i=0; i<COLUMN_PER_PE; i++) {
     if(i==0){

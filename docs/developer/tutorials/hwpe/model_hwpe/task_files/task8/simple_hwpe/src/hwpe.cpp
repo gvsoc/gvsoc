@@ -25,34 +25,34 @@
 Hwpe::Hwpe(vp::ComponentConf &config)
     : vp::Component(config)
 {
-  this->traces.new_trace("trace", &this->trace, vp::DEBUG);
-  this->new_slave_port("config", &this->cfg_port_); 
-  this->new_master_port("irq", &this->irq);
-  this->new_master_port("tcdm", &this->tcdm_port );
-  this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave);
+  this->traces.new_trace("trace" , &this->trace,       vp::DEBUG);
+  this->new_slave_port  ("config", &this->cfg_port_             ); 
+  this->new_master_port ("irq"   , &this->irq                   );
+  this->new_master_port ("tcdm"  , &this->tcdm_port             );
+  this->cfg_port_.set_req_meth(&Hwpe::hwpe_slave                );
 
 
   // contructor of the RegConfigManager class with access to the Hwpe
   this->regconfig_manager_instance = RegConfigManager<Hwpe>(this);
 
   this->fsm_start_event = this->event_new(&Hwpe::FsmStartHandler);
-  this->fsm_event = this->event_new(&Hwpe::FsmHandler);
-  this->fsm_end_event = this->event_new(&Hwpe::FsmEndHandler);
+  this->fsm_event       = this->event_new(&Hwpe::FsmHandler);
+  this->fsm_end_event   = this->event_new(&Hwpe::FsmEndHandler);
 
-  this->input_buffer_ =  LinearBuffer<InputType, INPUT_LINEAR_BUFFER_SIZE>();
-  this->output_buffer_ =  LinearBuffer<OutputType, OUTPUT_LINEAR_BUFFER_SIZE>();
+  this->input_buffer_   =  LinearBuffer<InputType, INPUT_LINEAR_BUFFER_SIZE>();
+  this->output_buffer_  =  LinearBuffer<OutputType, OUTPUT_LINEAR_BUFFER_SIZE>();
 }
 
 void Hwpe::clear()
 {
-  this->input.iteration = 0;
-  this->input.count = 8;
-  this->weight.iteration = 0;
-  this->weight.count = 8;
-  this->output.iteration = 0;
-  this->output.count = 4;
+  this->input.iteration   = 0;
+  this->input.count       = 8;
+  this->weight.iteration  = 0;
+  this->weight.count      = 8;
+  this->output.iteration  = 0;
+  this->output.count      = 4;
   this->compute.iteration = 0;
-  this->compute.count = 1;
+  this->compute.count     = 1;
 }
 void Hwpe::reset(){
   this->regconfig_manager_instance.set_job_running(0);
@@ -60,7 +60,7 @@ void Hwpe::reset(){
 // The `hwpe_slave` member function models an access to the HWPE SLAVE interface
 vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
 {
-  Hwpe *_this = (Hwpe *)__this;
+  Hwpe*   _this = (Hwpe *)__this;
   uint8_t *data = req->get_data(); 
   uint32_t addr = req->get_addr();
   

@@ -26,14 +26,14 @@
 
 std::string Hwpe::HwpeStateToString(const HwpeState& state) {
   switch (state) {
-    case IDLE: return "IDLE";
-    case START: return "START";
-    case LOAD_INPUT: return "LOAD_INPUT";
+    case IDLE:          return "IDLE"         ;
+    case START:         return "START"        ;
+    case LOAD_INPUT:    return "LOAD_INPUT"   ;
     case WEIGHT_OFFSET: return "WEIGHT_OFFSET";
-    case LOAD_WEIGHT: return "LOAD_WEIGHT";
-    case COMPUTE: return "COMPUTE";
-    case STORE_OUTPUT: return "STORE_OUTPUT";
-    case END: return "END";
+    case LOAD_WEIGHT:   return "LOAD_WEIGHT"  ;
+    case COMPUTE:       return "COMPUTE"      ;
+    case STORE_OUTPUT:  return "STORE_OUTPUT" ;
+    case END:           return "END"          ;
     default : 
       return "UNKNOWN";
   }

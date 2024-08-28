@@ -36,47 +36,43 @@ class Hwpe : public vp::Component
 public:
   Hwpe(vp::ComponentConf &config);
   vp::IoMaster tcdm_port;
-  vp::Trace trace;
-  vp::reg_32 state;
-  vp::IoReq io_req;
+  vp::Trace    trace    ;
+  vp::reg_32   state    ;
+  vp::IoReq    io_req   ;
 
 
   //register configuration instance
   RegConfigManager<Hwpe> regconfig_manager_instance;
 
 private:
-  vp::IoSlave cfg_port_;
-  vp::WireMaster<bool> irq;
-
-  Regconfig reg_config_;
+  vp::IoSlave           cfg_port_  ;
+  vp::WireMaster<bool>  irq        ;
+  Regconfig             reg_config_;
 
 
   Iterator input, weight, output;
   
-  void clear();
-  int  fsm();
-  void fsm_loop();
-
+  void    clear();
+  int     fsm();
+  void    fsm_loop();
   int64_t input_load();
   void    input_layout();
-
   int64_t weight_load();
   void    weight_layout();
-  
   int64_t weight_offset();
-  
   int64_t compute_output();
   int64_t output_store();
   
-  std::string HwpeStateToString(const HwpeState&);
-  static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 
   vp::ClockEvent *fsm_start_event;
   vp::ClockEvent *fsm_event;
   vp::ClockEvent *fsm_end_event;
 
-  static void FsmStartHandler(vp::Block *__this, vp::ClockEvent *event);
-  static void FsmHandler(vp::Block *__this, vp::ClockEvent *event);
-  static void FsmEndHandler(vp::Block *__this, vp::ClockEvent *event);
+  std::string     HwpeStateToString(const HwpeState&);
+  
+  static vp::IoReqStatus hwpe_slave     (vp::Block *__this, vp::IoReq      *req  );
+  static void            FsmStartHandler(vp::Block *__this, vp::ClockEvent *event);
+  static void            FsmHandler     (vp::Block *__this, vp::ClockEvent *event);
+  static void            FsmEndHandler  (vp::Block *__this, vp::ClockEvent *event);
 };
 #endif /* __HWPE_HPP__ */

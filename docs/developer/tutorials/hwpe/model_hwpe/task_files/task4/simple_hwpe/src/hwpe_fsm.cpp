@@ -26,16 +26,16 @@
 
 std::string Hwpe::HwpeStateToString(const HwpeState& state) {
   switch (state) {
-    case IDLE: return "IDLE";
-    case START: return "START";
-    case LOAD_INPUT: return "LOAD_INPUT";
-    case WEIGHT_OFFSET: return "WEIGHT_OFFSET";
-    case LOAD_WEIGHT: return "LOAD_WEIGHT";
-    case COMPUTE: return "COMPUTE";
-    case STORE_OUTPUT: return "STORE_OUTPUT";
-    case END: return "END";
+    case IDLE:           return "IDLE"         ;
+    case START:          return "START"        ;
+    case LOAD_INPUT:     return "LOAD_INPUT"   ;
+    case WEIGHT_OFFSET:  return "WEIGHT_OFFSET";
+    case LOAD_WEIGHT:    return "LOAD_WEIGHT"  ;
+    case COMPUTE:        return "COMPUTE"      ;
+    case STORE_OUTPUT:   return "STORE_OUTPUT" ;
+    case END:            return "END"          ;
     default : 
-      return "UNKNOWN";
+                         return "UNKNOWN"      ;
   }
 }
 
@@ -72,8 +72,8 @@ void Hwpe::fsm_loop() {
 }
 
 int Hwpe::fsm() {
-  int latency = 0;
-  auto state_next = this->state.get();
+  int   latency     = 0;
+  auto  state_next  = this->state.get();
   switch(this->state.get()) {
     case START:
       state_next = LOAD_INPUT; 
@@ -92,29 +92,31 @@ int Hwpe::fsm() {
       
       break;
     case WEIGHT_OFFSET:
-      latency = this->weight_offset();
+      latency    = this->weight_offset();
       state_next = LOAD_WEIGHT; 
       break;
     case LOAD_WEIGHT:
-      latency = this->weight_load();
+      latency    = this->weight_load();
       this->weight_layout();
       state_next = COMPUTE; 
       break;
     case COMPUTE:
-      latency = this->compute_output();
+      latency    = this->compute_output();
       state_next = STORE_OUTPUT;
       break;
     case STORE_OUTPUT:
-      latency = this->output_store();
+      latency    = this->output_store();
       state_next = END;
-      latency = 1;
+      latency    = 1;
       break;
     case END:
       break;
   }
   std::string state_string = HwpeStateToString((HwpeState)this->state.get());
-  state_string = "(fsm state) current state "+ state_string + " finished with latency : "+std::to_string(latency)+" cycles\n"; 
+  state_string             = "(fsm state) current state "+ state_string + " finished with latency : "+std::to_string(latency)+" cycles\n"; 
+  
   this->trace.msg(state_string.c_str());
   this->state.set(state_next);
+  
   return latency;
 }

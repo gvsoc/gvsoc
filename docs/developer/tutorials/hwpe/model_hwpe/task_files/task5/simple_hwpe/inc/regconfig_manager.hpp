@@ -26,10 +26,10 @@ template <typename HwpeType>
 class RegConfigManager
 {
   private:
-    int regfile_[HWPE_NB_REG];
-    int job_running_;
-    Regconfig reg_config_; 
-    HwpeType* hwpe_instance_;
+    int       regfile_[HWPE_NB_REG];
+    int       job_running_         ;
+    Regconfig reg_config_          ; 
+    HwpeType* hwpe_instance_       ;
 
   public:
     RegConfigManager(){};

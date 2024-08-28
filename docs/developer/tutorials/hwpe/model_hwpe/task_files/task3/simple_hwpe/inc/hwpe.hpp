@@ -35,23 +35,23 @@ class Hwpe : public vp::Component
 public:
   Hwpe(vp::ComponentConf &config);
   vp::IoMaster tcdm_port;
-  vp::Trace trace;
+  vp::Trace    trace    ;
 
   //register configuration instance
   RegConfigManager<Hwpe> regconfig_manager_instance;
 
 private:
-  vp::IoSlave cfg_port_;
-  vp::WireMaster<bool> irq;
+  vp::IoSlave          cfg_port_;
+  vp::WireMaster<bool> irq      ;
   void clear();
-  static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 
   vp::ClockEvent *fsm_start_event;
-  vp::ClockEvent *fsm_event;
-  vp::ClockEvent *fsm_end_event;
+  vp::ClockEvent *fsm_event      ;
+  vp::ClockEvent *fsm_end_event  ;
 
-  static void FsmStartHandler(vp::Block *__this, vp::ClockEvent *event);
-  static void FsmHandler(vp::Block *__this, vp::ClockEvent *event);
-  static void FsmEndHandler(vp::Block *__this, vp::ClockEvent *event);
+  static vp::IoReqStatus hwpe_slave     (vp::Block *__this, vp::IoReq        *req);
+  static void            FsmStartHandler(vp::Block *__this, vp::ClockEvent *event);
+  static void            FsmHandler     (vp::Block *__this, vp::ClockEvent *event);
+  static void            FsmEndHandler  (vp::Block *__this, vp::ClockEvent *event);
 };
 #endif /* __HWPE_HPP__ */

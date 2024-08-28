@@ -21,10 +21,10 @@
 
 int64_t Hwpe::compute_output()
 {
-  std::array<std::array<bool, BINCONV_PER_COLUMN>, COLUMN_PER_PE> enable;
-  std::array<std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight;
-  std::array<OutputType, COLUMN_PER_PE> sum_array;
-  std::array<WeightType, COLUMN_PER_PE> shift;
+  std::array<std::array<bool, BINCONV_PER_COLUMN>,       COLUMN_PER_PE> enable   ;
+  std::array<std::array<WeightType, BINCONV_PER_COLUMN>, COLUMN_PER_PE> weight   ;
+  std::array<OutputType,                                 COLUMN_PER_PE> sum_array;
+  std::array<WeightType,                                 COLUMN_PER_PE> shift    ;
 
   OutputType sum = this->output_buffer_.ReadFromIndex(this->compute.iteration);
 

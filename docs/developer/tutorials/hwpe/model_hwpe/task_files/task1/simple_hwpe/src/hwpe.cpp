@@ -25,10 +25,10 @@
 Hwpe::Hwpe(vp::ComponentConf &config)
     : vp::Component(config)
 {
-  this->traces.new_trace("trace", &this->trace, vp::DEBUG);
-  this->new_slave_port("config", &this->cfg_port_); 
-  this->new_master_port("irq", &this->irq);
-  this->new_master_port("tcdm", &this->tcdm_port );
+  this->traces.new_trace  ("trace"  , &this->trace     , vp::DEBUG);
+  this->new_slave_port    ("config" , &this->cfg_port_            ); 
+  this->new_master_port   ("irq"    , &this->irq                  );
+  this->new_master_port   ("tcdm"   , &this->tcdm_port            );
 
   ///////////////////////////////// TASK-1 ///////////////////////////////////
   // Attach the hwpe_slave to the callback function of cfg_port_

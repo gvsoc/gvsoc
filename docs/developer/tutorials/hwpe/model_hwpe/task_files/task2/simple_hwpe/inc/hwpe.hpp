@@ -34,16 +34,17 @@ class Hwpe : public vp::Component
 {
 public:
   Hwpe(vp::ComponentConf &config);
-  vp::IoMaster tcdm_port;
-  vp::Trace trace;
+  vp::IoMaster  tcdm_port;
+  vp::Trace     trace;
 
   //register configuration instance
   RegConfigManager<Hwpe> regconfig_manager_instance;
 
 private:
-  vp::IoSlave cfg_port_;
-  vp::WireMaster<bool> irq;
-  void clear();
+  vp::IoSlave           cfg_port_;
+  vp::WireMaster<bool>  irq;
+  
+  void   clear();
   static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 };
 #endif /* __HWPE_HPP__ */

@@ -25,12 +25,13 @@ int64_t Hwpe::input_load()
   for(int i=0; i<8; i++)
   {
     AddressType addr = CLUSTER_MASK & (this->reg_config_.input_ptr + this->input.iteration);
-    this->io_req.init();
-    this->io_req.set_addr(addr);
-    this->io_req.set_size(1);
-    this->io_req.set_data(&data[i]);
-    this->io_req.set_is_write(0);
-    this->io_req.set_debug(true);
+    this->io_req.init         (          );
+    this->io_req.set_addr     ( addr     );
+    this->io_req.set_size     ( 1        );
+    this->io_req.set_data     ( &data[i] );
+    this->io_req.set_is_write ( 0        );
+    this->io_req.set_debug    ( true     );
+    
     int err = this->tcdm_port.req(&this->io_req);
     if (err == vp::IO_REQ_OK) {
       int64_t latency = this->io_req.get_latency();

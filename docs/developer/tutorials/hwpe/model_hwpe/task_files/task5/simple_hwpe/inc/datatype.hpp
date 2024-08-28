@@ -27,25 +27,25 @@ using WeightType  = uint8_t;
 using OutputType  = int32_t;
 
 struct Regconfig{
-  AddressType input_ptr;
+  AddressType input_ptr ;
   AddressType weight_ptr;
   AddressType output_ptr;
-  uint32_t    woffs_val;
+  uint32_t    woffs_val ;
 };
 
 enum HwpeState {
-    IDLE,
-    START,
-    LOAD_INPUT, 
+    IDLE         ,
+    START        ,
+    LOAD_INPUT   , 
     WEIGHT_OFFSET,
-    LOAD_WEIGHT, 
-    COMPUTE, 
-    STORE_OUTPUT,
+    LOAD_WEIGHT  , 
+    COMPUTE      , 
+    STORE_OUTPUT ,
     END
 };
 
 struct Iterator{
-    int count;
+    int count    ;
     int iteration;
 };
 

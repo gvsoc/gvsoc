@@ -32,12 +32,15 @@
 class Hwpe : public vp::Component
 {
 public:
+  
   Hwpe(vp::ComponentConf &config);
-  vp::IoMaster tcdm_port;
-  vp::Trace trace;
+
+  vp::IoMaster  tcdm_port;
+  vp::Trace     trace    ;
+
 private:
-  vp::IoSlave cfg_port_;
-  vp::WireMaster<bool> irq;
+  vp::IoSlave          cfg_port_;
+  vp::WireMaster<bool> irq      ;
   static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 };
 #endif /* __HWPE_HPP__ */

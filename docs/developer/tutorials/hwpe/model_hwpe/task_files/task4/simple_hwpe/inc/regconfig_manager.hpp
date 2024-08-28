@@ -26,10 +26,10 @@ template <typename HwpeType>
 class RegConfigManager
 {
   private:
-    int regfile_[HWPE_NB_REG];
-    int job_running_;
-    Regconfig reg_config_; 
-    HwpeType* hwpe_instance_;
+    int       regfile_[HWPE_NB_REG];
+    int       job_running_         ;
+    Regconfig reg_config_          ; 
+    HwpeType* hwpe_instance_       ;
 
   public:
     RegConfigManager(){};
@@ -53,7 +53,7 @@ class RegConfigManager
 
     switch(addr) {
       case HWPE_REG_INPUT_PTR:
-        reg_config_.input_ptr = value;
+        reg_config_.input_ptr  = value;
         break;
 
       case HWPE_REG_WEIGHT_PTR:
@@ -65,7 +65,7 @@ class RegConfigManager
         break;
 
       case HWPE_REG_WEIGHT_OFFS:
-        reg_config_.woffs_val = value;
+        reg_config_.woffs_val  = value;
         break;
     }
   }

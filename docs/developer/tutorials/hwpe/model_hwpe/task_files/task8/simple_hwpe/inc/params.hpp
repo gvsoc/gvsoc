@@ -21,29 +21,29 @@
 #ifndef __HWPE_REG_PARAMS_H
 #define __HWPE_REG_PARAMS_H
 
-#define HWPE_REG_INPUT_PTR   0
-#define HWPE_REG_WEIGHT_PTR  1
-#define HWPE_REG_OUTPUT_PTR  2
-#define HWPE_REG_WEIGHT_OFFS 3
-
-#define HWPE_NB_REG          4
+#define HWPE_REG_INPUT_PTR          0
+#define HWPE_REG_WEIGHT_PTR         1
+#define HWPE_REG_OUTPUT_PTR         2
+#define HWPE_REG_WEIGHT_OFFS        3
+       
+#define HWPE_NB_REG                 4
 
 #define HWPE_REG_COMMIT_AND_TRIGGER 0x00
 #define HWPE_REG_STATUS             0x0c
 #define HWPE_REG_SOFT_CLEAR         0x14
 #define HWPE_REGISTER_OFFS          0x20
 
-#define CLUSTER_MASK  0x0FFFFFFF
+#define CLUSTER_MASK                0x0FFFFFFF
 
 
-#define INPUT_LINEAR_BUFFER_SIZE 8
-#define OUTPUT_LINEAR_BUFFER_SIZE 1
-#define BINCONV_PER_COLUMN 8
-#define COLUMN_PER_PE 8
-#define WEIGHT_OFFSET_LATENCY 2
-#define L1_BANDWIDTH 8 // in bytes
+#define INPUT_LINEAR_BUFFER_SIZE   8
+#define OUTPUT_LINEAR_BUFFER_SIZE  1
+#define BINCONV_PER_COLUMN         8
+#define COLUMN_PER_PE              8
+#define WEIGHT_OFFSET_LATENCY      2
+#define L1_BANDWIDTH               8 // in bytes
 
-#define WEIGHT_OFFSET_LATENCY 2
+#define WEIGHT_OFFSET_LATENCY      2
 
 
 #endif
