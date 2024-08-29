@@ -64,7 +64,7 @@ static void pe_entry(void *arg) {
 }
 
 static void cluster_entry(void *arg) {
-  pi_cl_team_fork(0, pe_entry, 0);
+  pi_cl_team_fork(1, pe_entry, 0);
 }
 
 static int launch_cluster_task() {

@@ -38,20 +38,19 @@ static int glob_errors;
 
 int run_test() {
 
-  uint8_t* input_ptr   = hwpe_input;
-  uint8_t* weight_ptr  = hwpe_weight;
-  uint32_t* actual_output_ptr = hwpe_actual_output;
-  uint32_t* expected_output_ptr = hwpe_expected_output;
+  uint8_t*  input_ptr            = hwpe_input          ;
+  uint8_t*  weight_ptr           = hwpe_weight         ;
+  uint32_t* actual_output_ptr    = hwpe_actual_output  ;
+  uint32_t* expected_output_ptr  = hwpe_expected_output;
 
   // soft-clear HWPE
   HWPE_WRITE_CMD(HWPE_SOFT_CLEAR, HWPE_SOFT_CLEAR_ALL);
   for(volatile int kk=0; kk<10; kk++);
-
   // program HWPE
-  HWPE_WRITE_REG(HWPE_REG_INPUT_PTR,     input_ptr);
-  HWPE_WRITE_REG(HWPE_REG_WEIGHT_PTR,    weight_ptr);
-  HWPE_WRITE_REG(HWPE_REG_OUTPUT_PTR,    actual_output_ptr);
-  HWPE_WRITE_REG(HWPE_REG_WEIGHT_OFFS,    -128);
+  HWPE_WRITE_REG(HWPE_REG_INPUT_PTR  ,    input_ptr        );
+  HWPE_WRITE_REG(HWPE_REG_WEIGHT_PTR ,    weight_ptr       );
+  HWPE_WRITE_REG(HWPE_REG_OUTPUT_PTR ,    actual_output_ptr);
+  HWPE_WRITE_REG(HWPE_REG_WEIGHT_OFFS,    -128             );
 
   // commit HWPE computation
   HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD);
@@ -74,7 +73,7 @@ static void pe_entry(void *arg) {
 }
 
 static void cluster_entry(void *arg) {
-  pi_cl_team_fork(0, pe_entry, 0);
+  pi_cl_team_fork(1, pe_entry, 0);
 }
 
 static int launch_cluster_task() {
