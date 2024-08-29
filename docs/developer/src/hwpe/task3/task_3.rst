@@ -18,7 +18,7 @@ In ``hwpe.cpp``, you will notice constructors for creating new events, such as `
    :class: task
    
    Create the connection between ``fsm_end_event`` and ``FsmEndHandler``.
-   Hint: Use ``fsm start event`` and ``fsm_event`` as reference.
+   Hint: Use ``fsm_start_event`` and ``fsm_event`` as reference.
 
 Next, let's handle the start of ``Hwpe`` execution. When ``HWPE_REG_COMMIT_AND_TRIGGER`` is set, the Hwpe execution should begin. Start by enqueueing the first event.
 

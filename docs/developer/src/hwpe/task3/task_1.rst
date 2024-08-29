@@ -12,7 +12,7 @@ In this task, we execute a basic application on RISC-V to configure the HWPE mod
         $ make build TARGETS=pulp-open-hwpe
         $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary ./docs/developer/tutorials/hwpe/model_hwpe/application/task1/test run --trace="hwpe"
 
-Ideally, a trace related to Hwpe configuration should appear. If not, the issue may be in ``hwpe.cpp``, where there could be a missing link between the ``cfg`` port and the callback function. The model needs to associate the ``cfg`` port with the callback function ``vp::IoReqStatus Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)``. Let's address this issue!
+Ideally, a trace related to Hwpe configuration should appear. If not, the issue may be in ``hwpe.cpp``, where there could be a missing link between the ``cfg_port_`` port and the callback function. The model needs to associate the ``cfg_port_`` port with the callback function ``vp::IoReqStatus Hwpe::hwpe_slave(vp::Block * this, vp::IoReq *req)``. Let's address this issue!
 
 .. admonition:: Task - 3.1.2 Fix the trace issue
    :class: task

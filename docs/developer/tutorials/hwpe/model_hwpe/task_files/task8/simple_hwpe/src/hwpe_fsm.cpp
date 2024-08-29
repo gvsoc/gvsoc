@@ -59,7 +59,6 @@ void Hwpe::FsmEndHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sen
   ///////////////////////// TASK-1 //////////////////////
   // Uncomment the following line -> useful for termination
   // _this->irq.sync(true);
-  _this->state.set(IDLE);
 }
 
 void Hwpe::fsm_loop() {

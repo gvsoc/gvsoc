@@ -31,7 +31,7 @@ The new target should work like the pulp-open because it is a copy of the pulp-o
    
    .. code-block:: bash
       
-      $ make all TARGETS=pulp-open-hwpe
+      $ make build TARGETS=pulp-open-hwpe
       $ ./install/bin/gvsoc --target=pulp-open-hwpe --binary examples/pulp-open/hello image flash run
 
 You should see the Hello code passing successfully. 
