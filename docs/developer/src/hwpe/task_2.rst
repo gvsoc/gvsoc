@@ -127,5 +127,5 @@ The last part of the integration is to connect the event signal ``irq`` of the H
 .. admonition:: Fixing failing build
    :class: task
    
-   Search for hwpe in the gvsoc config.json file. What went wrong?
+   Search for hwpe in the gvsoc_config.json file. What went wrong?
    Add the simple_hwpe folder in gvsoc/pulp/pulp/CMakeLists.txt. Then rebuild the model and run the hello application as done previously.
