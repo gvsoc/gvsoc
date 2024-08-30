@@ -13,7 +13,7 @@ Let's begin the setup for this task by copying the relevant source files for pul
       $ cd gvsoc
       $ make integrate_hwpe_task1
 
-All the necessary modifications are to be done in ``gvsoc/pulp/pulp/chips/pulp_open/cluster.json``. To include the new HWPE accelerator in the PULP system, an entry of the cluster needs to be updated in ``cluster.json``. The entry needs to be added below the ``dma`` entry as its base address comes next.
+All the necessary modifications are to be done in ``gvsoc/pulp/pulp/chips/pulp_open_hwpe/cluster.json``. To include the new HWPE accelerator in the PULP system, an entry of the cluster needs to be updated in ``cluster.json``. The entry needs to be added below the ``dma`` entry as its base address comes next.
 
 .. admonition:: Task - 2.1.1 Add HWPE entry to address map
    :class: task
@@ -53,7 +53,7 @@ After the ``hwpe`` is instantiated in ``cluster.json``, the hwpe model needs to 
 
 Now the HWPE instantiated in the cluster. However, there are no connections made to the other components in the cluster! 
 A brief overview of the connection is given in the below picture. A pulp-cluster template consists of a cluster of RISC-V cores connected to a Multibank 
-shared Tightly coupled data memory(TCDM). The HWPE could be configured by an of the RISC-V core in the cluster through the peripheral interconnect connected to the 
+shared Tightly coupled data memory (TCDM). The HWPE could be configured by an of the RISC-V core in the cluster through the peripheral interconnect connected to the 
 configuration port of the HWPE. The HWPE consists of the streamers, to access the L1 memory to load/store the processed data.
 
 .. image:: ../../images/hwpe/integrate.png
