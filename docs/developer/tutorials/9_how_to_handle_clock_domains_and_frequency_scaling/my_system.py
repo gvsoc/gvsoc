@@ -1,24 +1,31 @@
+import gvsoc.systree
+import gvsoc.runner
+
 import cpu.iss.riscv
 import memory.memory
 import vp.clock_domain
 import interco.router
 import utils.loader.loader
-import gvsoc.systree
-import gvsoc.runner
+import gdbserver.gdbserver
+
 import my_comp
 
 
 GAPY_TARGET = True
 
-class Soc(gvsoc.systree.Component):
+class Rv64(gvsoc.systree.Component):
 
-    def __init__(self, parent, name, parser):
-        super().__init__(parent, name)
+    def __init__(self, parent, name, parser, options):
+
+        super().__init__(parent, name, options=options)
 
         # Parse the arguments to get the path to the binary to be loaded
         [args, __] = parser.parse_known_args()
 
         binary = args.binary
+
+        clock1 = vp.clock_domain.Clock_domain(self, 'clock1', frequency=100000000)
+        clock2 = vp.clock_domain.Clock_domain(self, 'clock2', frequency=100000000)
 
         # Main interconnect
         ico = interco.router.Router(self, 'ico')
@@ -45,21 +52,13 @@ class Soc(gvsoc.systree.Component):
         loader.o_START   ( host.i_FETCHEN  ())
         loader.o_ENTRY   ( host.i_ENTRY    ())
 
+        clock1.o_CLOCK    ( host.i_CLOCK     ())
+        clock2.o_CLOCK    ( ico.i_CLOCK     ())
+        clock2.o_CLOCK    ( mem.i_CLOCK     ())
+        clock2.o_CLOCK    ( comp.i_CLOCK     ())
+        clock2.o_CLOCK    ( loader.i_CLOCK     ())
 
-
-# This is a wrapping component of the real one in order to connect a clock generator to it
-# so that it automatically propagate to other components
-class Rv64(gvsoc.systree.Component):
-
-    def __init__(self, parent, name, parser, options):
-
-        super().__init__(parent, name, options=options)
-
-        clock = vp.clock_domain.Clock_domain(self, 'clock', frequency=100000000)
-        soc = Soc(self, 'soc', parser)
-        clock.o_CLOCK    ( soc.i_CLOCK     ())
-
-
+        comp.o_CLK_CTRL   (clock1.i_CTRL())
 
 
 # This is the top target that gapy will instantiate

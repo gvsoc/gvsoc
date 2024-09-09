@@ -5,6 +5,7 @@ import interco.router
 import utils.loader.loader
 import gvsoc.systree
 import gvsoc.runner
+import my_comp
 
 
 GAPY_TARGET = True
@@ -21,6 +22,10 @@ class Soc(gvsoc.systree.Component):
 
         # Main interconnect
         ico = interco.router.Router(self, 'ico')
+
+        # Custom components
+        comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
+        ico.o_MAP(comp.i_INPUT(), 'comp', base=0x20000000, size=0x00001000, rm_base=True)
 
         # Main memory
         mem = memory.memory.Memory(self, 'mem', size=0x00100000)

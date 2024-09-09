@@ -40,12 +40,20 @@ class Soc(gvsoc.systree.Component):
         host.o_DATA      ( ico.i_INPUT     ())
         host.o_DATA_DEBUG(ico.i_INPUT    ())
 
+        # Instantiates the main core and connect fetch and data to the interconnect
+        host2 = cpu.iss.riscv.Riscv(self, 'host2', isa='rv64imafdc', core_id=1)
+        host2.o_FETCH     ( ico.i_INPUT     ())
+        host2.o_DATA      ( ico.i_INPUT     ())
+        host2.o_DATA_DEBUG(ico.i_INPUT    ())
+
         # Finally connect an ELF loader, which will execute first and will then
         # send to the core the boot address and notify him he can start
         loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
         loader.o_OUT     ( ico.i_INPUT     ())
         loader.o_START   ( host.i_FETCHEN  ())
         loader.o_ENTRY   ( host.i_ENTRY    ())
+        loader.o_START   ( host2.i_FETCHEN  ())
+        loader.o_ENTRY   ( host2.i_ENTRY    ())
 
         gdbserver.gdbserver.Gdbserver(self, 'gdbserver')
 

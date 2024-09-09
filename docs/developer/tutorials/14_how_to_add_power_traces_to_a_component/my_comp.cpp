@@ -10,6 +10,7 @@ public:
 
 private:
     static vp::IoReqStatus handle_req(vp::Block *__this, vp::IoReq *req);
+    void power_supply_set(vp::PowerSupplyState state);
 
     vp::IoSlave input_itf;
 
@@ -17,6 +18,9 @@ private:
 
     vp::Trace trace;
     vp::Signal<uint32_t> vcd_value;
+
+    vp::PowerSource access_power;
+    vp::PowerSource background_power;
 };
 
 
@@ -29,6 +33,24 @@ MyComp::MyComp(vp::ComponentConf &config)
     this->value = this->get_js_config()->get_child_int("value");
 
     this->traces.new_trace("trace", &this->trace);
+
+    this->power.new_power_source("leakage", &background_power, this->get_js_config()->get("**/background_power"));
+    this->power.new_power_source("access", &access_power, this->get_js_config()->get("**/access_power"));
+
+    this->background_power.leakage_power_start();
+}
+
+void MyComp::power_supply_set(vp::PowerSupplyState state)
+{
+    if (state == vp::PowerSupplyState::ON)
+    {
+        this->background_power.dynamic_power_start();
+
+    }
+    else
+    {
+        this->background_power.dynamic_power_stop();
+    }
 }
 
 vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
@@ -37,6 +59,8 @@ vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
 
     _this->trace.msg(vp::TraceLevel::DEBUG, "Received request at offset 0x%lx, size 0x%lx, is_write %d\n",
         req->get_addr(), req->get_size(), req->get_is_write());
+
+    _this->access_power.account_energy_quantum();
 
     if (req->get_size() == 4)
     {
