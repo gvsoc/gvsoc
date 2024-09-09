@@ -14,3 +14,10 @@ class MyComp(gvsoc.systree.Component):
 
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'input', signature='io')
+
+
+
+    def gen_gtkw(self, tree, comp_traces):
+
+        if tree.get_view() == 'overview':
+            tree.add_trace(self, self.name, vcd_signal='status[31:0]', tag='overview')

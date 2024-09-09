@@ -13,6 +13,8 @@ private:
     vp::IoSlave input_itf;
 
     uint32_t value;
+
+    vp::Trace trace;
 };
 
 
@@ -23,11 +25,16 @@ MyComp::MyComp(vp::ComponentConf &config)
     this->new_slave_port("input", &this->input_itf);
 
     this->value = this->get_js_config()->get_child_int("value");
+
+    this->traces.new_trace("trace", &this->trace);
 }
 
 vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
 {
     MyComp *_this = (MyComp *)__this;
+
+    _this->trace.msg(vp::TraceLevel::DEBUG, "Received request at offset 0x%lx, size 0x%lx, is_write %d\n",
+        req->get_addr(), req->get_size(), req->get_is_write());
 
     if (!req->get_is_write() && req->get_size() == 4)
     {
