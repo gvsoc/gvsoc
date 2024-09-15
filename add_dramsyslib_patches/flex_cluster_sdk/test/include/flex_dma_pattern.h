@@ -175,6 +175,20 @@ void flex_dma_pattern_systolic_shift_west_south(uint32_t local_offset, uint32_t 
 *  Asynchronize Iterface   *
 ***************************/
 
+//Basic DMA 1d transfter load from HBM
+void flex_dma_async_Load_HBM_1d(uint32_t local_offset, uint32_t hbm_offset, size_t transfer_size){
+    flex_push_stack();
+    snrt_dma_start_1d(local(local_offset),hbm_addr(hbm_offset), transfer_size); //Start iDMA
+    flex_pull_stack();
+}
+
+//Basic DMA 1d transfter store to HBM
+void flex_dma_async_Store_HBM_1d(uint32_t local_offset, uint32_t hbm_offset, size_t transfer_size){
+    flex_push_stack();
+    snrt_dma_start_1d(hbm_addr(hbm_offset), local(local_offset), transfer_size); //Start iDMA
+    flex_pull_stack();
+}
+
 //Pattern: Round Shift Right
 void flex_dma_async_pattern_round_shift_right(uint32_t local_offset, uint32_t remote_offset, size_t transfer_size){
     FlexPosition pos = get_pos(flex_get_cluster_id());

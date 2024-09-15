@@ -23,7 +23,7 @@ int main()
     // llm_mlp_inter_cluster_test_hbm(128,2);
     // llm_mlp_inter_cluster_matmul(1024,2,ARCH_NUM_CLUSTER_X);
     // llm_mlp_inter_cluster_matmul_optimize_hbm(32,2,ARCH_NUM_CLUSTER_X);
-    // llm_mlp_test(1024,2,ARCH_NUM_CLUSTER_X);
+    llm_mlp_test(1024,2,ARCH_NUM_CLUSTER_X);
     // if (flex_is_first_core())
     // {
     //     flex_redmule_set_M(0, 256);
@@ -35,11 +35,11 @@ int main()
     // multi_redmule_prepare(8, 128, 2, 16);
     // multi_redmule_trigger();
     // llm_mlp_inter_cluster_matmul_optimize_hbm_west_south_placement(256,2,ARCH_NUM_CLUSTER_X);
-    flex_barrier_neighbor_init();
-    for (int i = 0; i < 10; ++i)
-    {
-        flex_neighbor_barrier();
-    }
+    // flex_barrier_neighbor_init();
+    // for (int i = 0; i < 10; ++i)
+    // {
+    //     flex_neighbor_barrier();
+    // }
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
