@@ -2,6 +2,8 @@ CMAKE_FLAGS ?= -j 6
 CMAKE ?= cmake
 
 TARGETS ?= rv32;rv64
+BUILDDIR ?= build
+INSTALLDIR ?= install
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 
@@ -14,18 +16,18 @@ checkout:
 
 build:
 	# Change directory to curdir to avoid issue with symbolic links
-	cd $(CURDIR) && $(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCMAKE_INSTALL_PREFIX=install \
+	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
-	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
-	cd $(CURDIR) && $(CMAKE) --install build
+	cd $(CURDIR) && $(CMAKE) --build $(BUILDDIR) $(CMAKE_FLAGS)
+	cd $(CURDIR) && $(CMAKE) --install $(BUILDDIR)
 
 
 clean:
-	rm -rf build install
+	rm -rf $(BUILDDIR) $(INSTALLDIR)
 
 
 
@@ -92,3 +94,19 @@ dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-confi
 
 clean_dramsys_preparation:
 	rm -rf third_party
+
+######################################################################
+## 				Snitch cluster testsuite			 				##
+######################################################################
+
+snitch_cluster.checkout:
+	git clone git@github.com:pulp-platform/snitch_cluster.git -b gvsoc-ci
+	cd snitch_cluster && git submodule update --recursive --init
+
+snitch_cluster.build:
+	cd snitch_cluster/target/snitch_cluster && make DEBUG=ON OPENOCD_SEMIHOSTING=ON sw
+
+snitch_cluster.test:
+	cd snitch_cluster/target/snitch_cluster && GVSOC_TARGET=$(TARGETS) ./util/run.py sw/run.yaml --simulator gvsoc -j
+
+snitch_cluster: snitch_cluster.checkout snitch_cluster.build snitch_cluster.test
