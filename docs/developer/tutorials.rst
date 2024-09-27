@@ -2049,6 +2049,149 @@ GVSOC should first be compiled for rv64 with this command: ::
 
     make TARGETS=rv64 build
 
-THe Linux kernel can be taken from cva6 sdk, and the following command run from it: ::
+The Linux kernel can be taken from cva6 sdk, and the following command run from it: ::
 
     gvsoc --target=rv64 --binary install64/spike_fw_payload.elf  run
+
+
+19 - How to test a model with a standalone testbench
+....................................................
+
+In previous tutorials, we have validated our models using simulated sotfware running on core
+models.
+
+This approach is often simpler since existing software is usually available, making it easy to write and execute tests. However, in some cases, it may be more effective to test a model in isolation, similar to IP verification practices.
+
+In some cases, it may be better to test a model in a stand-alone way, similarly to what is done with IP verification.
+
+Although setting up standalone tests can require more effort, it can also make it easier to identify and fix complex bugs.
+
+The standalone testing method mirrors real IP-level testing. The model under test has defined inputs and outputs, which are connected to a testbench.
+The testbench stimulates the model by sending inputs and checks the model’s output to ensure it meets expectations.
+
+Below is an example where a model with one input and one output is connected to a testbench.
+
+.. image:: images/tutorial_19_testbench.drawio.png
+
+The testbench is a standard model, using the same engines and APIs as the real models to generate stimuli on the inputs and verify the outputs.
+
+For this tutorial, we will use a simple model that outputs double the input value.
+Additionally, the output is delayed by 5 cycles to simulate hardware latency.
+The testbench will validate both the functionality and the timing behavior of this model.
+
+We’ll start by creating the testbench generator, which should be the reverse of the model to be tested, with respect to inputs and outputs:
+
+.. code-block:: python
+
+    class Testbench(gvsoc.systree.Component):
+        def __init__(self, parent: gvsoc.systree.Component, name: str):
+
+            super().__init__(parent, name)
+
+            self.add_sources(['testbench.cpp'])
+
+        def i_DUT_OUTPUT(self) -> gvsoc.systree.SlaveItf:
+            return gvsoc.systree.SlaveItf(self, 'dut_output', signature='wire<int>')
+
+        def o_DUT_INPUT(self, itf: gvsoc.systree.SlaveItf):
+            self.itf_bind('dut_input', itf, signature='wire<int>')
+
+In addition to the usualclass content, the testbench class includes a clock event and a cycle stamp.
+
+The clock event is triggered during reset, allowing the testbench to start stimulating the model one cycle after the reset is deasserted.
+
+The cycle stamp records when the stimuli are sent, so we can verify that the output is produced exactly 5 cycles later.
+
+.. code-block:: cpp
+
+    class Testbench : public vp::Component
+    {
+    public:
+        Testbench(vp::ComponentConf &config);
+
+
+    private:
+        static void sync(vp::Block *__this, int value);
+        static void fsm_handler(vp::Block *__this, vp::ClockEvent *event);
+
+        void reset(bool active);
+
+        vp::WireMaster<int> dut_input;
+        vp::WireSlave<int> dut_output;
+        vp::ClockEvent fsm_event;
+        int64_t cycle_stamp;
+    };
+
+The constructor initializes the input, output, and clock event. The input interface has a method
+attached to it that is invoked whenever the model updates its output.
+
+.. code-block:: cpp
+
+    Testbench::Testbench(vp::ComponentConf &config)
+        : vp::Component(config), fsm_event(this, &this->fsm_handler)
+    {
+        this->new_master_port("dut_input", &this->dut_input);
+
+        this->dut_output.set_sync_meth(&this->sync);
+        this->new_slave_port("dut_output", &this->dut_output);
+    }
+
+When the reset is deasserted, the clock event is enqueued to execute on the next cycle:
+
+.. code-block:: cpp
+
+    void Testbench::reset(bool active)
+    {
+        if (!active)
+        {
+            this->fsm_event.enqueue();
+        }
+    }
+
+The role of the clock event is to initiate activity on the input.
+In this simple testbench, this involves sending a new value to the testbench output.
+We also record the current cycle count to measure the model’s latency when the output is updated:
+
+.. code-block:: cpp
+
+    void Testbench::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+    {
+        Testbench *_this = (Testbench *)__this;
+        int value = 0x12345678;
+        printf("Testbench sending value 0x%llx\n", value);
+        _this->cycle_stamp = _this->clock.get_cycles();
+        _this->dut_input.sync(value);
+    }
+
+Finally, we implement the callback for the input interface, which will be triggered whenever the 
+model’s output is updated. This is where we perform our checks.
+
+First, we verify that the received value is double what we sent.
+
+Next, we ensure the value was received exactly 5 cycles after the input was sent.
+
+Since this testbench performs a single check, we can stop the engine at the end of the current cycle.
+We return an exit status based on the result of our checks, reporting errors to the terminal if the checks fail:
+
+.. code-block:: cpp
+
+    void Testbench::sync(vp::Block *__this, int value)
+    {
+        Testbench *_this = (Testbench *)__this;
+
+        printf("Testbench sending value 0x%llx\n", value);
+
+        int status = value != 0x2468acf0 || _this->clock.get_cycles() - _this->cycle_stamp != 5;
+
+        _this->time.get_engine()->quit(status);
+    }
+
+In a more realistic test, multiple stimuli and checks could be sent at different points in time.
+
+To achieve this, clock events can be used to sequence stimuli and validations.
+The testbench can send an initial set of stimuli and, once checks are completed, send additional
+stimuli using further clock events.
+
+For a more advanced model-level test, you can refer to pulp/pulp/floonoc/test.
+This test verifies a network-on-chip by deploying traffic generators in various locations depending
+on the specific checks required.
