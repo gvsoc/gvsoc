@@ -789,7 +789,6 @@ void LightRedmule::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                 _this->total_runtime   += period_ns;
                 _this->num_matmul      += 1;
                 _this->trace.msg("[LightRedmule] Finished : %0d ns ---> %0d ns | period = %0d ns | uti = %0.3f | runtime = %0d ns | matmul id = %0d\n", start_time_ns, end_time_ns, period_ns, period_uti, _this->total_runtime, _this->num_matmul);
-                _this->trace.msg("[LightRedmule] Area : %d | Efficiency : %f \n", gemm_size*_this->elem_size ,redmul_eff);
             } else {
                 _this->state.set(STORING);
                 _this->event_enqueue(_this->fsm_event, 1);

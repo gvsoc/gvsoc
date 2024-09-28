@@ -176,6 +176,12 @@ void flex_dma_pattern_systolic_shift_west_south(uint32_t local_offset, uint32_t 
 ***************************/
 
 //Basic DMA 1d transfter load from HBM
+void flex_dma_async_1d(uint32_t src_addr, uint32_t dst_addr, size_t transfer_size){
+    flex_push_stack();
+    snrt_dma_start_1d(src_addr,dst_addr, transfer_size); //Start iDMA
+    flex_pull_stack();
+}
+
 void flex_dma_async_Load_HBM_1d(uint32_t local_offset, uint32_t hbm_offset, size_t transfer_size){
     flex_push_stack();
     snrt_dma_start_1d(local(local_offset),hbm_addr(hbm_offset), transfer_size); //Start iDMA

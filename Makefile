@@ -120,9 +120,15 @@ update:
 	cd pulp && git diff > ../add_dramsyslib_patches/gvsoc_pulp.patch
 
 config:
+	cp add_dramsyslib_patches/flex_cluster/flex_cluster_arch.py pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
 	python3 add_dramsyslib_patches/flex_cluster_utilities/config.py
 
 iter:
+	make config
+	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+	make rebuild_sw
+
+build_softhier:
 	make config
 	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
 	make rebuild_sw

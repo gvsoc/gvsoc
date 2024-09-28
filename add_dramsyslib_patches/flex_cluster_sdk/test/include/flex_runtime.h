@@ -145,6 +145,10 @@ void flex_amo_add(uint32_t* barrier){
     *barrier = 1;
 }
 
+void flex_intra_cluster_sync(){
+    snrt_cluster_hw_barrier();
+}
+
 void flex_barrier_init(){
     uint32_t * barrier      = ARCH_SYNC_BASE;
     uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
