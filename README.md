@@ -20,7 +20,7 @@ GVSoC requires the following tools and versions:
 
 - **g++** and **gcc** versions >= 11.2.0
 - **cmake** version >= 3.18.1
-- **Python** version >= 3.10
+- **Python** version >= 3.8.3
 
 Please ensure your toolchain meets these requirements. You can set the following environment variables as an example (adjust the versions as per your setup):
 
