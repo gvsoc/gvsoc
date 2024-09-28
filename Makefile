@@ -94,7 +94,7 @@ dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-confi
 sw: third_party/occamy
 
 third_party/occamy:
-	cd third_party; git clone git@github.com:pulp-platform/occamy.git; \
+	cd third_party; git clone https://github.com/pulp-platform/occamy.git; \
 	cd occamy; git reset --hard ed0b98162fae196faff96a972f861a0aa4593227; \
 	git submodule update --init --recursive; bender vendor init; \
 	git apply ../../add_dramsyslib_patches/flex_cluster_sdk/occamy.patch; \

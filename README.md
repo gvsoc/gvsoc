@@ -16,7 +16,13 @@ sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl
 
 ## Toolchain Requirements
 
-GVSoC requires `g++` and `gcc` versions >= 11.2.0, and `cmake` version >= 3.18.1. Please ensure your toolchain meets these requirements. Set the following environment variables as an example (adjust the versions if needed):
+GVSoC requires the following tools and versions:
+
+- **g++** and **gcc** versions >= 11.2.0
+- **cmake** version >= 3.18.1
+- **Python** version >= 3.10
+
+Please ensure your toolchain meets these requirements. You can set the following environment variables as an example (adjust the versions as per your setup):
 
 ```bash
 export CXX=g++-11.2.0
@@ -335,4 +341,3 @@ void example_one_cluster_gemm(){
 
 #endif
 ```
-
