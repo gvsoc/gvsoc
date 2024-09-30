@@ -32,16 +32,18 @@ export CMAKE=cmake-3.18.1
 
 ## Getting Started with SoftHier Simulation
 
-To begin a SoftHier simulation, follow these steps:
+### Clone the Repository and Set Up the Environment
 
-1. Clone the repository and navigate into the project directory:
+Follow these steps to set up the SoftHier simulation environment:
+
+1. **Clone the repository** and navigate into the project directory:
 
    ```bash
    git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_flex_cluster soft_hier
    cd soft_hier
    ```
 
-2. Export the necessary toolchain environment variables (adjust the versions as per your setup):
+2. **Set up the toolchain** by exporting the necessary environment variables (adjust the versions as needed):
 
    ```bash
    export CXX=g++-11.2.0
@@ -49,23 +51,33 @@ To begin a SoftHier simulation, follow these steps:
    export CMAKE=cmake-3.18.1
    ```
 
-3. Set up the simulator by running the following command:
+3. **Initialize the simulator environment** by running:
 
    ```bash
    source softhier_pushbutton.sh
    ```
 
-4. Build the SoftHier model and the execution binary:
+### Build and Run the SoftHier Simulation Model
+
+1. **Build the SoftHier hardware model**:
 
    ```bash
-   make build_softhier
+   make build_softhier_hw
    ```
 
-5. Run the simulation:
+2. **Run the simulation** with an example binary:
 
    ```bash
-   make run
+   ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
    ```
+
+   - `--binary`: Specifies the executable binary to be loaded for the SoftHier simulation.
+   - `--trace`: Indicates which component's trace logs should be generated during the simulation.
+
+### Build SoftHier Executable Binary
+
+(Specific toolchain details for building SoftHier executable binaries will be provided soon.)
+
 
 ## SoftHier Simulation Tutorial
 
