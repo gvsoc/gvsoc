@@ -20,6 +20,7 @@ jobs:
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
+          sudo pip3 install -r requirements.txt
       - name: build all targets
         run: |
           source sourceme.sh
@@ -32,6 +33,8 @@ jobs:
           make all TARGETS=occamy
           make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
           make TARGETS=snitch build
+          make config
+          make TARGETS=pulp.chips.flex_cluster.flex_cluster all
       - name: Run examples
         run: |
           source sourceme.sh
@@ -43,6 +46,7 @@ jobs:
           ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
+          ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
 
   # Removed due to no space left on eth machine
   # build_eth:
