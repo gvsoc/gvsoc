@@ -4,6 +4,7 @@ CMAKE ?= cmake
 TARGETS ?= rv32;rv64
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
+export PATH:=$(CURDIR)/third_party:$(PATH)
 
 all: checkout build
 
@@ -97,7 +98,7 @@ third_party/occamy:
 	cd third_party; curl --proto '=https' --tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh; \
 	git clone https://github.com/pulp-platform/occamy.git; \
 	cd occamy; git reset --hard ed0b98162fae196faff96a972f861a0aa4593227; \
-	git submodule update --init --recursive; ../bender vendor init; \
+	git submodule update --init --recursive; bender vendor init; \
 	git apply ../../add_dramsyslib_patches/flex_cluster_sdk/occamy.patch; \
 	cp -rfv ../../add_dramsyslib_patches/flex_cluster_sdk/test target/sim/sw/device/apps/blas; \
 	sed -i -e '29,52d' -e '63,67d' -e '79,91d' deps/snitch_cluster/sw/snRuntime/src/start.c; \

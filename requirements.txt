@@ -1,4 +1,6 @@
-pyelftools>=0.24
-six
-sphinx_rtd_theme
-
+dataclasses
+rich
+hjson
+jsonref
+mako
+tabulate
