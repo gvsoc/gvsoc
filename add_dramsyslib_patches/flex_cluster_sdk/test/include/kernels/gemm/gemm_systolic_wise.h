@@ -12,9 +12,13 @@
 typedef struct GemmSystolicInfo
 {
     //Tile Information
-    uint32_t tile_dimension;
+    uint32_t tile_dimension_M;
+    uint32_t tile_dimension_N;
+    uint32_t tile_dimension_K;
     uint32_t elem_size;
-    uint32_t tile_size_byte;
+    uint32_t tile_size_byte_X;
+    uint32_t tile_size_byte_W;
+    uint32_t tile_size_byte_Y;
 
     //L1 addr
     uint32_t X_offset_1;
@@ -34,22 +38,28 @@ typedef struct GemmSystolicInfo
     uint32_t total_iter;
 }GemmSystolicInfo;
 
-GemmSystolicInfo gemm_systolic_wise_analysis(uint32_t M_size, uint32_t N_size, uint32_t K_size, uint32_t elem_size){
+GemmSystolicInfo gemm_systolic_wise_analysis(
+    uint32_t M_size, uint32_t N_size, uint32_t K_size, uint32_t elem_size,
+    uint32_t tile_dimension_M, uint32_t tile_dimension_N, uint32_t tile_dimension_K){
     GemmSystolicInfo info;
-    info.tile_dimension = 256;
+    info.tile_dimension_M = tile_dimension_M;
+    info.tile_dimension_N = tile_dimension_N;
+    info.tile_dimension_K = tile_dimension_K;
     info.elem_size = elem_size;
-    info.tile_size_byte = info.tile_dimension * info.tile_dimension * elem_size;
+    info.tile_size_byte_X = info.tile_dimension_M * info.tile_dimension_N * elem_size;
+    info.tile_size_byte_W = info.tile_dimension_N * info.tile_dimension_K * elem_size;
+    info.tile_size_byte_Y = info.tile_dimension_M * info.tile_dimension_K * elem_size;
 
     info.X_offset_1 = 0;
-    info.W_offset_1 = 1 * info.tile_size_byte;
-    info.Y_offset_1 = 2 * info.tile_size_byte;
-    info.X_offset_2 = 3 * info.tile_size_byte;
-    info.W_offset_2 = 4 * info.tile_size_byte;
-    info.Y_offset_2 = 5 * info.tile_size_byte;
+    info.W_offset_1 = 1 * info.tile_size_byte_X;
+    info.Y_offset_1 = 2 * info.tile_size_byte_W;
+    info.X_offset_2 = 3 * info.tile_size_byte_Y;
+    info.W_offset_2 = 4 * info.tile_size_byte_X;
+    info.Y_offset_2 = 5 * info.tile_size_byte_W;
 
-    uint32_t M_tile = (M_size + info.tile_dimension - 1)/info.tile_dimension;
-    uint32_t N_tile = (N_size + info.tile_dimension - 1)/info.tile_dimension;
-    uint32_t K_tile = (K_size + info.tile_dimension - 1)/info.tile_dimension;
+    uint32_t M_tile = (M_size + info.tile_dimension_M - 1)/info.tile_dimension_M;
+    uint32_t N_tile = (N_size + info.tile_dimension_N - 1)/info.tile_dimension_N;
+    uint32_t K_tile = (K_size + info.tile_dimension_K - 1)/info.tile_dimension_K;
 
     FlexPosition pos = get_pos(flex_get_cluster_id());
     info.Z_tile_on_row = 0;
@@ -87,26 +97,26 @@ void gemm_systolic_wise_dma_access(GemmSystolicInfo info, uint32_t iter){
         if (sub_iter == 0)
         {
             //YZ tile transfering
-            flex_dma_async_1d(local(local_Y),hbm_south(pos.x,remote_Y), info.tile_size_byte);
-            flex_dma_async_1d(local(local_Z),hbm_west(pos.y,remote_Z), info.tile_size_byte);
+            flex_dma_async_1d(local(local_Y),hbm_south(pos.x,remote_Y), info.tile_size_byte_Y);
+            flex_dma_async_1d(local(local_Z),hbm_west(pos.y,remote_Z), info.tile_size_byte_Y);
             flex_dma_async_wait_all();
         } else {
             //XW tile transfering
             if(pos.x == 0){
                 /* clusters at west edge hbm transfer*/
-                flex_dma_async_1d(local(local_X),hbm_west(pos.y,remote_X), info.tile_size_byte);
+                flex_dma_async_1d(local(local_X),hbm_west(pos.y,remote_X), info.tile_size_byte_X);
             } else {
                 /* clusters on-chip transfer*/
-                flex_dma_async_1d(local(local_X),remote_pos(left_pos(pos),remote_X), info.tile_size_byte);
+                flex_dma_async_1d(local(local_X),remote_pos(left_pos(pos),remote_X), info.tile_size_byte_X);
             }
 
             if (pos.y == 0)
             {
                 /* clusters at south edge hbm transfer*/
-                flex_dma_async_1d(local(local_W),hbm_south(pos.x,remote_W), info.tile_size_byte);
+                flex_dma_async_1d(local(local_W),hbm_south(pos.x,remote_W), info.tile_size_byte_W);
             } else {
                 /* clusters on-chip transfer*/
-                flex_dma_async_1d(local(local_W),remote_pos(bottom_pos(pos),remote_W), info.tile_size_byte);
+                flex_dma_async_1d(local(local_W),remote_pos(bottom_pos(pos),remote_W), info.tile_size_byte_W);
             }
             flex_dma_async_wait_all();
         }
@@ -117,8 +127,6 @@ void gemm_systolic_wise_redmule(GemmSystolicInfo info, uint32_t iter){
 
     if ((iter >= (info.systolic_delay + 1)) && (iter < (info.Z_tile_all * (info.XW_tile_length + 1) + info.systolic_delay + 1)))
     {
-        // flex_redmule_trigger_async(0);
-        // flex_redmule_trigger_wait(0);
         uint32_t eff_iter = iter - info.systolic_delay - 1;
         uint32_t sub_iter = eff_iter%(info.XW_tile_length + 1);
         if (sub_iter != 0)
@@ -129,18 +137,20 @@ void gemm_systolic_wise_redmule(GemmSystolicInfo info, uint32_t iter){
     }
 }
 
-void gemm_systolic_wise(uint32_t M_size, uint32_t N_size, uint32_t K_size, uint32_t elem_size){
+void gemm_systolic_wise(
+    uint32_t M_size, uint32_t N_size, uint32_t K_size, uint32_t elem_size,
+    uint32_t tile_dimension_M, uint32_t tile_dimension_N, uint32_t tile_dimension_K){
 
     flex_global_barrier_xy();
     uint32_t CID = flex_get_cluster_id();
-    GemmSystolicInfo info = gemm_systolic_wise_analysis(M_size, N_size, K_size, elem_size);
+    GemmSystolicInfo info = gemm_systolic_wise_analysis(M_size, N_size, K_size, elem_size,tile_dimension_M,tile_dimension_N,tile_dimension_K);
 
     //Initialize RedMule Paramters
     if (flex_is_first_core())
     {
-        flex_redmule_set_M(0, info.tile_dimension);
-        flex_redmule_set_N(0, info.tile_dimension);
-        flex_redmule_set_K(0, info.tile_dimension);
+        flex_redmule_set_M(0, info.tile_dimension_M);
+        flex_redmule_set_N(0, info.tile_dimension_N);
+        flex_redmule_set_K(0, info.tile_dimension_K);
         if (CID == 0)
         {
             flex_log(info.total_iter);
