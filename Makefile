@@ -122,7 +122,8 @@ update:
 	cd pulp && git diff > ../add_dramsyslib_patches/gvsoc_pulp.patch
 
 config:
-	cp add_dramsyslib_patches/flex_cluster/flex_cluster_arch.py pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
+	rm -rf pulp/pulp/chips/flex_cluster
+	cp -rf add_dramsyslib_patches/flex_cluster pulp/pulp/chips/flex_cluster
 	python3 add_dramsyslib_patches/flex_cluster_utilities/config.py
 
 iter:
