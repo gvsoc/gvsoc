@@ -60,19 +60,11 @@ class Rv64(gvsoc.systree.Component):
 
 
 
-class MultiChip(gvsoc.systree.Component):
-    def __init__(self, parent, name, parser, options):
-        super().__init__(parent, name, options=options)
-
-        chip0 = Rv64(self, 'chip0', parser, options)
-
-        chip1 = Rv64(self, 'chip1', parser, options)
-
 
 # This is the top target that gapy will instantiate
 class Target(gvsoc.runner.Target):
 
     def __init__(self, parser, options):
         super(Target, self).__init__(parser, options,
-            model=MultiChip, description="RV64 virtual board")
+            model=Rv64, description="RV64 virtual board")
 

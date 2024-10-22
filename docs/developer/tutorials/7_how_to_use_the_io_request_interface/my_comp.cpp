@@ -10,14 +10,11 @@ public:
 
 private:
     static vp::IoReqStatus handle_req(vp::Block *__this, vp::IoReq *req);
-    static void handle_event(vp::Block *_this, vp::ClockEvent *event);
-    void handle_reg0_access(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
 
     vp::IoSlave input_itf;
 
     uint32_t value;
 
-    vp::ClockEvent event;
     vp::Trace trace;
 
     vp::IoReq *pending_req;
@@ -25,7 +22,7 @@ private:
 
 
 MyComp::MyComp(vp::ComponentConf &config)
-    : vp::Component(config), event(this, MyComp::handle_event)
+    : vp::Component(config)
 {
     this->input_itf.set_req_meth(&MyComp::handle_req);
     this->new_slave_port("input", &this->input_itf);
@@ -50,27 +47,11 @@ vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
         if (req->get_addr() == 0)
         {
             *(uint32_t *)req->get_data() = _this->value;
-            req->inc_latency(1000);
             return vp::IO_REQ_OK;
-        }
-        else if (req->get_addr() == 4)
-        {
-            _this->pending_req = req;
-            _this->event.enqueue(2000);
-            return vp::IO_REQ_PENDING;
         }
     }
 
     return vp::IO_REQ_INVALID;
-}
-
-
-void MyComp::handle_event(vp::Block *__this, vp::ClockEvent *event)
-{
-    MyComp *_this = (MyComp *)__this;
-
-    *(uint32_t *)_this->pending_req->get_data() = _this->value;
-    _this->pending_req->get_resp_port()->resp(_this->pending_req);
 }
 
 
