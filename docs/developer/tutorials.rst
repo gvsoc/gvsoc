@@ -570,9 +570,9 @@ It is also possible to activate instruction traces at the same time to see where
 
 This should dump: ::
 
-    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000 
+    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000
     32590000: 3259: [/soc/my_comp/trace             ] Received request at offset 0x0, size 0x4, is_write 0
-    32590000: 3259: [/soc/host/insn                 ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000 
+    32590000: 3259: [/soc/host/insn                 ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000
 
 4 - How to add VCD traces to a component
 ........................................
@@ -951,18 +951,18 @@ Then we need to write the callback of the event, which will send the result to t
 
 To see the effect, we can dump instruction traces and the ones from our component: ::
 
-    32470000: 3247: [/soc/host/insn                  ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000 
+    32470000: 3247: [/soc/host/insn                  ] main:0                           M 0000000000002c26 lui                 a5, 0x20000000            a5=0000000020000000
     Received request at offset 0x0, size 0x4, is_write 0
     32590000: 3259: [/soc/my_comp2/trace             ] Received notif
-    32590000: 3259: [/soc/host/insn                  ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000 
-    32600000: 3260: [/soc/host/insn                  ] main:0                           M 0000000000002c2c c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a70  sp:0000000000000a80 
-    32610000: 3261: [/soc/host/insn                  ] main:0                           M 0000000000002c2e addi                a0, 0, 260                a0=0000000000000260 
-    32620000: 3262: [/soc/host/insn                  ] main:0                           M 0000000000002c32 c.sdsp              ra, 8(sp)                 ra:0000000000000c0e  sp:0000000000000a70  PA:0000000000000a78 
+    32590000: 3259: [/soc/host/insn                  ] main:0                           M 0000000000002c2a c.lw                a1, 0(a5)                 a1=0000000012345678  a5:0000000020000000  PA:0000000020000000
+    32600000: 3260: [/soc/host/insn                  ] main:0                           M 0000000000002c2c c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a70  sp:0000000000000a80
+    32610000: 3261: [/soc/host/insn                  ] main:0                           M 0000000000002c2e addi                a0, 0, 260                a0=0000000000000260
+    32620000: 3262: [/soc/host/insn                  ] main:0                           M 0000000000002c32 c.sdsp              ra, 8(sp)                 ra:0000000000000c0e  sp:0000000000000a70  PA:0000000000000a78
     32690000: 3269: [/soc/my_comp2/trace             ] Sending result
     Received results 11111111 22222222
-    32750000: 3275: [/soc/host/insn                  ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffffb4      ra=0000000000002c38 
-    32770000: 3277: [/soc/host/insn                  ] printf:0                         M 0000000000002be8 c.addi16sp          sp, sp, ffffffffffffffa0  sp=0000000000000a10  sp:0000000000000a70 
-    32780000: 3278: [/soc/host/insn                  ] printf:0                         M 0000000000002bea addi                t1, sp, 28                t1=0000000000000a38  sp:0000000000000a10 
+    32750000: 3275: [/soc/host/insn                  ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffffb4      ra=0000000000002c38
+    32770000: 3277: [/soc/host/insn                  ] printf:0                         M 0000000000002be8 c.addi16sp          sp, sp, ffffffffffffffa0  sp=0000000000000a10  sp:0000000000000a70
+    32780000: 3278: [/soc/host/insn                  ] printf:0                         M 0000000000002bea addi                t1, sp, 28                t1=0000000000000a38  sp:0000000000000a10
 
 As we can see on the traces, the results were indeed sent 10 cycles after we received the notification. We also
 see that the core is executing instructions in between, which is what we want.
@@ -1007,11 +1007,11 @@ with others added by other components on the same path from the initiator to the
 
 To see the impact we can dump traces and get: ::
 
-    32790000: 3279: [/soc/host/insn                 ] main:0                           M 0000000000002c2a lui                 s1, 0x20000000            s1=0000000020000000 
+    32790000: 3279: [/soc/host/insn                 ] main:0                           M 0000000000002c2a lui                 s1, 0x20000000            s1=0000000020000000
     32800000: 3280: [/soc/my_comp/trace             ] Received request at offset 0x0, size 0x4, is_write 0
-    32800000: 3280: [/soc/host/insn                 ] main:0                           M 0000000000002c2e c.lw                a1, 0(s1)                 a1=0000000000000024  s1:0000000020000000  PA:0000000020000000 
-    42810000: 4281: [/soc/host/insn                 ] main:0                           M 0000000000002c30 c.sdsp              s0, 10(sp)                s0:0000000000000010  sp:0000000000000a60  PA:0000000000000a70 
-    42820000: 4282: [/soc/host/insn                 ] main:0                           M 0000000000002c32 addi                a0, 0, 260                a0=0000000000000260 
+    32800000: 3280: [/soc/host/insn                 ] main:0                           M 0000000000002c2e c.lw                a1, 0(s1)                 a1=0000000000000024  s1:0000000020000000  PA:0000000020000000
+    42810000: 4281: [/soc/host/insn                 ] main:0                           M 0000000000002c30 c.sdsp              s0, 10(sp)                s0:0000000000000010  sp:0000000000000a60  PA:0000000000000a70
+    42820000: 4282: [/soc/host/insn                 ] main:0                           M 0000000000002c32 addi                a0, 0, 260                a0=0000000000000260
 
 Now we are going to use an asynchronous reply, which allows modeling more complex handling of requests.
 In particular this allows handling requests where the response time is unknown and depend on external factors,
@@ -1048,10 +1048,10 @@ when it receives this call.
 
 To see the effect we can dump traces: ::
 
-    95000000: 9500: [/soc/host/insn                 ] printf:0                         M 0000000000002c14 c.jr                0, ra, 0, 0               ra:0000000000002c3c 
+    95000000: 9500: [/soc/host/insn                 ] printf:0                         M 0000000000002c14 c.jr                0, ra, 0, 0               ra:0000000000002c3c
     95020000: 9502: [/soc/my_comp/trace             ] Received request at offset 0x4, size 0x4, is_write 0
-    115020000: 11502: [/soc/host/insn                 ] main:0                           M 0000000000002c3c c.lw                a1, 4(s1)                 a1=0000000012345678  s1:0000000020000000  PA:0000000020000004 
-    115030000: 11503: [/soc/host/insn                 ] main:0                           M 0000000000002c3e addi                a0, 0, 260                a0=0000000000000260 
+    115020000: 11502: [/soc/host/insn                 ] main:0                           M 0000000000002c3c c.lw                a1, 4(s1)                 a1=0000000012345678  s1:0000000020000000  PA:0000000020000004
+    115030000: 11503: [/soc/host/insn                 ] main:0                           M 0000000000002c3e addi                a0, 0, 260                a0=0000000000000260
 
 This example is quite simple, but in practice, things are much more complex in case asynchronous replies
 are used. A succession of several callbacks from different components are executed, until finally
@@ -1091,17 +1091,17 @@ get the binary entry point and start at the same time.
 
 To see if both cores are really executing, we can check instruction traces: ::
 
-    28420000: 2842: [/soc/host/insn                   ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12 
-    28420000: 2842: [/soc/host2/insn                  ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12 
-    28430000: 2843: [/soc/host/insn                   ] $x:0                             M 0000000000000c16 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a90  sp:0000000000000c12 
-    28440000: 2844: [/soc/host/insn                   ] $x:0                             M 0000000000000c1a auipc               t0, 0x0                   t0=0000000000000c1a 
-    28450000: 2845: [/soc/host/insn                   ] $x:0                             M 0000000000000c1e addi                t0, t0, 1a                t0=0000000000000c34  t0:0000000000000c1a 
-    28460000: 2846: [/soc/host/insn                   ] $x:0                             M 0000000000000c22 csrrw               0, t0, mtvec              t0:0000000000000c34 
-    28470000: 2847: [/soc/host/insn                   ] $x:0                             M 0000000000000c26 auipc               t0, 0x0                   t0=0000000000000c26 
-    28480000: 2848: [/soc/host/insn                   ] $x:0                             M 0000000000000c2a addi                t0, t0, ffffffffffffffc4  t0=0000000000000bea  t0:0000000000000c26 
-    28490000: 2849: [/soc/host/insn                   ] $x:0                             M 0000000000000c2e c.li                a0, 0, 0                  a0=0000000000000000 
-    28500000: 2850: [/soc/host/insn                   ] $x:0                             M 0000000000000c30 jalr                ra, t0, 0                 ra=0000000000000c34  t0:0000000000000bea 
-    28520000: 2852: [/soc/host/insn                   ] __init_start:0                   M 0000000000000bea c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a80  sp:0000000000000a90 
+    28420000: 2842: [/soc/host/insn                   ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12
+    28420000: 2842: [/soc/host2/insn                  ] $x:0                             M 0000000000000c12 auipc               sp, 0x0           sp=0000000000000c12
+    28430000: 2843: [/soc/host/insn                   ] $x:0                             M 0000000000000c16 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a90  sp:0000000000000c12
+    28440000: 2844: [/soc/host/insn                   ] $x:0                             M 0000000000000c1a auipc               t0, 0x0                   t0=0000000000000c1a
+    28450000: 2845: [/soc/host/insn                   ] $x:0                             M 0000000000000c1e addi                t0, t0, 1a                t0=0000000000000c34  t0:0000000000000c1a
+    28460000: 2846: [/soc/host/insn                   ] $x:0                             M 0000000000000c22 csrrw               0, t0, mtvec              t0:0000000000000c34
+    28470000: 2847: [/soc/host/insn                   ] $x:0                             M 0000000000000c26 auipc               t0, 0x0                   t0=0000000000000c26
+    28480000: 2848: [/soc/host/insn                   ] $x:0                             M 0000000000000c2a addi                t0, t0, ffffffffffffffc4  t0=0000000000000bea  t0:0000000000000c26
+    28490000: 2849: [/soc/host/insn                   ] $x:0                             M 0000000000000c2e c.li                a0, 0, 0                  a0=0000000000000000
+    28500000: 2850: [/soc/host/insn                   ] $x:0                             M 0000000000000c30 jalr                ra, t0, 0                 ra=0000000000000c34  t0:0000000000000bea
+    28520000: 2852: [/soc/host/insn                   ] __init_start:0                   M 0000000000000bea c.addi              sp, sp, fffffffffffffff0  sp=0000000000000a80  sp:0000000000000a90
     28590000: 2859: [/soc/host2/insn                  ] $x:0                             M 0000000000000c16 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a90  sp:0000000000000c12
 
 We see indeed that both cores are executing together. They don't execute exactly the same because of
@@ -1112,7 +1112,7 @@ We can also check in GTKwave the multi-core execution.
 GDB can also connected, and we'll see the 2 cores as 2 different threads: ::
 
     (gdb) info threads
-    Id   Target Id         Frame 
+    Id   Target Id         Frame
     * 1    Thread 1 (host)   main () at main.c:6
     2    Thread 2 (host2)  0x0000000000000bfe in __init_do_ctors () at ../utils/init.c:16
 
@@ -1207,12 +1207,12 @@ Then we use the handler to switch between 2 frequencies:
 
 Now we can see the effect by looking at the traces: ::
 
-    66936000: 4566: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001074 c.mv                a1, 0, s10                a1=0000000000000002 s10:0000000000000002 
-    66937000: 4567: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001076 c.jalr              ra, s9, 0, 0              ra=0000000000001078  s9:0000000000000e46 
-    66939000: 4569: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e46 c.lui               a3, 0x1000                a3=0000000000001000 
+    66936000: 4566: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001074 c.mv                a1, 0, s10                a1=0000000000000002 s10:0000000000000002
+    66937000: 4567: [/host/insn                    ] __libc_prf_safe:0                M 0000000000001076 c.jalr              ra, s9, 0, 0              ra=0000000000001078  s9:0000000000000e46
+    66939000: 4569: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e46 c.lui               a3, 0x1000                a3=0000000000001000
     67000000: 6700: [/my_comp/trace                ] Set frequency to 10000000
-    69800000: 4658: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e48 lw                  a4, fffffffffffffb18(a3)  a4=0000000000000006  a3:0000000000001000  PA:0000000000000b18 
-    69900000: 4659: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e4c c.lui               a5, 0x1000                a5=0000000000001000 
+    69800000: 4658: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e48 lw                  a4, fffffffffffffb18(a3)  a4=0000000000000006  a3:0000000000001000  PA:0000000000000b18
+    69900000: 4659: [/host/insn                    ] __libc_fputc_safe:0              M 0000000000000e4c c.lui               a5, 0x1000                a5=0000000000001000
 
 If we look the timestamp column, at the very left, we see that the duration of 1 clock cycle becomes
 much longer after the frequency has changed.
@@ -1244,11 +1244,11 @@ during these cycles.
 We can see the impact by looking at the instruction traces, where we can see the latency on each memory
 access: ::
 
-    45180000: 4518: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a90  a3:0000000000000b00 
-    45210000: 4521: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a90  PA:0000000000000a90 
-    46220000: 4622: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4c c.addi              a5, a5, 8                 a5=0000000000000a98  a5:0000000000000a90 
-    46230000: 4623: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a98  a3:0000000000000b00 
-    46260000: 4626: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a98  PA:0000000000000a98 
+    45180000: 4518: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a90  a3:0000000000000b00
+    45210000: 4521: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a90  PA:0000000000000a90
+    46220000: 4622: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4c c.addi              a5, a5, 8                 a5=0000000000000a98  a5:0000000000000a90
+    46230000: 4623: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b4e bne                 a5, a3, fffffffffffffffa  a5:0000000000000a98  a3:0000000000000b00
+    46260000: 4626: [/soc/host/insn                 ] __init_bss:0                     M 0000000000000b48 sd                  0, 0(a5)                  a5:0000000000000a98  PA:0000000000000a98
 
 The second way to modify the timing is to change the bandwidth of the router.
 
@@ -1277,12 +1277,12 @@ Then we modify the simulated binary so that it does accesses in a loop:
 
 Then we can see the impact on traces: ::
 
-    124860000: 12486: [/soc/host/insn                 ] main:0                           M 0000000000002c1a c.bnez              a5, 0, ffffffffffffffee   a5:0000000000000012 
-    124890000: 12489: [/soc/host/insn                 ] main:0                           M 0000000000002c08 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
-    124900000: 12490: [/soc/host/insn                 ] main:0                           M 0000000000002c0c lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
-    124940000: 12494: [/soc/host/insn                 ] main:0                           M 0000000000002c10 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
-    124980000: 12498: [/soc/host/insn                 ] main:0                           M 0000000000002c14 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004 
-    125020000: 12502: [/soc/host/insn                 ] main:0                           M 0000000000002c18 c.addiw             a5, a5, ffffffffffffffff  a5=0000000000000011  a5:0000000000000012 
+    124860000: 12486: [/soc/host/insn                 ] main:0                           M 0000000000002c1a c.bnez              a5, 0, ffffffffffffffee   a5:0000000000000012
+    124890000: 12489: [/soc/host/insn                 ] main:0                           M 0000000000002c08 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004
+    124900000: 12490: [/soc/host/insn                 ] main:0                           M 0000000000002c0c lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004
+    124940000: 12494: [/soc/host/insn                 ] main:0                           M 0000000000002c10 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004
+    124980000: 12498: [/soc/host/insn                 ] main:0                           M 0000000000002c14 lw                  a4, 4(0)                  a4=0000000000000000   0:0000000000000000  PA:0000000000000004
+    125020000: 12502: [/soc/host/insn                 ] main:0                           M 0000000000002c18 c.addiw             a5, a5, ffffffffffffffff  a5=0000000000000011  a5:0000000000000012
 
 The core should normally be able to do one load of 4 bytes per cycle, since the default bandwidth is 4,
 but now, we see it is stalled starting on the second access.
@@ -1342,9 +1342,9 @@ To test the instruction, an assembly file with our instruction encoded by hands 
 
 We can execute the test with instruction traces to see our instruction: ::
 
-    31870000: 3187: [/soc/host/insn                 ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffdeec      ra=0000000000002c38 
-    31890000: 3189: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
-    31900000: 3190: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c38 
+    31870000: 3187: [/soc/host/insn                 ] main:0                           M 0000000000002c34 jal                 ra, ffffffffffffdeec      ra=0000000000002c38
+    31890000: 3189: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a
+    31900000: 3190: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c38
 
 
 
@@ -1367,7 +1367,7 @@ and an input register of the next instruction, any latency will immediately stal
 is no dependency, only a latency greater than 2 will stall the pipeline.
 
 Such latencies must be assigned in the ISA, so that the decoder is aware of it. For that we must first customize
-the core that we are using. We can do it simply by copying the core description from the riscv.py script into 
+the core that we are using. We can do it simply by copying the core description from the riscv.py script into
 our system script and make our system use it:
 
 .. code-block:: python
@@ -1402,11 +1402,11 @@ Then we can modify the isa to include a latency on our instruction:
 
 We can see the impact on the traces: ::
 
-    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c3e jal                 ra, ffffffffffffdee2      ra=0000000000002c42 
-    32650000: 3265: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a 
-    32800000: 3280: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c42 
-    33800000: 3380: [/soc/host/insn                 ] main:0                           M 0000000000002c42 c.mv                a2, 0, s0                 a2=000000000000000a  s0:000000000000000a 
-    33810000: 3381: [/soc/host/insn                 ] main:0                           M 0000000000002c44 addiw               a3, a0, 0                 a3=0000000000000019  a0:0000000000000019 
+    32470000: 3247: [/soc/host/insn                 ] main:0                           M 0000000000002c3e jal                 ra, ffffffffffffdee2      ra=0000000000002c42
+    32650000: 3265: [/soc/host/insn                 ] $d:0                             M 0000000000000b20 my_instr            a0, a0, a1                a0=0000000000000019  a0:0000000000000005  a1:000000000000000a
+    32800000: 3280: [/soc/host/insn                 ] $x:0                             M 0000000000000b24 c.jr                0, ra, 0, 0               ra:0000000000002c42
+    33800000: 3380: [/soc/host/insn                 ] main:0                           M 0000000000002c42 c.mv                a2, 0, s0                 a2=000000000000000a  s0:000000000000000a
+    33810000: 3381: [/soc/host/insn                 ] main:0                           M 0000000000002c44 addiw               a3, a0, 0                 a3=0000000000000019  a0:0000000000000019
 
 The second way to customize timing is to directly add it in the model of the instruction. This has
 the advantage of allowing a dynamic timing, since it can now depend on the value of the input registers.
@@ -1444,9 +1444,7 @@ generator that we did in a previous tutorial:
 
 .. code-block:: python
 
-    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa)
-
-    isa_instance.add_tree(IsaDecodeTree('my_isa', [MyIsa()]))
+    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa, extensions=[ MyIsa() ])
 
 
 14 - How to add power traces to a component
@@ -1799,10 +1797,10 @@ is replicated twice in memory, and we see both executing at the same time: ::
 
 We can also have a look at traces to see how their execution is interleaved: ::
 
-    28340000: 2834: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
-    28340000: 2834: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02 
-    28350000: 2835: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
-    28350000: 2835: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02 
+    28340000: 2834: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02
+    28340000: 2834: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c02 auipc               sp, 0x0           sp=0000000000000c02
+    28350000: 2835: [/chip1/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02
+    28350000: 2835: [/chip0/soc/host/insn                   ] $x:0                             M 0000000000000c06 addi                sp, sp, fffffffffffffe7e  sp=0000000000000a80  sp:0000000000000c02
 
 This time, they execute exactly the same, because there is no contention at all between them.
 
@@ -2163,7 +2161,7 @@ We also record the current cycle count to measure the model’s latency when the
         _this->dut_input.sync(value);
     }
 
-Finally, we implement the callback for the input interface, which will be triggered whenever the 
+Finally, we implement the callback for the input interface, which will be triggered whenever the
 model’s output is updated. This is where we perform our checks.
 
 First, we verify that the received value is double what we sent.

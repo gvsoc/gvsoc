@@ -255,13 +255,12 @@ Here is another kind of customization which can be done in the ISS generator:
 
 .. code-block:: python
 
-    isa = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(name, 'rv32imfc')
+    extensions = [ PulpV2(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux() ]
 
-    isa.add_tree(IsaDecodeTree('sfloat', [Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux()]))
-    isa.add_tree(IsaDecodeTree('pulpv2', [PulpV2()]))
+    isa = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(name, 'rv32imfc', extensions=extensions)
 
 The ISA can be generated differently first by giving a different isa string, for what concerns generic isa
-subsets. Then custom isa can be added by adding them to the tree.
+subsets. Then custom isa can be added by adding them to the extensions parameter.
 
 Hereafter is the generic ISS class with all the possible parameters which can be customized
 to get ISS variants:
@@ -316,10 +315,10 @@ and attach some latency to it.
 .. code-block:: python
 
     def __build_isa(name):
-        isa = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(name, 'rv32imfcXpulpv2Xf8Xf16XfvecXfauxXf16altXgap9')
+        extensions = [ PulpV2(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux() ]
 
-        isa.add_tree(IsaDecodeTree('sfloat', [Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux()]))
-        isa.add_tree(IsaDecodeTree('pulpv2', [PulpV2()]))
+        isa = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(name, 'rv32imfc', extensions=extensions)
+
 
         for insn in isa.get_insns():
 
