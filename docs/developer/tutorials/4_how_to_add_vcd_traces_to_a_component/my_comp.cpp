@@ -16,12 +16,11 @@ private:
     uint32_t value;
 
     vp::Trace trace;
-    vp::Signal<uint32_t> vcd_value;
 };
 
 
 MyComp::MyComp(vp::ComponentConf &config)
-    : vp::Component(config), vcd_value(*this, "status", 32)
+    : vp::Component(config)
 {
     this->input_itf.set_req_meth(&MyComp::handle_req);
     this->new_slave_port("input", &this->input_itf);
@@ -47,14 +46,6 @@ vp::IoReqStatus MyComp::handle_req(vp::Block *__this, vp::IoReq *req)
         else
         {
             uint32_t value = *(uint32_t *)req->get_data();
-            if (value == 5)
-            {
-                _this->vcd_value.release();
-            }
-            else
-            {
-                _this->vcd_value.set(value);
-            }
         }
     }
 

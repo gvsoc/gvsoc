@@ -27,10 +27,6 @@ class Soc(gvsoc.systree.Component):
         comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
         ico.o_MAP(comp.i_INPUT(), 'comp', base=0x20000000, size=0x00001000, rm_base=True)
 
-        comp2 = my_comp.MyComp2(self, 'my_comp2')
-        comp.o_NOTIF(comp2.i_NOTIF())
-        comp2.o_RESULT(comp.i_RESULT())
-
         # Main memory
         mem = memory.memory.Memory(self, 'mem', size=0x00100000)
         # The memory needs to be connected with a mpping. The rm_base is used to substract

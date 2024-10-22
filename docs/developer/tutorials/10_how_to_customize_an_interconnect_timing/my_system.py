@@ -24,7 +24,7 @@ class Soc(gvsoc.systree.Component):
         binary = args.binary
 
         # Main interconnect
-        ico = interco.router.Router(self, 'ico', bandwidth=1)
+        ico = interco.router.Router(self, 'ico')
 
         # Custom components
         comp = my_comp.MyComp(self, 'my_comp', value=0x12345678)
@@ -34,7 +34,7 @@ class Soc(gvsoc.systree.Component):
         mem = memory.memory.Memory(self, 'mem', size=0x00100000)
         # The memory needs to be connected with a mpping. The rm_base is used to substract
         # the global address to the requests address so that the memory only gets a local offset.
-        ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True, latency=100)
+        ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True)
 
         # Instantiates the main core and connect fetch and data to the interconnect
         host = cpu.iss.riscv.Riscv(self, 'host', isa='rv64imafdc')
