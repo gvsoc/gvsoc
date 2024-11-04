@@ -38,9 +38,7 @@ void example_one_cluster_gemm(){
     if (flex_is_first_core() && (CID == 0))//Use the first core in cluster 0 to configure RedMule
     {
         //Configure M-N-K of tile that RedMule will accelerate
-        flex_redmule_set_M(0, TILE_DIMENSION);
-        flex_redmule_set_N(0, TILE_DIMENSION);
-        flex_redmule_set_K(0, TILE_DIMENSION);
+        flex_redmule_config(TILE_DIMENSION, TILE_DIMENSION, TILE_DIMENSION);
     }
 
     flex_global_barrier_xy();//Global barrier
@@ -98,17 +96,11 @@ void example_one_cluster_gemm(){
 
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
-                            //Configure tile address in L1
-                            flex_redmule_set_X(0, X_L1_OFFSET1);
-                            flex_redmule_set_W(0, W_L1_OFFSET1);
-                            flex_redmule_set_Y(0, YZ_L1_OFFSET);
-                            flex_redmule_set_Z(0, YZ_L1_OFFSET);
-
-                            //Run RedMule Acceleration
-                            flex_redmule_trigger_async(0);
+                            //Configure tile address in L1 and run RedMule acceleration
+                            flex_redmule_trigger(X_L1_OFFSET1, W_L1_OFFSET1, YZ_L1_OFFSET);
 
                             //Wait RedMule Done
-                            flex_redmule_trigger_wait(0);
+                            flex_redmule_wait();
                         }
                     } else {
                         if (flex_is_dm_core()){//Use DM core to trigger DMA transcations
@@ -124,17 +116,11 @@ void example_one_cluster_gemm(){
 
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
-                            //Configure tile address in L1
-                            flex_redmule_set_X(0, X_L1_OFFSET2);
-                            flex_redmule_set_W(0, W_L1_OFFSET2);
-                            flex_redmule_set_Y(0, YZ_L1_OFFSET);
-                            flex_redmule_set_Z(0, YZ_L1_OFFSET);
-
-                            //Run RedMule Acceleration
-                            flex_redmule_trigger_async(0);
+                            //Configure tile address in L1 and run RedMule acceleration
+                            flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET);
 
                             //Wait RedMule Done
-                            flex_redmule_trigger_wait(0);
+                            flex_redmule_wait();
                         }
                     }
                     flex_intra_cluster_sync();//Cluster barrier
@@ -143,12 +129,8 @@ void example_one_cluster_gemm(){
                 //Last Computation
                 if (flex_is_first_core())
                 {
-                    flex_redmule_set_X(0, X_L1_OFFSET2);
-                    flex_redmule_set_W(0, W_L1_OFFSET2);
-                    flex_redmule_set_Y(0, YZ_L1_OFFSET);
-                    flex_redmule_set_Z(0, YZ_L1_OFFSET);
-                    flex_redmule_trigger_async(0);
-                    flex_redmule_trigger_wait(0);
+                    flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET);
+                    flex_redmule_wait();
                 }
                 flex_intra_cluster_sync();//Cluster barrier
 

@@ -25,7 +25,7 @@ class FlexClusterArch:
         self.num_cluster_y           = 4
         self.num_core_per_cluster    = 3
 
-        self.cluster_tcdm_bank_width = 8
+        self.cluster_tcdm_bank_width = 64
         self.cluster_tcdm_bank_nb    = 64
 
         self.cluster_tcdm_base       = 0x00000000

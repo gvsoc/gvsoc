@@ -75,7 +75,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         insn_base           =   arch.instruction_mem_base,
                                         insn_size           =   arch.instruction_mem_size,
                                         nb_tcdm_banks       =   arch.cluster_tcdm_bank_nb,
-                                        tcdm_bank_width     =   arch.cluster_tcdm_bank_width,
+                                        tcdm_bank_width     =   arch.cluster_tcdm_bank_width/8,
                                         redmule_ce_height   =   arch.redmule_ce_height,
                                         redmule_ce_width    =   arch.redmule_ce_width,
                                         redmule_ce_pipe     =   arch.redmule_ce_pipe,

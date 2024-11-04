@@ -117,9 +117,8 @@ clean_dramsys_preparation:
 	rm -rf third_party
 
 update:
-	rm -rf soft_hier/flex_cluster
-	cp -rf pulp/pulp/chips/flex_cluster/ soft_hier/flex_cluster
 	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
+	cd core && git add models/cpu && git diff --cached > ../soft_hier/gvsoc_core.patch
 
 config:
 	rm -rf pulp/pulp/chips/flex_cluster

@@ -191,11 +191,11 @@ class ClusterUnit(gvsoc.systree.Component):
         if xfrep:
             fpu_sequencers = []
         for core_id in range(0, arch.nb_core):
-            cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdvca',
+            cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
                 core_id=core_id, htif=False))
 
-            fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdvca',
+            fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
                 core_id=core_id, htif=False))
             if xfrep:
@@ -304,6 +304,7 @@ class ClusterUnit(gvsoc.systree.Component):
                 size=arch.tcdm.area.size, rm_base=True)
             cores_ico[core_id].o_MAP(narrow_axi.i_INPUT())
             cores[core_id].o_FETCH(instr_router.i_INPUT())
+            cores[core_id].o_REDMULE(redmule_list[0].i_CORE_ACC())
 
         for core_id in range(0, arch.nb_core):
             fp_cores[core_id].o_DATA( cores_ico[core_id].i_INPUT() )

@@ -2,7 +2,6 @@
 #define _GEMM_SYSTOLIC_WISE_H_
 
 #include <math.h>
-#include "kernels/common/common_tiling.h"
 #include "snrt.h"
 #include "flex_runtime.h"
 #include "flex_redmule.h"
@@ -131,8 +130,8 @@ void gemm_systolic_wise_redmule(GemmSystolicInfo info, uint32_t iter){
         uint32_t sub_iter = eff_iter%(info.XW_tile_length + 1);
         if (sub_iter != 0)
         {
-            flex_redmule_trigger_async(0);
-            flex_redmule_trigger_wait(0);
+            flex_redmule_trigger(0, 0, 0);
+            flex_redmule_wait();
         }
     }
 }
@@ -148,9 +147,7 @@ void gemm_systolic_wise(
     //Initialize RedMule Paramters
     if (flex_is_first_core())
     {
-        flex_redmule_set_M(0, info.tile_dimension_M);
-        flex_redmule_set_N(0, info.tile_dimension_N);
-        flex_redmule_set_K(0, info.tile_dimension_K);
+        flex_redmule_config(info.tile_dimension_M, info.tile_dimension_N, info.tile_dimension_K);
         if (CID == 0)
         {
             flex_log(info.total_iter);

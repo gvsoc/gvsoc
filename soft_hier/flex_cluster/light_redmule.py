@@ -52,5 +52,8 @@ class LightRedmule(gvsoc.systree.Component):
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'input', signature='io')
 
+    def i_CORE_ACC(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'core_acc', signature='io')
+
     def o_TCDM(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('tcdm', itf, signature='io')

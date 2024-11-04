@@ -85,3 +85,107 @@ index 300ef51..05cc215 100644
 +    int64_t num_inflight_transfer;
 +    int64_t total_idma_used_time;
  };
+diff --git a/pulp/snitch/sequencer.cpp b/pulp/snitch/sequencer.cpp
+index 673529f..080f26f 100644
+--- a/pulp/snitch/sequencer.cpp
++++ b/pulp/snitch/sequencer.cpp
+@@ -21,7 +21,7 @@
+  */
+ 
+ // Temporary workaround to let this component include ISS headers
+-#include <../../../../isa_snitch_rv32imfdvca.hpp>
++#include <../../../../isa_snitch_rv32imfdva.hpp>
+ 
+ #include <vp/vp.hpp>
+ #include <vp/itf/io.hpp>
+diff --git a/pulp/snitch/snitch_core.py b/pulp/snitch/snitch_core.py
+index 0bda5e4..b00ea87 100644
+--- a/pulp/snitch/snitch_core.py
++++ b/pulp/snitch/snitch_core.py
+@@ -86,7 +86,7 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+     def __init__(self,
+             parent,
+             name,
+-            isa: str='rv32imafdc',
++            isa: str='rv32imafd',
+             misa: int=None,
+             binaries: list=[],
+             fetch_enable: bool=False,
+@@ -99,7 +99,7 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+ 
+         if isa_instances.get(isa) is None:
+             isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa("snitch_" + isa, isa,
+-                extensions=[ Rv32ssr(), Rv32frep(), Xdma(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux() ] )
++                extensions=[ Rv32ssr(), Rv32frep(), Xdma(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux(), Rv32redmule() ] )
+             add_latencies(isa_instance)
+             isa_instances[isa] = isa_instance
+ 
+@@ -150,13 +150,16 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+     def o_BARRIER_REQ(self, itf: gvsoc.systree.SlaveItf):
+         self.itf_bind('barrier_req', itf, signature='wire<bool>')
+ 
++    def o_REDMULE(self, itf: gvsoc.systree.SlaveItf):
++        self.itf_bind('redmule_itf', itf, signature='io')
++
+ 
+ class SnitchBare(cpu.iss.riscv.RiscvCommon):
+ 
+     def __init__(self,
+             parent,
+             name,
+-            isa: str='rv32imafdc',
++            isa: str='rv32imafd',
+             misa: int=None,
+             binaries: list=[],
+             fetch_enable: bool=False,
+@@ -197,7 +200,7 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+     def __init__(self,
+             parent,
+             name,
+-            isa: str='rv32imafdc',
++            isa: str='rv32imafd',
+             misa: int=None,
+             binaries: list=[],
+             fetch_enable: bool=False,
+@@ -209,7 +212,7 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+ 
+ 
+         isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa("snitch_fp_ss_" + isa, isa,
+-            extensions=[ Rv32ssr(), Rv32frep(), Xdma(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux() ] )
++            extensions=[ Rv32ssr(), Rv32frep(), Xdma(), Xf16(), Xf16alt(), Xf8(), Xfvec(), Xfaux(), Rv32redmule() ] )
+ 
+         add_latencies(isa_instance)
+ 
+@@ -266,7 +269,7 @@ class Spatz(cpu.iss.riscv.RiscvCommon):
+     def __init__(self,
+             parent,
+             name,
+-            isa: str='rv32imafdc',
++            isa: str='rv32imafd',
+             misa: int=None,
+             binaries: list=[],
+             fetch_enable: bool=False,
+diff --git a/pulp/snitch/snitch_isa.py b/pulp/snitch/snitch_isa.py
+index 0f1fea3..3f5a975 100644
+--- a/pulp/snitch/snitch_isa.py
++++ b/pulp/snitch/snitch_isa.py
+@@ -100,3 +100,19 @@ class Rv32ssr(IsaSubset):
+             Instr('scfgr', Format_SCFGR, '0000000----- 00001 001 ---- -0101011', tags=["ssr", 'nseq', 'fp_op']),
+             Instr('scfgw', Format_SCFGW, '0000000----- ----- 010 0000 00101011', tags=["ssr", 'nseq', 'fp_op']),
+         ])
++
++Format_MARITH = [
++    InReg (0, Range(15, 5)),
++    InReg (1, Range(20, 5)),
++    InReg (2, Range(27, 5)),
++    UnsignedImm(0, Range(7, 8)),
++]
++
++
++class Rv32redmule(IsaSubset):
++
++    def __init__(self):
++        super().__init__(name='redmule', instrs=[
++            Instr('mcnfig', Format_R     ,'0000000 ----- ----- 000 00000 0001010'),
++            Instr('marith', Format_MARITH,'-----00 ----- ----- --- ----- 0101010'),
++        ])
