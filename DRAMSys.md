@@ -74,10 +74,10 @@ Then You can freely develop your own model, instance multiple DRAM models and co
 
 There are a lot of on-developing GVSoC branchs for different extensions. To enbale GVSoC+DRAMsys co-simulations on those branches, there are following steps to follow:
 
-- copy folder `add_dramsyslib_patches`
+- copy folder `soft_hier`
 - copy `dramsys_pushbutton_ETHenv.sh` and `dramsys_pushbutton.sh`
 - Merge the `## Make Targets for DRAMSys Integration ##` part in Makefile
 - Merge the `## Envirment Parameters for DRAMSys Integration ##` part in `sourceme.sh`
 - Try to run `make drmasys_apply_patch`
-	- if you encounter any errors, please try modify `core` & `pulp` submodules accroding to `add_dramsyslib_patches/gvsoc_core.patch` and `add_dramsyslib_patches/gvsoc_pulp.patch`, and generate new patches replacing the old one in `add_dramsyslib_patches`
+	- if you encounter any errors, please try modify `core` & `pulp` submodules accroding to `soft_hier/gvsoc_core.patch` and `soft_hier/gvsoc_pulp.patch`, and generate new patches replacing the old one in `soft_hier`
 - After all setps above, you can run `source dramsys_pushbutton_ETHenv.sh` or `source dramsys_pushbutton.sh` to build, run, and test the dramsys-integrated GVSoC on your branch.

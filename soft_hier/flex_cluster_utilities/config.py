@@ -2,7 +2,7 @@ import re
 
 # Read the input Python file
 input_file = 'pulp/pulp/chips/flex_cluster/flex_cluster_arch.py'
-output_file = 'add_dramsyslib_patches/flex_cluster_sdk/test/include/flex_cluster_arch.h'
+output_file = 'soft_hier/flex_cluster_sdk/test/include/flex_cluster_arch.h'
 
 # Initialize a dictionary to store the class attributes and their values
 attributes = {}

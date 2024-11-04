@@ -48,8 +48,8 @@ int main() {
     printf("use function --- \n");
 
     // Use the function from the dynamic library
-    int dram_id = add_dram("add_dramsyslib_patches/dramsys_configs", "add_dramsyslib_patches/dramsys_configs/hbm2-example.json");
-    int dram_id2 = add_dram("add_dramsyslib_patches/dramsys_configs", "add_dramsyslib_patches/dramsys_configs/hbm2-example.json");
+    int dram_id = add_dram("soft_hier/dramsys_configs", "soft_hier/dramsys_configs/hbm2-example.json");
+    int dram_id2 = add_dram("soft_hier/dramsys_configs", "soft_hier/dramsys_configs/hbm2-example.json");
     run_ns(1000);
     printf("get dram id: %d\n", dram_id);
 

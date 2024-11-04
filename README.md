@@ -81,11 +81,11 @@ Follow these steps to set up the SoftHier simulation environment:
 
 ## SoftHier Simulation Tutorial
 
-All SoftHier model source code can be found in the `add_dramsyslib_patches/flex_cluster/` directory. The software stack is located in the `add_dramsyslib_patches/flex_cluster_sdk/test` directory.
+All SoftHier model source code can be found in the `soft_hier/flex_cluster/` directory. The software stack is located in the `soft_hier/flex_cluster_sdk/test` directory.
 
 ### SoftHier Architecture Configuration
 
-The architecture configuration is managed through the Python file `add_dramsyslib_patches/flex_cluster/flex_cluster_arch.py`, which includes parameters such as:
+The architecture configuration is managed through the Python file `soft_hier/flex_cluster/flex_cluster_arch.py`, which includes parameters such as:
 
 - **Cluster Configuration**:
   - Number of clusters in the mesh (X and Y dimensions)
@@ -180,7 +180,7 @@ class FlexClusterArch:
 
 ### SoftHier Software
 
-The entry point for programs on the SoftHier architecture is located in the file `add_dramsyslib_patches/flex_cluster_sdk/test/src/test.c`. By default, it runs an example of GEMM (General Matrix Multiply) using one cluster.
+The entry point for programs on the SoftHier architecture is located in the file `soft_hier/flex_cluster_sdk/test/src/test.c`. By default, it runs an example of GEMM (General Matrix Multiply) using one cluster.
 
 ```C
 #include "flex_runtime.h"
@@ -209,7 +209,7 @@ int main()
 	return 0;
 }
 ```
-The function of example_one_cluster_gemm is defined in file `add_dramsyslib_patches/flex_cluster_sdk/test/include/examples/example_one_cluster_gemm.h`. The code demonstrates how to:
+The function of example_one_cluster_gemm is defined in file `soft_hier/flex_cluster_sdk/test/include/examples/example_one_cluster_gemm.h`. The code demonstrates how to:
 
 1. Use DMA to transfer data between HBM and the cluster.
 2. Use RedMule to accelerate GEMM operations.
