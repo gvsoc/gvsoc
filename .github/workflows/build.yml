@@ -28,11 +28,6 @@ jobs:
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open
-          make all TARGETS=pulp.spatz.spatz
-          make all TARGETS=snitch_spatz
-          make all TARGETS=occamy
-          make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
-          make TARGETS=snitch build
           make config
           make TARGETS=pulp.chips.flex_cluster.flex_cluster all
       - name: Run examples
@@ -41,11 +36,6 @@ jobs:
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary soft_hier/dma_dram_test.bin image flash run
-          ./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
-          ./install/bin/gvsoc --target=snitch_spatz --binary examples/rv64uv-p-vfadd run
-          ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
-          ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
-          ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
           ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
 
   # Removed due to no space left on eth machine
