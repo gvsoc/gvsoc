@@ -1711,9 +1711,9 @@ we exercise the various states and voltages:
         printf("\n\n");
     }
 
-The simulation must be launcher with option *--vcd*:
+The simulation must be launcher with option *--power* to enable power modeling:
 
-    make all run runner_args="--vcd"
+    make all run runner_args="--power"
 
 This should dump the average power in the terminal: ::
 
@@ -1751,7 +1751,11 @@ This should dump the average power in the terminal: ::
 
 A more detailed power report has also been generated in *build/power_report.csv*.
 
-GTKwave can also be used to visualize the power consumption. Each level in our system architecture has
+GTKwave can also be used to visualize the power consumption. For that VCD traces must be enabled:
+
+    make all run runner_args="--power --vcd --event=.*"
+
+Each level in our system architecture has
 a power VCD trace which can be displayed with analog step data format:
 
 .. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd.png
