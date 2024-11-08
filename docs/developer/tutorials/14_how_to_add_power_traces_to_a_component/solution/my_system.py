@@ -38,6 +38,65 @@ class Soc(gvsoc.systree.Component):
         # the global address to the requests address so that the memory only gets a local offset.
         ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True)
 
+        mem.add_properties({
+            "background": {
+                "dynamic": {
+                    "type": "linear",
+                    "unit": "W",
+
+                    "values": {
+                        "25": {
+                            "1.2": {
+                                "any": "0.0001"
+                            }
+                        }
+                    }
+                },
+                "leakage": {
+                    "type": "linear",
+                    "unit": "W",
+
+                    "values": {
+                        "25": {
+                            "1.2": {
+                                "any": "0.000001"
+                            }
+                        }
+                    }
+                }
+            },
+            "read_32": {
+                "dynamic": {
+                    "type": "linear",
+                    "unit": "pJ",
+
+                    "values": {
+                        "25": {
+                            "1.2": {
+                                "any": "1.5"
+                            }
+                        }
+                    }
+                }
+            },
+            "write_32": {
+                "dynamic": {
+                    "type": "linear",
+                    "unit": "pJ",
+
+                    "values": {
+                        "25": {
+                            "1.2": {
+                                "any": "2.5"
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+
+
         # Instantiates the main core and connect fetch and data to the interconnect
         host = cpu.iss.riscv.Riscv(self, 'host', isa='rv64imafdc')
         host.o_FETCH     ( ico.i_INPUT     ())
@@ -75,4 +134,3 @@ class Target(gvsoc.runner.Target):
     def __init__(self, parser, options):
         super(Target, self).__init__(parser, options,
             model=Rv64, description="RV64 virtual board")
-

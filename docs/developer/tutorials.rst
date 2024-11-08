@@ -1760,6 +1760,95 @@ a power VCD trace which can be displayed with analog step data format:
 
 .. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd.png
 
+Some components already contain power models, and just need to be given some power numbers in order
+to contribute to the power consumption.
+
+For example, the memory model used in our system as the main memory can be given power numbers by
+giving them as component properties in the system generator:
+
+.. code-block:: python
+
+    # Main memory
+    mem = memory.memory.Memory(self, 'mem', size=0x00100000)
+    # The memory needs to be connected with a mpping. The rm_base is used to substract
+    # the global address to the requests address so that the memory only gets a local offset.
+    ico.o_MAP(mem.i_INPUT(), 'mem', base=0x00000000, size=0x00100000, rm_base=True)
+
+    mem.add_properties({
+        "background": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "W",
+
+                "values": {
+                    "25": {
+                        "1.2": {
+                            "any": "0.0001"
+                        }
+                    }
+                }
+            },
+            "leakage": {
+                "type": "linear",
+                "unit": "W",
+
+                "values": {
+                    "25": {
+                        "1.2": {
+                            "any": "0.000001"
+                        }
+                    }
+                }
+            }
+        },
+        "read_32": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "pJ",
+
+                "values": {
+                    "25": {
+                        "1.2": {
+                            "any": "1.5"
+                        }
+                    }
+                }
+            }
+        },
+        "write_32": {
+            "dynamic": {
+                "type": "linear",
+                "unit": "pJ",
+
+                "values": {
+                    "25": {
+                        "1.2": {
+                            "any": "2.5"
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+This model is able to first account background power which is the part of the power consumed
+whatever the memory is doing. It contains leakage power, which is accounted when memory is on,
+and dynamic power, accounted when memory is clocked, to account some toggling power even when
+the memory is in idle.
+Then it accounts on top of that some power for the memory accesses, expressed as energy, as a
+quantum of energy will be accounted at each access. Different energies have to be specified
+according to the memory access type, read or write, and access size.
+
+Once these numbers are provided, the power report should now include some consumption for the
+memory:
+
+    /soc/mem/power_trace; 0.000100000000; 0.000001000000; 0.000101000000; 1.000000
+
+This power consumption is also visible through small spikes in the VCD traces:
+
+.. image:: tutorials/14_how_to_add_power_traces_to_a_component/power_vcd_with_mem.png
+
+
 
 15 - How to build a multi-chip system
 .....................................
