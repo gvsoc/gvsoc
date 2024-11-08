@@ -106,43 +106,26 @@ uint32_t flex_get_barrier_amo_value(){
 }
 
 uint32_t flex_get_barrier_num_cluster(){
-    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+8;
-    return *amo_reg;
+    uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+8;
+    return *info_reg;
 }
 
 uint32_t flex_get_barrier_num_cluster_x(){
-    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+12;
-    return *amo_reg;
+    uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+12;
+    return *info_reg;
 }
 
 uint32_t flex_get_barrier_num_cluster_y(){
-    uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+16;
-    return *amo_reg;
+    uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+16;
+    return *info_reg;
 }
 
 void flex_reset_barrier(uint32_t* barrier){
-    //Note: the floonoc model can not forward atomic correctly, here
-    //      we use a specific memory to do synchronization:
-    //          when read  x    => return x & x=x+1
-    //          when write x    => x = 0
     *barrier = 0;
 }
 
 uint32_t flex_amo_fetch_add(uint32_t* barrier){
-    //Note: the floonoc model can not forward atomic correctly, here
-    //      we use a specific memory to do synchronization:
-    //          when read  x    => return x & x=x+1
-    //          when write x    => x = 0
-    return (*barrier);
-}
-
-void flex_amo_add(uint32_t* barrier){
-    //Note: the floonoc model can not forward atomic correctly, here
-    //      we use a specific memory to do synchronization:
-    //      location must >= ARCH_SYNC_SPECIAL_MEM
-    //          when write x 0  => x = 0
-    //          when write x m  => x = x + 1
-    *barrier = 1;
+    return __atomic_fetch_add(barrier, flex_get_barrier_amo_value(), __ATOMIC_RELAXED);
 }
 
 void flex_intra_cluster_sync(){
@@ -236,122 +219,6 @@ void flex_global_barrier_xy(){
             }
         }
         *cluster_reg = 1;
-    }
-
-    snrt_cluster_hw_barrier();
-}
-
-void flex_barrier_neighbor_init(){
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
-
-    if (flex_is_dm_core()){
-        if (flex_get_cluster_id() == 0)
-        {
-            for (int x = 0; x < ARCH_NUM_CLUSTER_X; ++x)
-            {
-                for (int y = 0; y < ARCH_NUM_CLUSTER_Y; ++y)
-                {
-                    volatile uint32_t * barrier_west    = ARCH_SYNC_BASE+(cluster_index(x,y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+0;
-                    volatile uint32_t * barrier_north   = ARCH_SYNC_BASE+(cluster_index(x,y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+4;
-                    volatile uint32_t * barrier_east    = ARCH_SYNC_BASE+(cluster_index(x,y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+8;
-                    volatile uint32_t * barrier_south   = ARCH_SYNC_BASE+(cluster_index(x,y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+12;
-                    flex_reset_barrier(barrier_west);
-                    flex_reset_barrier(barrier_north);
-                    flex_reset_barrier(barrier_east);
-                    flex_reset_barrier(barrier_south);
-                }
-            }
-            *wakeup_reg = 1;
-        }
-        *cluster_reg = 1;
-    }
-
-    snrt_cluster_hw_barrier();
-}
-
-void flex_neighbor_barrier(){
-
-    snrt_cluster_hw_barrier();
-
-    if (flex_is_dm_core()){
-
-        uint32_t cluster_id = flex_get_cluster_id();
-        FlexPosition pos = get_pos(cluster_id);
-        volatile uint32_t * west_neighbor   = ARCH_SYNC_BASE+(cluster_index(pos.x - 1,pos.y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+0;
-        volatile uint32_t * north_neighbor  = ARCH_SYNC_BASE+(cluster_index(pos.x,pos.y + 1)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+4;
-        volatile uint32_t * east_neighbor   = ARCH_SYNC_BASE+(cluster_index(pos.x + 1,pos.y)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+8;
-        volatile uint32_t * south_neighbor  = ARCH_SYNC_BASE+(cluster_index(pos.x,pos.y - 1)*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+12;
-        volatile uint32_t * check_west      = ARCH_SYNC_BASE+(cluster_id*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+8;
-        volatile uint32_t * check_north     = ARCH_SYNC_BASE+(cluster_id*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+12;
-        volatile uint32_t * check_east      = ARCH_SYNC_BASE+(cluster_id*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+0;
-        volatile uint32_t * check_south     = ARCH_SYNC_BASE+(cluster_id*ARCH_SYNC_INTERLEAVE)+ARCH_SYNC_SPECIAL_MEM+4;
-
-        /********************
-        *   set barrier     *
-        ********************/
-
-        //west neighbor
-        if (pos.x != 0)
-        {
-            while(*west_neighbor != 0);
-            flex_amo_add(west_neighbor);
-        }
-
-        //north neighbor
-        if (pos.y != ARCH_NUM_CLUSTER_Y - 1)
-        {
-            while(*north_neighbor != 0);
-            flex_amo_add(north_neighbor);
-        }
-
-        //east neighbor
-        if (pos.x != ARCH_NUM_CLUSTER_X - 1)
-        {
-            while(*east_neighbor != 0);
-            flex_amo_add(east_neighbor);
-        }
-
-        //south neighbor
-        if (pos.y != 0)
-        {
-            while(*south_neighbor != 0);
-            flex_amo_add(south_neighbor);
-        }
-
-        /********************
-        *  release barrier  *
-        ********************/
-
-        //west
-        if (pos.x != 0)
-        {
-            while(*check_west == 0);
-            flex_reset_barrier(check_west);
-        }
-
-        //north
-        if (pos.y != ARCH_NUM_CLUSTER_Y - 1)
-        {
-            
-            while(*check_north == 0);
-            flex_reset_barrier(check_north);
-        }
-
-        //east
-        if (pos.x != ARCH_NUM_CLUSTER_X - 1)
-        {
-            while(*check_east == 0);
-            flex_reset_barrier(check_east);
-        }
-
-        //south
-        if (pos.y != 0)
-        {
-            while(*check_south == 0);
-            flex_reset_barrier(check_south);
-        }
-
     }
 
     snrt_cluster_hw_barrier();

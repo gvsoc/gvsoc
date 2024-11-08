@@ -100,7 +100,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Synchronization bus
         sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
-                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters)
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, atomics=1)
 
         #HBM channels
         hbm_list_west = []

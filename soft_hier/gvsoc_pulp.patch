@@ -1,3 +1,77 @@
+diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
+index 668a863..0d77e2d 100644
+--- a/pulp/floonoc/floonoc.cpp
++++ b/pulp/floonoc/floonoc.cpp
+@@ -36,6 +36,7 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+     this->dim_x = get_js_config()->get_int("dim_x");
+     this->dim_y = get_js_config()->get_int("dim_y");
+     this->router_input_queue_size = get_js_config()->get_int("router_input_queue_size");
++    this->atomics = get_js_config()->get_int("atomics");
+ 
+     // Reserve the array for the target. We may have one target at each node.
+     this->targets.resize(this->dim_x * this->dim_y);
+diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
+index 644696a..0a087a5 100644
+--- a/pulp/floonoc/floonoc.hpp
++++ b/pulp/floonoc/floonoc.hpp
+@@ -108,6 +108,9 @@ public:
+     // this width so that the bandwidth corresponds to the width.
+     uint64_t width;
+ 
++    // Whether Support Atomics
++    bool atomics; 
++
+ private:
+     // Callback called when a target request is asynchronously granted after a denied error was
+     // reported
+diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
+index 2aa365c..bb3e393 100644
+--- a/pulp/floonoc/floonoc.py
++++ b/pulp/floonoc/floonoc.py
+@@ -47,7 +47,7 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+         before the source output queue is stalled.
+     """
+     def __init__(self, parent: gvsoc.systree.Component, name, width: int,
+-            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
++            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0):
+         super(FlooNoc2dMesh, self).__init__(parent, name)
+ 
+         self.add_sources([
+@@ -64,6 +64,7 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+         self.add_property('dim_x', dim_x)
+         self.add_property('dim_y', dim_y)
+         self.add_property('router_input_queue_size', router_input_queue_size)
++        self.add_property('atomics', atomics)
+ 
+     def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
+         self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
+diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
+index 4124c25..f0621e1 100644
+--- a/pulp/floonoc/floonoc_network_interface.cpp
++++ b/pulp/floonoc/floonoc_network_interface.cpp
+@@ -130,6 +130,11 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         req->set_size(size);
+         req->set_data(_this->pending_burst_data);
+         req->set_is_write(burst->get_is_write());
++        if (_this->noc->atomics)
++        {
++            req->set_opcode(burst->get_opcode());
++            req->set_second_data(burst->get_second_data());
++        }
+ 
+         // Get the target entry corresponding to the current base
+         Entry *entry = _this->noc->get_entry(base, size);
+@@ -174,8 +179,8 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+ 
+             // And forward to the first router which is at the same position as the network
+             // interface
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, destination: (%d, %d))\n",
+-                req, base, size, entry->x, entry->y);
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, op_code: %0d, destination: (%d, %d))\n",
++                req, base, size, req->get_opcode(), entry->x, entry->y);
+ 
+             // Noe that the router may not grant tje request if its input queue is full.
+             // In this case we must stall the network interface
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
 index 50cb4ac..bc110bf 100644
 --- a/pulp/floonoc/floonoc_router.cpp

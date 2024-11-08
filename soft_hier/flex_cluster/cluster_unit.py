@@ -23,7 +23,6 @@ from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.chips.flex_cluster.light_redmule import LightRedmule
 from pulp.chips.flex_cluster.hwpe_interleaver import HWPEInterleaver
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
-from pulp.chips.flex_cluster.flex_sync_mem import FlexSyncMem
 from pulp.snitch.zero_mem import ZeroMem
 from elftools.elf.elffile import *
 from pulp.idma.snitch_dma import SnitchDma
@@ -122,7 +121,7 @@ class ClusterTcdm(gvsoc.systree.Component):
         hwpe_interleaver = HWPEInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
-        tcdm_sync_mem = FlexSyncMem(self, 'sync_mem', size=arch.sync_size, special_mem_base=arch.sync_special_mem)
+        tcdm_sync_mem = memory.Memory(self, 'sync_mem', size=arch.sync_size, atomics=True, width_log2=int(math.log2(arch.bank_width)))
 
         for i in range(0, nb_banks):
             self.bind(interleaver, 'out_%d' % i, banks[i], 'input')
