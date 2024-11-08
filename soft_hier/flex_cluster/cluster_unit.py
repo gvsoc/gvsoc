@@ -58,8 +58,7 @@ class ClusterArch:
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
-                        data_bandwidth,     num_redmule,
-                        auto_fetch=False,   boot_addr=0x8000_0650):
+                        data_bandwidth,     auto_fetch=False,   boot_addr=0x8000_0650):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base
@@ -74,7 +73,6 @@ class ClusterArch:
         self.insn_area              = Area(insn_base, insn_size)
 
         #RedMule
-        self.num_redmule            = num_redmule
         self.redmule_ce_height      = redmule_ce_height
         self.redmule_ce_width       = redmule_ce_width
         self.redmule_ce_pipe        = redmule_ce_pipe
@@ -204,19 +202,14 @@ class ClusterUnit(gvsoc.systree.Component):
             cores_ico.append(router.Router(self, f'pe{core_id}_ico', bandwidth=arch.tcdm.bank_width))
 
         # RedMule
-        redmule_list = []
-        for redmule_id in range(0, arch.num_redmule):
-            redmule = LightRedmule(self, f'redmule_{redmule_id}',
-                                        redmule_id          = redmule_id,
-                                        tcdm_bank_width     = arch.tcdm.bank_width,
-                                        tcdm_bank_number    = (arch.tcdm.nb_tcdm_banks / arch.num_redmule),
-                                        elem_size           = arch.redmule_elem_size,
-                                        ce_height           = arch.redmule_ce_height,
-                                        ce_width            = arch.redmule_ce_width,
-                                        ce_pipe             = arch.redmule_ce_pipe,
-                                        queue_depth         = arch.redmule_queue_depth)
-            redmule_list.append(redmule)
-            pass
+        redmule = LightRedmule(self, f'redmule',
+                                    tcdm_bank_width     = arch.tcdm.bank_width,
+                                    tcdm_bank_number    = arch.tcdm.nb_tcdm_banks,
+                                    elem_size           = arch.redmule_elem_size,
+                                    ce_height           = arch.redmule_ce_height,
+                                    ce_width            = arch.redmule_ce_width,
+                                    ce_pipe             = arch.redmule_ce_pipe,
+                                    queue_depth         = arch.redmule_queue_depth)
 
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers',
@@ -225,9 +218,6 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
-            tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
-
-        idma2 = SnitchDma(self, 'idma2', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
             tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
 
         #stack memory
@@ -261,9 +251,7 @@ class ClusterUnit(gvsoc.systree.Component):
         narrow_axi.o_MAP(cluster_registers.i_INPUT(), base=arch.reg_area.base, size=arch.reg_area.size, rm_base=True)
 
         #binding to redmule
-        for redmule_id in range(0, arch.num_redmule):
-            narrow_axi.o_MAP(redmule_list[redmule_id].i_INPUT(), base=arch.redmule_area.base+redmule_id*arch.redmule_area.size, size=arch.redmule_area.size, rm_base=True)
-            pass
+        narrow_axi.o_MAP(redmule.i_INPUT(), base=arch.redmule_area.base, size=arch.redmule_area.size, rm_base=True)
 
         #binding back to instruction memory if access needs
         narrow_axi.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
@@ -274,10 +262,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
 
         #RedMule to TCDM
-        for redmule_id in range(0, arch.num_redmule):
-            redmule_list[redmule_id].o_TCDM(tcdm.i_HWPE_INPUT())
-            pass
-
+        redmule.o_TCDM(tcdm.i_HWPE_INPUT())
 
         # Wire router for DMA and instruction caches
         self.o_WIDE_INPUT(wide_axi_goto_tcdm.i_INPUT())
@@ -288,9 +273,6 @@ class ClusterUnit(gvsoc.systree.Component):
         # iDMA connection
         cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
         idma.o_OFFLOAD_GRANT(cores[arch.nb_core-1].i_OFFLOAD_GRANT())
-
-        cores[arch.nb_core-2].o_OFFLOAD(idma2.i_OFFLOAD())
-        idma2.o_OFFLOAD_GRANT(cores[arch.nb_core-2].i_OFFLOAD_GRANT())
 
         # Cores
         for core_id in range(0, arch.nb_core):
@@ -304,7 +286,7 @@ class ClusterUnit(gvsoc.systree.Component):
                 size=arch.tcdm.area.size, rm_base=True)
             cores_ico[core_id].o_MAP(narrow_axi.i_INPUT())
             cores[core_id].o_FETCH(instr_router.i_INPUT())
-            cores[core_id].o_REDMULE(redmule_list[0].i_CORE_ACC())
+            cores[core_id].o_REDMULE(redmule.i_CORE_ACC())
 
         for core_id in range(0, arch.nb_core):
             fp_cores[core_id].o_DATA( cores_ico[core_id].i_INPUT() )
@@ -341,9 +323,6 @@ class ClusterUnit(gvsoc.systree.Component):
         # Cluster DMA
         idma.o_AXI(wide_axi_from_idma.i_INPUT())
         idma.o_TCDM(tcdm.i_DMA_INPUT())
-
-        idma2.o_AXI(wide_axi_from_idma.i_INPUT())
-        idma2.o_TCDM(tcdm.i_DMA_INPUT())
 
     def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'fetchen', signature='wire<bool>')

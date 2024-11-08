@@ -51,10 +51,10 @@ index 354a1e51..c640eeb8 100644
  
 diff --git a/models/cpu/iss/include/isa/redmule.hpp b/models/cpu/iss/include/isa/redmule.hpp
 new file mode 100644
-index 00000000..2451c68a
+index 00000000..fde9d634
 --- /dev/null
 +++ b/models/cpu/iss/include/isa/redmule.hpp
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,63 @@
 +/*
 + * Copyright (C) 2020 GreenWaves Technologies, SAS, ETH Zurich and
 + *                    University of Bologna
@@ -103,10 +103,12 @@ index 00000000..2451c68a
 +    uint32_t x_addr = REG_GET(0);
 +    uint32_t w_addr = REG_GET(1);
 +    uint32_t y_addr = REG_GET(2);
++    uint32_t config = UIM_GET(0);
 +
 +    iss->redmule_xwy_reg[0] = x_addr;
 +    iss->redmule_xwy_reg[1] = w_addr;
 +    iss->redmule_xwy_reg[2] = y_addr;
++    iss->redmule_xwy_reg[3] = config;
 +
 +    iss->redmule_req->init();
 +    iss->redmule_req->set_addr(4);

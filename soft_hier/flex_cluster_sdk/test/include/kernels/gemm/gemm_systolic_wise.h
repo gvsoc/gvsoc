@@ -130,7 +130,7 @@ void gemm_systolic_wise_redmule(GemmSystolicInfo info, uint32_t iter){
         uint32_t sub_iter = eff_iter%(info.XW_tile_length + 1);
         if (sub_iter != 0)
         {
-            flex_redmule_trigger(0, 0, 0);
+            flex_redmule_trigger(0, 0, 0, REDMULE_INT_16);
             flex_redmule_wait();
         }
     }

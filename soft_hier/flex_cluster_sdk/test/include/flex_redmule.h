@@ -3,6 +3,14 @@
 #include "snrt.h"
 #include "flex_cluster_arch.h"
 
+typedef enum {
+    REDMULE_NONE_16,
+    REDMULE_UINT_16,
+    REDMULE_INT_16,
+    REDMULE_FP_16
+} redmule_compute_format_t;
+
+
 void flex_redmule_config(uint16_t m_size, uint16_t n_size, uint16_t k_size){
     flex_push_stack();
     uint32_t cfg_reg0 = ((k_size << 16) | (m_size << 0));
@@ -28,7 +36,7 @@ void flex_redmule_config(uint16_t m_size, uint16_t n_size, uint16_t k_size){
     flex_pull_stack();
 }
 
-void flex_redmule_trigger(uint16_t x_addr, uint16_t w_addr, uint16_t y_addr){
+void flex_redmule_trigger(uint32_t x_addr, uint32_t w_addr, uint32_t y_addr, redmule_compute_format_t format){
     flex_push_stack();
     asm volatile ("addi t0, %0, 0" :: "r"(x_addr));
     asm volatile ("addi t1, %0, 0" :: "r"(w_addr));
@@ -46,16 +54,57 @@ void flex_redmule_trigger(uint16_t x_addr, uint16_t w_addr, uint16_t y_addr){
     //            (0b001     <<  7) | \     /* Data format                  */
     //            (0b0101010 <<  0)   \n"); /* OpCode                       */
 
-    asm volatile(
-         ".word (0b00111   << 27) | \
-                (0b00      << 25) | \
-                (0b00110   << 20) | \
-                (0b00101   << 15) | \
-                (0b0       << 14) | \
-                (0b0       << 13) | \
-                (0b001     << 10) | \
-                (0b001     <<  7) | \
-                (0b0101010 <<  0)   \n");
+    switch (format) {
+        case REDMULE_NONE_16:
+            asm volatile(
+                 ".word (0b00111   << 27) | \
+                        (0b00      << 25) | \
+                        (0b00110   << 20) | \
+                        (0b00101   << 15) | \
+                        (0b0       << 14) | \
+                        (0b0       << 13) | \
+                        (0b000     << 10) | \
+                        (0b000     <<  7) | \
+                        (0b0101010 <<  0)   \n");
+            break;
+        case REDMULE_UINT_16:
+            asm volatile(
+                 ".word (0b00111   << 27) | \
+                        (0b00      << 25) | \
+                        (0b00110   << 20) | \
+                        (0b00101   << 15) | \
+                        (0b0       << 14) | \
+                        (0b0       << 13) | \
+                        (0b000     << 10) | \
+                        (0b001     <<  7) | \
+                        (0b0101010 <<  0)   \n");
+            break;
+        case REDMULE_INT_16:
+            asm volatile(
+                 ".word (0b00111   << 27) | \
+                        (0b00      << 25) | \
+                        (0b00110   << 20) | \
+                        (0b00101   << 15) | \
+                        (0b0       << 14) | \
+                        (0b0       << 13) | \
+                        (0b000     << 10) | \
+                        (0b010     <<  7) | \
+                        (0b0101010 <<  0)   \n");
+            break;
+        case REDMULE_FP_16:
+            asm volatile(
+                 ".word (0b00111   << 27) | \
+                        (0b00      << 25) | \
+                        (0b00110   << 20) | \
+                        (0b00101   << 15) | \
+                        (0b0       << 14) | \
+                        (0b0       << 13) | \
+                        (0b000     << 10) | \
+                        (0b011     <<  7) | \
+                        (0b0101010 <<  0)   \n");
+            break;
+    }
+            
     flex_pull_stack();
 }
 

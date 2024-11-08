@@ -39,7 +39,6 @@ class FlexClusterArch:
         self.cluster_reg_size        = 0x00000200
 
         #RedMule
-        self.num_redmule_per_cluster = 1
         self.redmule_ce_height       = 128
         self.redmule_ce_width        = 32
         self.redmule_ce_pipe         = 3
