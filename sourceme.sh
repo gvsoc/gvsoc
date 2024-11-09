@@ -2,8 +2,14 @@
 ##              Check Basic Dependency Requirements                         ##
 ##############################################################################
 # Function to compare versions
+# version_ge() {
+#     printf '%s\n%s' "$2" "$1" | sort -C -V
+# }
 version_ge() {
-    printf '%s\n%s' "$2" "$1" | sort -C -V
+    # Pad version strings with zeros to handle missing minor/patch versions
+    printf -v ver1 "%03d%03d%03d" $(echo "$1" | tr '.' ' ')
+    printf -v ver2 "%03d%03d%03d" $(echo "$2" | tr '.' ' ')
+    [[ "$ver1" -ge "$ver2" ]]
 }
 
 # Required versions
