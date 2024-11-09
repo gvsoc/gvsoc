@@ -14,20 +14,20 @@ To install the required packages, run:
 sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
 ```
 
-## Toolchain Requirements
+## Toolchain and Shell Requirements
 
 GVSoC requires the following tools and versions:
 
 - **g++** and **gcc** versions >= 11.2.0
 - **cmake** version >= 3.18.1
-- **Python** version >= 3.8.3
+- **Python** version >= 3.11.3
 
-Please ensure your toolchain meets these requirements. You can set the following environment variables as an example (adjust the versions as per your setup):
+Please ensure your toolchain meets these requirements. 
+
+Also please make sure you are using the bash shell for SoftHier Simulation:
 
 ```bash
-export CXX=g++-11.2.0
-export CC=gcc-11.2.0
-export CMAKE=cmake-3.18.1
+bash
 ```
 
 ## Getting Started with SoftHier Simulation
@@ -43,18 +43,10 @@ Follow these steps to set up the SoftHier simulation environment:
    cd soft_hier_release
    ```
 
-2. **Set up the toolchain** by exporting the necessary environment variables (adjust the versions as needed):
+2. **Initialize the simulator environment** by running:
 
    ```bash
-   export CXX=g++-11.2.0
-   export CC=gcc-11.2.0
-   export CMAKE=cmake-3.18.1
-   ```
-
-3. **Initialize the simulator environment** by running:
-
-   ```bash
-   source softhier_pushbutton.sh
+   source sourceme.sh
    ```
 
 ### Build and Run the SoftHier Simulation Model

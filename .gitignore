@@ -15,3 +15,4 @@ third_party/
 *tx_uart.log
 result*
 sw_build*
+pyenv*
