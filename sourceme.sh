@@ -2,18 +2,12 @@
 ##              Check Basic Dependency Requirements                         ##
 ##############################################################################
 # Function to compare versions
-# version_ge() {
-#     printf '%s\n%s' "$2" "$1" | sort -C -V
-# }
 version_ge() {
-    # Pad version strings with zeros to handle missing minor/patch versions
-    printf -v ver1 "%03d%03d%03d" $(echo "$1" | tr '.' ' ')
-    printf -v ver2 "%03d%03d%03d" $(echo "$2" | tr '.' ' ')
-    [[ "$ver1" -ge "$ver2" ]]
+    printf '%s\n%s' "$2" "$1" | sort -C -V
 }
 
 # Required versions
-GCC_REQUIRED="11.2.0"
+GCC_REQUIRED="11.0.0"
 CMAKE_REQUIRED="3.18.1"
 PYTHON_REQUIRED="3.11.3"
 PYTHON_CMD="python3"
