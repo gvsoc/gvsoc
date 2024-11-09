@@ -10,6 +10,7 @@ version_ge() {
 GCC_REQUIRED="11.2.0"
 CMAKE_REQUIRED="3.18.1"
 PYTHON_REQUIRED="3.11.3"
+PYTHON_CMD="python3"
 
 # Check g++ and gcc versions
 if command -v g++ > /dev/null 2>&1 && command -v gcc > /dev/null 2>&1; then
@@ -39,26 +40,53 @@ else
     exit 1
 fi
 
-# Check Python version
-if command -v python > /dev/null 2>&1; then
-    PYTHON_VERSION=$(python --version | awk '{print $2}')
+# Check Python 3 version
+if command -v python3 > /dev/null 2>&1; then
+    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
     if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
-        echo "Python version is $PYTHON_VERSION (meets requirement)"
+        echo "Python3 version is $PYTHON_VERSION (meets requirement)"
     else
-        echo "Python version $PYTHON_VERSION is less than required version $PYTHON_REQUIRED"
-        exit 1
+        echo "Python3 version $PYTHON_VERSION is less than required version $PYTHON_REQUIRED"
+        echo "Checking for 'python' instead..."
+        
+        # Check Python (fallback)
+        if command -v python > /dev/null 2>&1; then
+            PYTHON_VERSION=$(python --version | awk '{print $2}')
+            if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
+                echo "Python version is $PYTHON_VERSION (meets requirement)"
+            else
+                echo "Python version $PYTHON_VERSION is also less than required version $PYTHON_REQUIRED"
+                exit 1
+            fi
+        else
+            echo "'python' is not installed either"
+            exit 1
+        fi
     fi
 else
-    echo "Python is not installed"
-    exit 1
+    echo "Python3 is not installed. Checking for 'python' instead..."
+    
+    # Check Python (fallback)
+    if command -v python > /dev/null 2>&1; then
+        PYTHON_VERSION=$(python --version | awk '{print $2}')
+        if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
+            echo "Python version is $PYTHON_VERSION (meets requirement)"
+            PYTHON_CMD="python"
+        else
+            echo "Python version $PYTHON_VERSION is less than required version $PYTHON_REQUIRED"
+            exit 1
+        fi
+    else
+        echo "'python' is not installed either"
+        exit 1
+    fi
 fi
 
-
 if [  -n "${ZSH_VERSION:-}" ]; then
-	DIR="$(readlink -f -- "${(%):-%x}")"
-	SDK_HOME=$(dirname $DIR)
+    DIR="$(readlink -f -- "${(%):-%x}")"
+    SDK_HOME=$(dirname $DIR)
 else
-	SDK_HOME="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+    SDK_HOME="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 fi
 
 ##############################################################################
@@ -69,7 +97,7 @@ export PATH=$SDK_HOME/install/bin:$PATH
 export PYTHONPATH=$SDK_HOME/install/python:$PYTHONPATH
 
 ##############################################################################
-## 				Envirment Parameters for DRAMSys Integration 				##
+##              Envirment Parameters for DRAMSys Integration                ##
 ##############################################################################
 export SYSTEMC_HOME=$SDK_HOME/third_party/systemc_install
 export LD_LIBRARY_PATH=${SYSTEMC_HOME}/lib64:$LD_LIBRARY_PATH
@@ -77,13 +105,13 @@ export LD_LIBRARY_PATH=$SDK_HOME/third_party/DRAMSys:$LD_LIBRARY_PATH
 
 
 ##############################################################################
-## 				Envirment Parameters for Tool-Chains	     				##
+##              Envirment Parameters for Tool-Chains                        ##
 ##############################################################################
 export PATH=$SDK_HOME/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin:$PATH
 
 
 ##############################################################################
-## 				Check and Setup SoftHier Simulatior Envirment  				##
+##              Check and Setup SoftHier Simulatior Envirment               ##
 ##############################################################################
 # Check if "third_party" folder exists; if not, run the preparation step
 if [ ! -d "third_party" ]; then
@@ -105,10 +133,10 @@ fi
 # Check if "pyenv_softhier" folder exists; if not, create the virtual environment
 if [ ! -d "pyenv_softhier" ]; then
     echo "Creating virtual environment 'pyenv_softhier'..."
-    python -m venv pyenv_softhier
+    ${PYTHON_CMD} -m venv pyenv_softhier
     source pyenv_softhier/bin/activate
     pip install --upgrade pip
-	pip3 install -r requirements.txt
+    pip3 install -r requirements.txt
 else
     echo "Skipping virtual environment creation as 'pyenv_softhier' folder already exists."
 fi

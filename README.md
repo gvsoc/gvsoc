@@ -67,14 +67,14 @@ Follow these steps to set up the SoftHier simulation environment:
    - `--trace`: Indicates which component's trace logs should be generated during the simulation.
 
 
-### 1. Build the Default Binary
+### Build the Default Binary
 To build the default binary from the source code in `soft_hier/flex_cluster_sdk/app_example`, run:
    ```bash
    make sw
    ```
 The generated binary `sw_build/softhier.elf` and the dump file `sw_build/softhier.dump` will be located in the `sw_build` directory.
 
-### 2. Build a Custom Binary
+### Build a Custom Binary
 To build your own binary:
 
 1. Prepare your source code in a folder with a `CMakeLists.txt` that defines the source files and include paths. For example:
