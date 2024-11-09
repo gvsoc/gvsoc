@@ -19,8 +19,7 @@ version_ge() {
 # Required versions
 GCC_REQUIRED="11.2.0"
 CMAKE_REQUIRED="3.18.1"
-PYTHON_REQUIRED="3.11.3"
-PYTHON_CMD="python3"
+PYTHON_REQUIRED="3.10.3"
 
 # Check g++ and gcc versions
 if command -v g++ > /dev/null 2>&1 && command -v gcc > /dev/null 2>&1; then
@@ -82,7 +81,6 @@ else
         PYTHON_VERSION=$(python --version | awk '{print $2}')
         if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
             echo "Python version is $PYTHON_VERSION (meets requirement)"
-            PYTHON_CMD="python"
         else
             echo "Python version $PYTHON_VERSION is less than required version $PYTHON_REQUIRED"
             exit 1
@@ -143,8 +141,14 @@ fi
 
 # Check if "pyenv_softhier" folder exists; if not, create the virtual environment
 if [ ! -d "pyenv_softhier" ]; then
-    echo "Creating virtual environment 'pyenv_softhier'..."
-    ${PYTHON_CMD} -m venv pyenv_softhier
+    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
+    if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
+        echo "Creating virtual environment 'pyenv_softhier' from python3..."
+        python3 -m venv pyenv_softhier
+    else
+        echo "Creating virtual environment 'pyenv_softhier' from python..."
+        python -m venv pyenv_softhier
+    fi
     source pyenv_softhier/bin/activate
     pip install --upgrade pip
     pip3 install -r requirements.txt
