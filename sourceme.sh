@@ -1,13 +1,23 @@
 ##############################################################################
 ##              Check Basic Dependency Requirements                         ##
 ##############################################################################
+pad_version() {
+    local version="$1"
+    # Split version by dots and count components
+    IFS='.' read -r -a parts <<< "$version"
+    while [ "${#parts[@]}" -lt 3 ]; do
+        parts+=("2")  # Append "0" to missing components
+    done
+    echo "${parts[0]}.${parts[1]}.${parts[2]}"
+}
+
 # Function to compare versions
 version_ge() {
     printf '%s\n%s' "$2" "$1" | sort -C -V
 }
 
 # Required versions
-GCC_REQUIRED="11.0.0"
+GCC_REQUIRED="11.2.0"
 CMAKE_REQUIRED="3.18.1"
 PYTHON_REQUIRED="3.11.3"
 PYTHON_CMD="python3"
@@ -15,6 +25,7 @@ PYTHON_CMD="python3"
 # Check g++ and gcc versions
 if command -v g++ > /dev/null 2>&1 && command -v gcc > /dev/null 2>&1; then
     GCC_VERSION=$(gcc -dumpversion)
+    GCC_VERSION=$(pad_version "$GCC_VERSION")
     if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
         echo "g++ and gcc version is $GCC_VERSION (meets requirement)"
     else
