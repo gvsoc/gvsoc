@@ -62,7 +62,7 @@ Follow these steps to set up the SoftHier simulation environment:
 1. **Build the SoftHier hardware model**:
 
    ```bash
-   make build_softhier_hw
+   make hw
    ```
 
 2. **Run the simulation** with an example binary:
@@ -74,14 +74,40 @@ Follow these steps to set up the SoftHier simulation environment:
    - `--binary`: Specifies the executable binary to be loaded for the SoftHier simulation.
    - `--trace`: Indicates which component's trace logs should be generated during the simulation.
 
-### Build SoftHier Executable Binary
 
-(Specific toolchain details for building SoftHier executable binaries will be provided soon.)
+### 1. Build the Default Binary
+To build the default binary from the source code in `soft_hier/flex_cluster_sdk/app_example`, run:
+   ```bash
+   make sw
+   ```
+The generated binary `sw_build/softhier.elf` and the dump file `sw_build/softhier.dump` will be located in the `sw_build` directory.
+
+### 2. Build a Custom Binary
+To build your own binary:
+
+1. Prepare your source code in a folder with a `CMakeLists.txt` that defines the source files and include paths. For example:
+   ```cmake
+   # CMakeLists.txt example
+   set(SRC_SOURCES
+       ${CMAKE_CURRENT_SOURCE_DIR}/main.c
+   )
+   
+   set(SOURCES ${SRC_SOURCES} PARENT_SCOPE)
+   set(INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
+   ```
+
+2. Run the following command, replacing `<folder/of/your/code>` with the path to your source code folder:
+   ```bash
+   app=<folder/of/your/code> make sw
+   ```
+
+This will compile the binary using the specified folder. The generated binary `sw_build/softhier.elf` and the dump file `sw_build/softhier.dump` will be located in the `sw_build` directory.
+
 
 
 ## SoftHier Simulation Tutorial
 
-All SoftHier model source code can be found in the `soft_hier/flex_cluster/` directory. The software stack is located in the `soft_hier/flex_cluster_sdk/test` directory.
+All SoftHier model source code can be found in the `soft_hier/flex_cluster/` directory. The software stack is located in the `soft_hier/flex_cluster_sdk/runtime` directory.
 
 ### SoftHier Architecture Configuration
 
@@ -93,7 +119,6 @@ The architecture configuration is managed through the Python file `soft_hier/fle
   - TCDM (L1) banks: width and number
 
 - **RedMule Configuration**:
-  - Number of RedMule cores per cluster
   - CE array size (height and width)
   - CE pipeline stages
   - Element size (in bytes) for operations
@@ -125,7 +150,7 @@ class FlexClusterArch:
         self.num_cluster_y           = 4
         self.num_core_per_cluster    = 3
 
-        self.cluster_tcdm_bank_width = 8
+        self.cluster_tcdm_bank_width = 64
         self.cluster_tcdm_bank_nb    = 64
 
         self.cluster_tcdm_base       = 0x00000000
@@ -133,13 +158,12 @@ class FlexClusterArch:
         self.cluster_tcdm_remote     = 0x30000000
 
         self.cluster_stack_base      = 0x10000000
-        self.cluster_stack_size      = 0x00020000
+        self.cluster_stack_size      = 0x00001000
 
         self.cluster_reg_base        = 0x20000000
         self.cluster_reg_size        = 0x00000200
 
         #RedMule
-        self.num_redmule_per_cluster = 1
         self.redmule_ce_height       = 128
         self.redmule_ce_width        = 32
         self.redmule_ce_pipe         = 3
@@ -156,36 +180,20 @@ class FlexClusterArch:
         self.hbm_start_base          = 0xc0000000
         self.hbm_node_interleave     = 0x00100000
         self.num_hbm_ch_per_node     = 1
-        self.hbm_placement           = [4,0,0,4]
+        self.hbm_placement           = [4,0,0,0]
 
         #NoC
         self.noc_outstanding         = 64
         self.noc_link_width          = 512
-
-        #System
-        self.instruction_mem_base    = 0x80000000
-        self.instruction_mem_size    = 0x00010000
-
-        self.soc_register_base       = 0x90000000
-        self.soc_register_size       = 0x00010000
-        self.soc_register_eoc        = 0x90000000
-        self.soc_register_wakeup     = 0x90000004
-
-        #Synchronization
-        self.sync_base               = 0x40000000
-        self.sync_interleave         = 0x00000080
-        self.sync_special_mem        = 0x00000040
-
 ```
 
 ### SoftHier Software
 
-The entry point for programs on the SoftHier architecture is located in the file `soft_hier/flex_cluster_sdk/test/src/test.c`. By default, it runs an example of GEMM (General Matrix Multiply) using one cluster.
+The entry point for programs on the SoftHier architecture is located in the file `soft_hier/flex_cluster_sdk/app_example/main.c`. By default, it runs an example of GEMM (General Matrix Multiply) using one cluster.
 
 ```C
 #include "flex_runtime.h"
-#include "kernels/gemm/gemm_systolic_wise.h"
-#include "examples/example_one_cluster_gemm.h"
+#include "example_one_cluster_gemm.h"
 #include <math.h>
 
 int main()
@@ -209,7 +217,7 @@ int main()
 	return 0;
 }
 ```
-The function of example_one_cluster_gemm is defined in file `soft_hier/flex_cluster_sdk/test/include/examples/example_one_cluster_gemm.h`. The code demonstrates how to:
+The function of example_one_cluster_gemm is defined in file `soft_hier/flex_cluster_sdk/app_example/include/example_one_cluster_gemm.h`. The code demonstrates how to:
 
 1. Use DMA to transfer data between HBM and the cluster.
 2. Use RedMule to accelerate GEMM operations.
@@ -314,7 +322,7 @@ void example_one_cluster_gemm(){
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
                             //Configure tile address in L1 and run RedMule acceleration
-                            flex_redmule_trigger(X_L1_OFFSET1, W_L1_OFFSET1, YZ_L1_OFFSET);
+                            flex_redmule_trigger(X_L1_OFFSET1, W_L1_OFFSET1, YZ_L1_OFFSET, REDMULE_INT_16);
 
                             //Wait RedMule Done
                             flex_redmule_wait();
@@ -334,7 +342,7 @@ void example_one_cluster_gemm(){
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
                             //Configure tile address in L1 and run RedMule acceleration
-                            flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET);
+                            flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_INT_16);
 
                             //Wait RedMule Done
                             flex_redmule_wait();
@@ -346,7 +354,7 @@ void example_one_cluster_gemm(){
                 //Last Computation
                 if (flex_is_first_core())
                 {
-                    flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET);
+                    flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_INT_16);
                     flex_redmule_wait();
                 }
                 flex_intra_cluster_sync();//Cluster barrier

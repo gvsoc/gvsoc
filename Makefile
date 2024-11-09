@@ -28,8 +28,6 @@ build:
 clean:
 	rm -rf build install
 
-
-
 ######################################################################
 ## 				Make Targets for DRAMSys Integration 				##
 ######################################################################
@@ -37,6 +35,10 @@ clean:
 SYSTEMC_VERSION := 2.3.3
 SYSTEMC_GIT_URL := https://github.com/accellera-official/systemc.git
 SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
+
+update:
+	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
+	cd core && git add models/cpu && git diff --cached > ../soft_hier/gvsoc_core.patch
 
 drmasys_apply_patch:
 	git submodule update --init --recursive
@@ -90,49 +92,59 @@ build-configs: core/models/memory/dramsys_configs
 core/models/memory/dramsys_configs:
 	cp -rf soft_hier/dramsys_configs core/models/memory/
 
-dramsys_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs
+build-toolchain: third_party/toolchain
 
-sw: third_party/occamy
+third_party/toolchain:
+	mkdir -p third_party/toolchain
+	cd third_party/toolchain && \
+	wget https://github.com/pulp-platform/pulp-riscv-gnu-toolchain/releases/download/v1.0.16/v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
+	tar -xvjf v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2
 
-third_party/occamy:
-	cd third_party; curl --proto '=https' --tlsv1.2 https://pulp-platform.github.io/bender/init -sSf | sh; \
-	git clone https://github.com/pulp-platform/occamy.git; \
-	cd occamy; git reset --hard ed0b98162fae196faff96a972f861a0aa4593227; \
-	git submodule update --init --recursive; bender vendor init; \
-	git apply ../../soft_hier/flex_cluster_sdk/occamy.patch; \
-	cp -rfv ../../soft_hier/flex_cluster_sdk/test target/sim/sw/device/apps/blas; \
-	sed -i -e '29,52d' -e '63,67d' -e '79,91d' deps/snitch_cluster/sw/snRuntime/src/start.c; \
-	cd target/sim; make DEBUG=ON sw
+softhier_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs build-toolchain
 
-rebuild_sw:
-	cd third_party/occamy; \
-	rm -rf target/sim/sw/device/apps/blas/test; \
-	cp -rfv ../../soft_hier/flex_cluster_sdk/test target/sim/sw/device/apps/blas; \
-	cd target/sim; make DEBUG=ON sw
-
-clean_sw:
-	rm -rf third_party/occamy
-
-clean_dramsys_preparation:
+clean_preparation:
 	rm -rf third_party
 
-update:
-	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
-	cd core && git add models/cpu && git diff --cached > ../soft_hier/gvsoc_core.patch
+######################################################################
+## 				Make Targets for SoftHier Simulator 				##
+######################################################################
 
 config:
 	rm -rf pulp/pulp/chips/flex_cluster
 	cp -rf soft_hier/flex_cluster pulp/pulp/chips/flex_cluster
 	python3 soft_hier/flex_cluster_utilities/config.py
 
+hw:
+	make config
+	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+
+
+######################################################################
+## 				Make Targets for SoftHier Software	 				##
+######################################################################
+
+sw_cmake_arg ?= ""
+ifdef app
+	app_path = $(abspath $(app))
+	sw_cmake_arg = "-DSRC_DIR=$(app_path)"
+endif
+
+sw:
+	rm -rf sw_build && mkdir sw_build
+	cd sw_build && cmake $(sw_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
+
+clean_sw:
+	rm -rf sw_build
+
 iter:
 	make config
 	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
-	make rebuild_sw
+	make sw
 
-build_softhier_hw:
-	make config
-	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+######################################################################
+## 				Make Targets for Run Simulator		 				##
+######################################################################
 
 run:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary third_party/occamy/target/sim/sw/device/apps/blas/test/build/test.elf run --trace=/chip/cluster_0/redmule
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run --trace=/chip/cluster_0/redmule
+

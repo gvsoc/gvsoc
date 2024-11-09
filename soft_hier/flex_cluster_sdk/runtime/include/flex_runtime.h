@@ -1,6 +1,6 @@
 #ifndef _FLEX_RUNTIME_H_
 #define _FLEX_RUNTIME_H_
-#include "snrt.h"
+#include <stdint.h>
 #include "flex_cluster_arch.h"
 
 #define ARCH_NUM_CLUSTER            (ARCH_NUM_CLUSTER_X*ARCH_NUM_CLUSTER_Y)
@@ -129,7 +129,7 @@ uint32_t flex_amo_fetch_add(uint32_t* barrier){
 }
 
 void flex_intra_cluster_sync(){
-    snrt_cluster_hw_barrier();
+    asm volatile("csrr x0, 0x7C2" ::: "memory");
 }
 
 void flex_barrier_init(){
@@ -147,7 +147,7 @@ void flex_barrier_init(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 void flex_global_barrier(){
@@ -155,7 +155,7 @@ void flex_global_barrier(){
     uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
     uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
         if ((flex_get_barrier_num_cluster() - 1) == flex_amo_fetch_add(barrier)) {
@@ -165,7 +165,7 @@ void flex_global_barrier(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 void flex_barrier_xy_init(){
@@ -190,12 +190,12 @@ void flex_barrier_xy_init(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 void flex_global_barrier_xy(){
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
 
@@ -221,7 +221,7 @@ void flex_global_barrier_xy(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 /*******************
@@ -251,7 +251,7 @@ void flex_timer_start(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 void flex_timer_end(){
@@ -268,7 +268,7 @@ void flex_timer_end(){
         *cluster_reg = 1;
     }
 
-    snrt_cluster_hw_barrier();
+    flex_intra_cluster_sync();
 }
 
 /*******************

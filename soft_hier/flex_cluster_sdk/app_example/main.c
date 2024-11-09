@@ -1,6 +1,5 @@
 #include "flex_runtime.h"
-#include "kernels/gemm/gemm_systolic_wise.h"
-#include "examples/example_one_cluster_gemm.h"
+#include "example_one_cluster_gemm.h"
 #include <math.h>
 
 int main()
@@ -21,5 +20,5 @@ int main()
     flex_global_barrier_xy();
     flex_timer_end();
     flex_eoc(eoc_val);
-	return 0;
+    return 0;
 }

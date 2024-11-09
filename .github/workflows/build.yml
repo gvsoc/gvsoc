@@ -24,7 +24,7 @@ jobs:
       - name: build all targets
         run: |
           source sourceme.sh
-          make dramsys_preparation
+          make softhier_preparation
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open

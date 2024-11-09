@@ -18,13 +18,15 @@ import gvsoc.systree
 
 class CtrlRegisters(gvsoc.systree.Component):
 
-    def __init__(self, parent: gvsoc.systree.Component, name: str):
+    def __init__(self, parent: gvsoc.systree.Component, name: str, num_cluster_x: int, num_cluster_y: int):
 
         super().__init__(parent, name)
 
         self.add_sources(['pulp/chips/flex_cluster/ctrl_registers.cpp'])
 
         self.add_properties({
+            'num_cluster_x': num_cluster_x,
+            'num_cluster_y': num_cluster_y,
         })
 
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:

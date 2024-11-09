@@ -2,7 +2,8 @@ import re
 
 # Read the input Python file
 input_file = 'pulp/pulp/chips/flex_cluster/flex_cluster_arch.py'
-output_file = 'soft_hier/flex_cluster_sdk/test/include/flex_cluster_arch.h'
+C_header_file = 'soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.h'
+S_header_file = 'soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.inc'
 
 # Initialize a dictionary to store the class attributes and their values
 attributes = {}
@@ -18,7 +19,7 @@ with open(input_file, 'r') as file:
             attributes[attr_name] = attr_value
 
 # Write the output C header file
-with open(output_file, 'w') as file:
+with open(C_header_file, 'w') as file:
     file.write('#ifndef FLEXCLUSTERARCH_H\n')
     file.write('#define FLEXCLUSTERARCH_H\n\n')
     
@@ -29,4 +30,21 @@ with open(output_file, 'w') as file:
     
     file.write('\n#endif // FLEXCLUSTERARCH_H\n')
 
-print(f'Header file "{output_file}" generated successfully.')
+print(f'Header file "{C_header_file}" generated successfully.')
+
+# Write the output S header file
+with open(S_header_file, 'w') as file:
+    file.write('#ifndef FLEXCLUSTERARCH_H\n')
+    file.write('#define FLEXCLUSTERARCH_H\n\n')
+    
+    for attr_name, attr_value in attributes.items():
+        # Convert attribute name to uppercase and prefix with 'ARCH_'
+        define_name = f'ARCH_{attr_name.upper()}'
+        if define_name == 'ARCH_HBM_PLACEMENT':
+            continue
+            pass
+        file.write(f'.set {define_name}, {attr_value}\n')
+    
+    file.write('\n#endif // FLEXCLUSTERARCH_H\n')
+
+print(f'Header file "{S_header_file}" generated successfully.')

@@ -57,7 +57,7 @@ class ClusterArch:
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
-                        data_bandwidth,     auto_fetch=False,   boot_addr=0x8000_0650):
+                        data_bandwidth,     auto_fetch=False,   boot_addr=0x8000_0000):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base

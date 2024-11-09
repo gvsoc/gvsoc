@@ -95,7 +95,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
 
         #Control register
-        csr = CtrlRegisters(self, 'ctrl_registers')
+        csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y)
 
         #Synchronization bus
         sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,

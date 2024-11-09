@@ -1,6 +1,5 @@
 #ifndef _FLEX_REDMULE_H_
 #define _FLEX_REDMULE_H_
-#include "snrt.h"
 #include "flex_cluster_arch.h"
 
 typedef enum {

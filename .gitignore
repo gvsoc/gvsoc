@@ -14,3 +14,4 @@ third_party/
 *trace_file.txt
 *tx_uart.log
 result*
+sw_build*

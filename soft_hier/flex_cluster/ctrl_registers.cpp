@@ -40,6 +40,8 @@ private:
     vp::WireMaster<bool> barrier_ack_itf;
     vp::ClockEvent * wakeup_event;
     int64_t timer_start;
+    uint32_t num_cluster_x;
+    uint32_t num_cluster_y;
 };
 
 
@@ -54,6 +56,8 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
     this->new_master_port("barrier_ack", &this->barrier_ack_itf);
     this->wakeup_event = this->event_new(&CtrlRegisters::wakeup_event_handler);
     this->timer_start = 0;
+    this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
+    this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
 }
 
 void CtrlRegisters::wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event) {
@@ -84,7 +88,7 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
         }
         if (offset == 4)
         {
-            _this->event_enqueue(_this->wakeup_event, 1);
+            _this->event_enqueue(_this->wakeup_event, _this->num_cluster_x + _this->num_cluster_y);
         }
         if (offset == 8)
         {
