@@ -116,7 +116,7 @@ config:
 
 hw:
 	make config
-	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+	make TARGETS=pulp.chips.flex_cluster.flex_cluster all
 
 
 ######################################################################
@@ -138,7 +138,7 @@ clean_sw:
 
 iter:
 	make config
-	CXX=g++-11.2.0 CC=gcc-11.2.0 CMAKE=cmake-3.18.1 make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+	make TARGETS=pulp.chips.flex_cluster.flex_cluster all
 	make sw
 
 ######################################################################
