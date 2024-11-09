@@ -39,8 +39,8 @@ Follow these steps to set up the SoftHier simulation environment:
 1. **Clone the repository** and navigate into the project directory:
 
    ```bash
-   git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_flex_cluster soft_hier
-   cd soft_hier
+   git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_release soft_hier_release
+   cd soft_hier_release
    ```
 
 2. **Set up the toolchain** by exporting the necessary environment variables (adjust the versions as needed):
