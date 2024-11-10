@@ -40,36 +40,13 @@ done
 # Export the found gcc version or exit if not found
 if [ -n "$FOUND_GCC" ]; then
     export CC="$FOUND_GCC"
+    FOUND_GXX=$(echo "$FOUND_GCC" | sed 's/gcc/g++/')
+    export CXX="$FOUND_GXX"
     echo "gcc >=$GCC_REQUIRED found at $FOUND_GCC (version = $($FOUND_GCC -dumpversion 2>/dev/null)) and set as CC."
 else
     echo "No gcc version $GCC_REQUIRED found on the system."
     return 1
 fi
-
-# Check g++ commands and version
-GXX_COMMANDS=$(compgen -c g++ | grep -E '^g\+\+(-[0-9]+)?$|g\+\+-[0-9]+')
-FOUND_GXX=""
-for gxx in $GXX_COMMANDS; do
-    # Get the version of the gcc binary
-    GXX_VERSION=$($gxx -dumpversion 2>/dev/null)
-    GXX_VERSION=$(pad_version "$GXX_VERSION")
-
-    # Check if the version matches the required version
-    if version_ge "$GXX_VERSION" "$GCC_REQUIRED"; then
-        FOUND_GXX="$gxx"
-        break
-    fi
-done
-
-# Export the found gcc version or exit if not found
-if [ -n "$FOUND_GXX" ]; then
-    export CXX="$FOUND_GXX"
-    echo "g++ >=$GCC_REQUIRED found at $FOUND_GXX (version = $($FOUND_GXX -dumpversion 2>/dev/null)) and set as CXX."
-else
-    echo "No g++ version $GCC_REQUIRED found on the system."
-    return 1
-fi
-
 
 # Check cmake commands and version
 CMAKE_COMMANDS=$(compgen -c cmake | grep -E '^cmake(-[0-9]+)?$|cmake-[0-9]+')
