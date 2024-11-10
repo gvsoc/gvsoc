@@ -23,7 +23,7 @@ PYTHON_REQUIRED="3.10.3"
 
 
 # Check gcc commands and version
-GCC_COMMANDS=$(compgen -c gcc | grep -E '^gcc-[0-9]+')
+GCC_COMMANDS=$(compgen -c gcc | grep -E '^gcc(-[0-9]+)?$|gcc-[0-9]+')
 FOUND_GCC=""
 for gcc in $GCC_COMMANDS; do
     # Get the version of the gcc binary
@@ -47,11 +47,8 @@ else
 fi
 
 
-
 # Check cmake commands and version
-compgen -c cmake
-compgen -c cmake | grep -E 'cmake-[0-9]+'
-CMAKE_COMMANDS=$(compgen -c cmake | grep -E 'cmake-[0-9]+')
+CMAKE_COMMANDS=$(compgen -c cmake | grep -E '^cmake(-[0-9]+)?$|cmake-[0-9]+')
 FOUND_CMAKE=""
 for cmake in $CMAKE_COMMANDS; do
     # Get the version of the gcc binary
