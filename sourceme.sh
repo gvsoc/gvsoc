@@ -49,16 +49,14 @@ fi
 
 
 # Check cmake commands and version
-CMAKE_COMMANDS=$(compgen -c cmake | grep -E '^cmake-[0-9]+')
-echo $CMAKE_COMMANDS
+compgen -c cmake
+compgen -c cmake | grep -E 'cmake-[0-9]+'
+CMAKE_COMMANDS=$(compgen -c cmake | grep -E 'cmake-[0-9]+')
 FOUND_CMAKE=""
 for cmake in $CMAKE_COMMANDS; do
     # Get the version of the gcc binary
-    echo $cmake
     CMAKE_VERSION=$($cmake --version | head -n 1 | awk '{print $3}')
-    echo $CMAKE_VERSION
     CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
-    echo $CMAKE_VERSION
     
     # Check if the version matches the required version
     if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
