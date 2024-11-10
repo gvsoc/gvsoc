@@ -77,6 +77,7 @@ fi
 PYTHON_COMMANDS_SET1=$(compgen -c python | grep -E '^python([0-9]+)?$' | grep -v '^python2')
 PYTHON_COMMANDS_SET2=$(compgen -c python | grep 'exe' | grep -v '^python2' | grep -v '^pythonw')
 PYTHON_COMMANDS="$PYTHON_COMMANDS_SET1 $PYTHON_COMMANDS_SET2"
+echo $PYTHON_COMMANDS
 FOUND_PYTHON=""
 for pycmd in $PYTHON_COMMANDS; do
     # Get the version of the gcc binary
