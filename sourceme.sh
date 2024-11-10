@@ -29,7 +29,7 @@ for gcc in $GCC_COMMANDS; do
     # Get the version of the gcc binary
     GCC_VERSION=$($gcc -dumpversion 2>/dev/null)
     GCC_VERSION=$(pad_version "$GCC_VERSION")
-    
+
     # Check if the version matches the required version
     if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
         FOUND_GCC="$gcc"
@@ -46,6 +46,30 @@ else
     return 1
 fi
 
+# Check g++ commands and version
+GXX_COMMANDS=$(compgen -c g++ | grep -E '^g\+\+(-[0-9]+)?$|g\+\+-[0-9]+')
+FOUND_GXX=""
+for gxx in $GXX_COMMANDS; do
+    # Get the version of the gcc binary
+    GXX_VERSION=$($gxx -dumpversion 2>/dev/null)
+    GXX_VERSION=$(pad_version "$GXX_VERSION")
+
+    # Check if the version matches the required version
+    if version_ge "$GXX_VERSION" "$GCC_REQUIRED"; then
+        FOUND_GXX="$gxx"
+        break
+    fi
+done
+
+# Export the found gcc version or exit if not found
+if [ -n "$FOUND_GXX" ]; then
+    export CXX="$FOUND_GXX"
+    echo "g++ >=$GCC_REQUIRED found at $FOUND_GXX (version = $($FOUND_GXX -dumpversion 2>/dev/null)) and set as CXX."
+else
+    echo "No g++ version $GCC_REQUIRED found on the system."
+    return 1
+fi
+
 
 # Check cmake commands and version
 CMAKE_COMMANDS=$(compgen -c cmake | grep -E '^cmake(-[0-9]+)?$|cmake-[0-9]+')
@@ -54,7 +78,7 @@ for cmake in $CMAKE_COMMANDS; do
     # Get the version of the gcc binary
     CMAKE_VERSION=$($cmake --version | head -n 1 | awk '{print $3}')
     CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
-    
+
     # Check if the version matches the required version
     if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
         FOUND_CMAKE="$cmake"
@@ -80,7 +104,7 @@ for pycmd in $PYTHON_COMMANDS; do
     # Get the version of the gcc binary
     PYTHON_VERSION=$($pycmd --version | grep -oP '\d+\.\d+\.\d+')
     PYTHON_VERSION=$(pad_version "$PYTHON_VERSION")
-    
+
     # Check if the version matches the required version
     if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
         FOUND_PYTHON="$pycmd"
