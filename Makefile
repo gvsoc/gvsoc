@@ -131,7 +131,7 @@ endif
 
 sw:
 	rm -rf sw_build && mkdir sw_build
-	cd sw_build && cmake $(sw_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
+	cd sw_build && $(CMAKE) $(sw_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
 
 clean_sw:
 	rm -rf sw_build
