@@ -35,6 +35,25 @@ import utils.loader.loader
 
 GAPY_TARGET = True
 
+#Function to get EoC entry
+def find_binary_entry(elf_filename):
+    # Open the ELF file in binary mode
+    with open(elf_filename, 'rb') as f:
+        elffile = ELFFile(f)
+
+        # Find the symbol table section in the ELF file
+        for section in elffile.iter_sections():
+            if isinstance(section, SymbolTableSection):
+                # Iterate over symbols in the symbol table
+                for symbol in section.iter_symbols():
+                    # Check if this symbol's name matches "tohost"
+                    if symbol.name == '_start':
+                        # Return the symbol's address
+                        return symbol['st_value']
+
+    # If the symbol wasn't found, return None
+    return None
+
 
 
 class Area:
@@ -57,12 +76,11 @@ class ClusterArch:
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
-                        data_bandwidth,     auto_fetch=False,   boot_addr=0x8000_0000):
+                        data_bandwidth,     auto_fetch=False):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base
         self.cluster_id             = cluster_id
-        self.boot_addr              = boot_addr
         self.auto_fetch             = auto_fetch
         self.barrier_irq            = 19
         self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
@@ -163,6 +181,11 @@ class ClusterUnit(gvsoc.systree.Component):
         # Components
         #
 
+        #Boot Address
+        boot_addr = 0x8000_0000
+        if binary is not None:
+            boot_addr = find_binary_entry(binary)
+
         #Loader
         loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
 
@@ -189,11 +212,11 @@ class ClusterUnit(gvsoc.systree.Component):
             fpu_sequencers = []
         for core_id in range(0, arch.nb_core):
             cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdva',
-                fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
+                fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
                 core_id=core_id, htif=False))
 
             fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdva',
-                fetch_enable=arch.auto_fetch, boot_addr=arch.boot_addr,
+                fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
                 core_id=core_id, htif=False))
             if xfrep:
                 fpu_sequencers.append(Sequencer(self, f'fpu_sequencer{core_id}', latency=0))
@@ -213,7 +236,7 @@ class ClusterUnit(gvsoc.systree.Component):
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers',
             num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, nb_cores=arch.nb_core,
-            boot_addr=entry, cluster_id=arch.cluster_id)
+            boot_addr=boot_addr, cluster_id=arch.cluster_id)
 
         # Cluster DMA
         idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,

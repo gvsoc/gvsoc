@@ -11,11 +11,13 @@ set(OBJDUMPER "riscv32-unknown-elf-objdump")
 set(SRC_DIR ${SRC_DIR} CACHE STRING "Source directory")
 if (NOT SRC_DIR)
     set(SRC_DIR "${CMAKE_SOURCE_DIR}/app_example")
+    # Add the selected subdirectory
+    add_subdirectory(${SRC_DIR})
+else()
+    # Add the selected subdirectory
+    add_subdirectory(${SRC_DIR} ${CMAKE_BINARY_DIR}/app)
 endif()
 
-
-# Add the selected subdirectory
-add_subdirectory(${SRC_DIR})
 
 if (NOT INCLUDE_DIRS)
     set(INCLUDE_DIRS "")
