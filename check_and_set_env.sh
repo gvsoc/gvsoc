@@ -28,14 +28,12 @@ FOUND_GCC=""
 for gcc in $GCC_COMMANDS; do
     # Get the version of the gcc binary
     GCC_VERSION=$($gcc -dumpversion 2>/dev/null)
-    if [[ $CMAKE_VERSION =~ ^[0-9] ]]; then
-        GCC_VERSION=$(pad_version "$GCC_VERSION")
+    GCC_VERSION=$(pad_version "$GCC_VERSION")
 
-        # Check if the version matches the required version
-        if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
-            FOUND_GCC="$gcc"
-            break
-        fi
+    # Check if the version matches the required version
+    if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
+        FOUND_GCC="$gcc"
+        break
     fi
 done
 
@@ -56,14 +54,12 @@ FOUND_CMAKE=""
 for cmake in $CMAKE_COMMANDS; do
     # Get the version of the gcc binary
     CMAKE_VERSION=$($cmake --version | head -n 1 | awk '{print $3}')
-    if [[ $CMAKE_VERSION =~ ^[0-9] ]]; then
-        CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
+    CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
 
-        # Check if the version matches the required version
-        if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
-            FOUND_CMAKE="$cmake"
-            break
-        fi
+    # Check if the version matches the required version
+    if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
+        FOUND_CMAKE="$cmake"
+        break
     fi
 done
 
