@@ -28,12 +28,14 @@ FOUND_GCC=""
 for gcc in $GCC_COMMANDS; do
     # Get the version of the gcc binary
     GCC_VERSION=$($gcc -dumpversion 2>/dev/null)
-    GCC_VERSION=$(pad_version "$GCC_VERSION")
+    if [[ $CMAKE_VERSION =~ ^[0-9] ]]; then
+        GCC_VERSION=$(pad_version "$GCC_VERSION")
 
-    # Check if the version matches the required version
-    if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
-        FOUND_GCC="$gcc"
-        break
+        # Check if the version matches the required version
+        if version_ge "$GCC_VERSION" "$GCC_REQUIRED"; then
+            FOUND_GCC="$gcc"
+            break
+        fi
     fi
 done
 
@@ -42,9 +44,9 @@ if [ -n "$FOUND_GCC" ]; then
     export CC="$FOUND_GCC"
     FOUND_GXX=$(echo "$FOUND_GCC" | sed 's/gcc/g++/')
     export CXX="$FOUND_GXX"
-    echo "gcc >=$GCC_REQUIRED found at $FOUND_GCC (version = $($FOUND_GCC -dumpversion 2>/dev/null)) and set as CC."
+    echo "gcc >=$GCC_REQUIRED found at <$FOUND_GCC> (version = $($FOUND_GCC -dumpversion 2>/dev/null)) and set as CC."
 else
-    echo "No gcc version $GCC_REQUIRED found on the system."
+    echo "No gcc version >= $GCC_REQUIRED found on the system."
     return 1
 fi
 
@@ -54,46 +56,49 @@ FOUND_CMAKE=""
 for cmake in $CMAKE_COMMANDS; do
     # Get the version of the gcc binary
     CMAKE_VERSION=$($cmake --version | head -n 1 | awk '{print $3}')
-    CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
+    if [[ $CMAKE_VERSION =~ ^[0-9] ]]; then
+        CMAKE_VERSION=$(pad_version "$CMAKE_VERSION")
 
-    # Check if the version matches the required version
-    if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
-        FOUND_CMAKE="$cmake"
-        break
+        # Check if the version matches the required version
+        if version_ge "$CMAKE_VERSION" "$CMAKE_REQUIRED"; then
+            FOUND_CMAKE="$cmake"
+            break
+        fi
     fi
 done
 
 # Export the found gcc version or exit if not found
 if [ -n "$FOUND_CMAKE" ]; then
     export CMAKE="$FOUND_CMAKE"
-    echo "cmake >= $CMAKE_REQUIRED found at $FOUND_CMAKE (version = $($FOUND_CMAKE --version | head -n 1 | awk '{print $3}')) and set as CMAKE."
+    echo "cmake >= $CMAKE_REQUIRED found at <$FOUND_CMAKE> (version = $($FOUND_CMAKE --version | head -n 1 | awk '{print $3}')) and set as CMAKE."
 else
-    echo "No cmake version $CMAKE_REQUIRED found on the system."
+    echo "No cmake version >= $CMAKE_REQUIRED found on the system."
     return 1
 fi
 
 
 # Check python commands and version
 PYTHON_COMMANDS=$(compgen -c python | grep -E '^python([0-9]+)?$' | grep -v '^python2')
-echo $PYTHON_COMMANDS
 FOUND_PYTHON=""
 for pycmd in $PYTHON_COMMANDS; do
     # Get the version of the gcc binary
     PYTHON_VERSION=$($pycmd --version | grep -oP '\d+\.\d+\.\d+')
-    PYTHON_VERSION=$(pad_version "$PYTHON_VERSION")
+    if [[ $PYTHON_VERSION =~ ^[0-9] ]]; then
+        PYTHON_VERSION=$(pad_version "$PYTHON_VERSION")
 
-    # Check if the version matches the required version
-    if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
-        FOUND_PYTHON="$pycmd"
-        break
+        # Check if the version matches the required version
+        if version_ge "$PYTHON_VERSION" "$PYTHON_REQUIRED"; then
+            FOUND_PYTHON="$pycmd"
+            break
+        fi
     fi
 done
 
 # Export the found gcc version or exit if not found
 if [ -n "$FOUND_PYTHON" ]; then
     export PYTHON_CMD="$FOUND_PYTHON"
-    echo "python >= $PYTHON_REQUIRED found at $FOUND_PYTHON (version = $($FOUND_PYTHON --version | grep -oP '\d+\.\d+\.\d+')) and set as PYTHON_CMD."
+    echo "python >= $PYTHON_REQUIRED found at <$FOUND_PYTHON> (version = $($FOUND_PYTHON --version | grep -oP '\d+\.\d+\.\d+')) and set as PYTHON_CMD."
 else
-    echo "No python version $PYTHON_REQUIRED found on the system."
+    echo "No python version >= $PYTHON_REQUIRED found on the system."
     return 1
 fi
