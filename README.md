@@ -225,7 +225,7 @@ The function of example_one_cluster_gemm is defined in file `soft_hier/flex_clus
 #include "flex_dma_pattern.h"
 
 // GEMM M-N-K           : 1024-1024-1024
-// Elem Size            : Int16
+// Elem Size            : FP16
 // Assumption           : Data are already tiled in HBM
 
 #define ELEM_SIZE      2
@@ -314,7 +314,7 @@ void example_one_cluster_gemm(){
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
                             //Configure tile address in L1 and run RedMule acceleration
-                            flex_redmule_trigger(X_L1_OFFSET1, W_L1_OFFSET1, YZ_L1_OFFSET, REDMULE_INT_16);
+                            flex_redmule_trigger(X_L1_OFFSET1, W_L1_OFFSET1, YZ_L1_OFFSET, REDMULE_FP_16);
 
                             //Wait RedMule Done
                             flex_redmule_wait();
@@ -334,7 +334,7 @@ void example_one_cluster_gemm(){
                         if (flex_is_first_core())//Use the first core in cluster 0 to configure and trigger RedMule
                         {
                             //Configure tile address in L1 and run RedMule acceleration
-                            flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_INT_16);
+                            flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_FP_16);
 
                             //Wait RedMule Done
                             flex_redmule_wait();
@@ -346,7 +346,7 @@ void example_one_cluster_gemm(){
                 //Last Computation
                 if (flex_is_first_core())
                 {
-                    flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_INT_16);
+                    flex_redmule_trigger(X_L1_OFFSET2, W_L1_OFFSET2, YZ_L1_OFFSET, REDMULE_FP_16);
                     flex_redmule_wait();
                 }
                 flex_intra_cluster_sync();//Cluster barrier
