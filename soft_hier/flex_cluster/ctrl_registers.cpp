@@ -102,7 +102,8 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
         }
         if (offset == 16)
         {
-            std::cout << "[Print]: " << value << std::endl;
+            char c = (char)value;
+            std::cout << c;
         }
     }
 

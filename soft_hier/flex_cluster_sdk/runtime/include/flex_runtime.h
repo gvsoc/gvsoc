@@ -271,14 +271,6 @@ void flex_timer_end(){
     flex_intra_cluster_sync();
 }
 
-/*******************
-*      Logging     *
-*******************/
-
-void flex_log(uint32_t data){
-    volatile uint32_t * log_reg = (volatile uint32_t *)(ARCH_SOC_REGISTER_EOC + 16);
-    *log_reg = data;
-}
 
 /****************************
 *      Stack Operations     *
