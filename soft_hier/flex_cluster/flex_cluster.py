@@ -92,7 +92,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             pass
 
         #Narrow AXI router
-        narrow_axi = router.Router(self, 'narrow_axi', bandwidth=8)
+        narrow_interco = router.Router(self, 'narrow_interco', bandwidth=8)
 
         #Control register
         csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y)
@@ -137,17 +137,18 @@ class FlexClusterSystem(gvsoc.systree.Component):
         ############
 
         #Debug memory
-        narrow_axi.o_MAP(debug_mem.i_INPUT())
+        narrow_interco.o_MAP(debug_mem.i_INPUT())
+        narrow_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_interleave * (arch.hbm_placement[0] + arch.hbm_placement[1] + arch.hbm_placement[2] + arch.hbm_placement[3]), rm_base=False)
 
         #Control register
-        narrow_axi.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
+        narrow_interco.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
         for cluster_id in range(num_clusters):
             csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ())
             pass
 
         #Clusters
         for cluster_id in range(num_clusters):
-            cluster_list[cluster_id].o_NARROW_SOC(narrow_axi.i_INPUT())
+            cluster_list[cluster_id].o_NARROW_SOC(narrow_interco.i_INPUT())
             pass
 
         #Data NoC + Sync NoC
