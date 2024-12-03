@@ -80,19 +80,19 @@ uint32_t flex_get_cluster_id(){
 
 uint32_t flex_get_core_id(){
     uint32_t hartid;
-    asm("csrr %0, mhartid" : "=r"(hartid));
+    asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return hartid;
 }
 
 uint32_t flex_is_dm_core(){
     uint32_t hartid;
-    asm("csrr %0, mhartid" : "=r"(hartid));
+    asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return (hartid == ARCH_NUM_CORE_PER_CLUSTER-1);
 }
 
 uint32_t flex_is_first_core(){
     uint32_t hartid;
-    asm("csrr %0, mhartid" : "=r"(hartid));
+    asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return (hartid == 0);
 }
 
@@ -271,6 +271,21 @@ void flex_timer_end(){
     flex_intra_cluster_sync();
 }
 
+/*******************
+*      Logging     *
+*******************/
+
+void flex_log_char(char c){
+    uint32_t data = (uint32_t) c;
+    volatile uint32_t * log_reg = (volatile uint32_t *)(ARCH_SOC_REGISTER_EOC + 16);
+    *log_reg = data;
+}
+
+void flex_print(char * str){
+    for (int i = 0; str[i] != '\0'; i++) {
+        flex_log_char(str[i]);
+    }
+}
 
 /****************************
 *      Stack Operations     *
