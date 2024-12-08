@@ -50,9 +50,15 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         # Get Binary
         binary = None
+        preload_binary = None
+        has_preload_binary = 0
         if parser is not None:
+            parser.add_argument("--preload", type=str, help="Path to the HBM preload binary file")
             [args, otherArgs] = parser.parse_known_args()
             binary = args.binary
+            preload_binary = args.preload
+            if preload_binary is not None:
+                has_preload_binary = 1
 
         ##############
         # Components #
@@ -95,7 +101,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         narrow_interco = router.Router(self, 'narrow_interco', bandwidth=8)
 
         #Control register
-        csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y)
+        csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, has_preload_binary=has_preload_binary)
 
         #Synchronization bus
         sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,
@@ -132,6 +138,9 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Debug Memory
         debug_mem = memory.memory.Memory(self,'debug_mem', size=1)
 
+        #HBM Preloader
+        hbm_preloader = utils.loader.loader.ElfLoader(self, 'hbm_preloader', binary=preload_binary)
+
         ############
         # Bindings #
         ############
@@ -145,6 +154,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for cluster_id in range(num_clusters):
             csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ())
             pass
+
+        #HBM Preloader
+        hbm_preloader.o_OUT(data_noc.i_CLUSTER_INPUT(0, 0))
+        hbm_preloader.o_START(csr.i_HBM_PRELOAD_DONE())
 
         #Clusters
         for cluster_id in range(num_clusters):

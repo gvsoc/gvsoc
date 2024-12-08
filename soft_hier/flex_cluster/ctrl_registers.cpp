@@ -34,14 +34,18 @@ public:
 private:
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
     static void wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event);
+    static void hbm_preload_done_handler(vp::Block *__this, bool value);
 
     vp::Trace trace;
     vp::IoSlave input_itf;
     vp::WireMaster<bool> barrier_ack_itf;
+    vp::WireSlave<bool> hbm_preload_done_itf;
     vp::ClockEvent * wakeup_event;
     int64_t timer_start;
     uint32_t num_cluster_x;
     uint32_t num_cluster_y;
+    uint32_t has_preload_binary;
+    uint32_t hbm_preload_done;
 };
 
 
@@ -51,19 +55,35 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
 {
     this->traces.new_trace("trace", &this->trace, vp::DEBUG);
     this->input_itf.set_req_meth(&CtrlRegisters::req);
+    this->hbm_preload_done_itf.set_sync_meth(&CtrlRegisters::hbm_preload_done_handler);
 
     this->new_slave_port("input", &this->input_itf);
     this->new_master_port("barrier_ack", &this->barrier_ack_itf);
+    this->new_slave_port("hbm_preload_done", &this->hbm_preload_done_itf);
     this->wakeup_event = this->event_new(&CtrlRegisters::wakeup_event_handler);
     this->timer_start = 0;
     this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
     this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
+    this->has_preload_binary = this->get_js_config()->get("has_preload_binary")->get_int();
+    this->hbm_preload_done = (this->has_preload_binary == 0)? 1:0;
 }
 
 void CtrlRegisters::wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event) {
     CtrlRegisters *_this = (CtrlRegisters *)__this;
-    _this->barrier_ack_itf.sync(1);
-    _this->trace.msg("Control registers wake up signal work and write %d to barrier ack output\n", 1);
+    if (_this->hbm_preload_done)
+    {
+        _this->barrier_ack_itf.sync(1);
+        _this->trace.msg("Global Barrier at %d ns\n", _this->time.get_time()/1000);
+    } else {
+        _this->event_enqueue(_this->wakeup_event, 300);
+    }
+}
+
+void CtrlRegisters::hbm_preload_done_handler(vp::Block *__this, bool value)
+{
+    CtrlRegisters *_this = (CtrlRegisters *)__this;
+    _this->hbm_preload_done = 1;
+    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "HBM Preloading Done\n");
 }
 
 

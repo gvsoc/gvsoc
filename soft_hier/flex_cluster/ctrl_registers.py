@@ -18,7 +18,7 @@ import gvsoc.systree
 
 class CtrlRegisters(gvsoc.systree.Component):
 
-    def __init__(self, parent: gvsoc.systree.Component, name: str, num_cluster_x: int, num_cluster_y: int):
+    def __init__(self, parent: gvsoc.systree.Component, name: str, num_cluster_x: int, num_cluster_y: int, has_preload_binary: int=0):
 
         super().__init__(parent, name)
 
@@ -27,6 +27,7 @@ class CtrlRegisters(gvsoc.systree.Component):
         self.add_properties({
             'num_cluster_x': num_cluster_x,
             'num_cluster_y': num_cluster_y,
+            'has_preload_binary': has_preload_binary,
         })
 
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:
@@ -37,3 +38,6 @@ class CtrlRegisters(gvsoc.systree.Component):
 
     def o_BARRIER_ACK(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('barrier_ack', itf, signature='wire<bool>')
+
+    def i_HBM_PRELOAD_DONE(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'hbm_preload_done', signature='wire<bool>')
