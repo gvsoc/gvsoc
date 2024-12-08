@@ -67,6 +67,7 @@ class Area:
 class ClusterArch:
     def __init__(self,  nb_core_per_cluster, base, cluster_id, tcdm_size,
                         stack_base,         stack_size,
+                        zomem_base,         zomem_size,
                         reg_base,           reg_size,
                         sync_base,          sync_size,          sync_special_mem,
                         insn_base,          insn_size,
@@ -85,6 +86,7 @@ class ClusterArch:
         self.barrier_irq            = 19
         self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
         self.stack_area             = Area(stack_base, stack_size)
+        self.zomem_area             = Area(zomem_base, zomem_size)
         self.sync_area              = Area(sync_base, sync_size)
         self.reg_area               = Area(reg_base, reg_size)
         self.insn_area              = Area(insn_base, insn_size)
@@ -245,6 +247,9 @@ class ClusterUnit(gvsoc.systree.Component):
         #stack memory
         stack_mem = memory.Memory(self, 'stack_mem', size=arch.stack_area.size)
 
+        #zero memory
+        zero_mem = ZeroMem(self, 'zero_mem', size=arch.zomem_area.size)
+
         #synchronization router
         sync_router = router.Router(self, 'sync_router', bandwidth=4)
 
@@ -290,6 +295,7 @@ class ClusterUnit(gvsoc.systree.Component):
         self.o_WIDE_INPUT(wide_axi_goto_tcdm.i_INPUT())
         wide_axi_goto_tcdm.o_MAP(tcdm.i_BUS_INPUT())
         wide_axi_from_idma.o_MAP(self.i_WIDE_SOC())
+        wide_axi_from_idma.o_MAP(zero_mem.i_INPUT(), base=arch.zomem_area.base, size=arch.zomem_area.size, rm_base=True)
         
 
         # iDMA connection

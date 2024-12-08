@@ -73,6 +73,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         tcdm_size           =   arch.cluster_tcdm_size,
                                         stack_base          =   arch.cluster_stack_base,
                                         stack_size          =   arch.cluster_stack_size,
+                                        zomem_base          =   arch.cluster_zomem_base,
+                                        zomem_size          =   arch.cluster_zomem_size,
                                         reg_base            =   arch.cluster_reg_base,
                                         reg_size            =   arch.cluster_reg_size,
                                         sync_base           =   arch.sync_base,

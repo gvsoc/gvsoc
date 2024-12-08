@@ -6,6 +6,7 @@
 #define ARCH_NUM_CLUSTER            (ARCH_NUM_CLUSTER_X*ARCH_NUM_CLUSTER_Y)
 #define cluster_index(x,y)          ((y)*ARCH_NUM_CLUSTER_X+(x))
 #define local(offset)               (ARCH_CLUSTER_TCDM_BASE+offset)
+#define zomem(offset)               (ARCH_CLUSTER_ZOMEM_BASE+offset)
 #define remote_cid(cid,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cid*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_xy(x,y,offset)       (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(x,y)*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_pos(pos,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(pos.x,pos.y)*ARCH_CLUSTER_TCDM_SIZE+offset)

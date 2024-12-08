@@ -35,6 +35,9 @@ class FlexClusterArch:
         self.cluster_stack_base      = 0x10000000
         self.cluster_stack_size      = 0x00020000
 
+        self.cluster_zomem_base      = 0x18000000
+        self.cluster_zomem_size      = 0x00020000
+
         self.cluster_reg_base        = 0x20000000
         self.cluster_reg_size        = 0x00000200
 
