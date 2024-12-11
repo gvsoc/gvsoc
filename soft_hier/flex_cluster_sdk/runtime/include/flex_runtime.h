@@ -288,6 +288,11 @@ void flex_print(char * str){
     }
 }
 
+void flex_print_int(uint32_t data){
+    volatile uint32_t * log_reg = (volatile uint32_t *)(ARCH_SOC_REGISTER_EOC + 20);
+    *log_reg = data;
+}
+
 /****************************
 *      Stack Operations     *
 ****************************/

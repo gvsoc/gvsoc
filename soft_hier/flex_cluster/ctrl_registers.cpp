@@ -125,6 +125,10 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
             char c = (char)value;
             std::cout << c;
         }
+        if (offset == 20)
+        {
+            std::cout << value;
+        }
     }
 
     return vp::IO_REQ_OK;
