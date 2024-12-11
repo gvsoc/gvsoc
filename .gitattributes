@@ -1,3 +1,4 @@
 add_dramsyslib_patches/dramsys_configs/traces/example.stl filter=lfs diff=lfs merge=lfs -text
 add_dramsyslib_patches/dramsys_configs/traces/pct.stl filter=lfs diff=lfs merge=lfs -text
 add_dramsyslib_patches/dramsys_configs/traces/ranktest.stl filter=lfs diff=lfs merge=lfs -text
+add_dramsyslib_patches/dramsys_configs/traces/*.stl filter=lfs diff=lfs merge=lfs -text
