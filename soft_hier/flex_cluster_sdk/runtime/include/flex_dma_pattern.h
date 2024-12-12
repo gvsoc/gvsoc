@@ -52,6 +52,50 @@ inline uint32_t bare_dma_start_1d(uint64_t dst, uint64_t src,
     return reg_txid;
 }
 
+inline uint32_t bare_dma_start_2d(uint64_t dst, uint64_t src,
+                                                 size_t size, size_t dst_stride,
+                                                 size_t src_stride,
+                                                 size_t repeat) {
+    register uint32_t reg_dst_low asm("a0") = dst >> 0;       // 10
+    register uint32_t reg_dst_high asm("a1") = dst >> 32;     // 11
+    register uint32_t reg_src_low asm("a2") = src >> 0;       // 12
+    register uint32_t reg_src_high asm("a3") = src >> 32;     // 13
+    register uint32_t reg_size asm("a4") = size;              // 14
+    register uint32_t reg_dst_stride asm("a5") = dst_stride;  // 15
+    register uint32_t reg_src_stride asm("a6") = src_stride;  // 16
+    register uint32_t reg_repeat asm("a7") = repeat;          // 17
+
+    // dmsrc a0, a1
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSRC_FUNCT7, 13, 12,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_src_high), "r"(reg_src_low));
+
+    // dmdst a0, a1
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMDST_FUNCT7, 11, 10,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_dst_high), "r"(reg_dst_low));
+
+    // dmstr a5, a6
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSTR_FUNCT7, 15, 16,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_src_stride), "r"(reg_dst_stride));
+
+    // dmrep a7
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMREP_FUNCT7, 0, 17,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_repeat));
+
+    // dmcpyi a0, a4, 0b10
+    register uint32_t reg_txid asm("a0");  // 10
+    asm volatile(".word %1\n"
+                 : "=r"(reg_txid)
+                 : "i"(R_TYPE_ENCODE(DMCPYI_FUNCT7, 0b00010, 14, XDMA_FUNCT3,
+                                     10, OP_CUSTOM1)),
+                   "r"(reg_size));
+
+    return reg_txid;
+}
+
 inline void bare_dma_wait_all() {
     // dmstati t0, 2  # 2=status.busy
     asm volatile(
@@ -67,7 +111,7 @@ inline void bare_dma_wait_all() {
 *  Basic Asynchronize DMA Interface  *
 *************************************/
 
-//Basic DMA 1d transfter load from HBM
+//Basic DMA 1d transfter
 void flex_dma_async_1d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size){
     bare_dma_start_1d(dst_addr, src_addr, transfer_size); //Start iDMA
 }
@@ -75,6 +119,25 @@ void flex_dma_async_1d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_siz
 //wait for idma
 void flex_dma_async_wait_all(){
     bare_dma_wait_all(); // Wait for iDMA Finishing
+}
+
+/*************************************
+*  Basic Synchronize DMA Interface   *
+*************************************/
+
+//Basic DMA 2d transfter
+void flex_dma_sync_2d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size, size_t dst_stride, size_t src_stride, size_t repeat){
+    if (is_hbm_region(dst_addr))
+    {
+        for (int i = 0; i < repeat; i++)
+        {
+            bare_dma_start_1d(dst_addr + i * dst_stride, src_addr + i * src_stride, transfer_size);
+            bare_dma_wait_all();
+        }
+    } else {
+        bare_dma_start_2d(dst_addr, src_addr, transfer_size, dst_stride, src_stride, repeat); //Start iDMA
+        bare_dma_wait_all(); // Wait for iDMA Finishing
+    }
 }
 
 /****************************************
