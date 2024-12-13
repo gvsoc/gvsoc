@@ -1,0 +1,79 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f4f4f9;
+}
+
+.container {
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: white;
+}
+
+h1 {
+    font-size: 2rem;
+    color: #333;
+}
+
+p {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#fileInfo {
+    margin-top: 15px;
+    font-size: 1rem;
+    color: #333;
+}
+
+#timeline-container {
+    width: 100%;
+    overflow-x: scroll;
+}
+
+svg text.axis-label {
+    font-size: 12px;
+    fill: #333;
+    text-anchor: end;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none; /* Prevents the tooltip from blocking mouse events */
+    transition: opacity 0.3s ease;
+}
+
+

@@ -148,3 +148,12 @@ iter:
 run:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run --trace=/chip/cluster_0/redmule
 
+runv:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run --trace=redmule --trace=idma --trace=/chip/ctrl_registers | tee sw_build/analyze.trace
+
+######################################################################
+## 				Make Targets for Trace Analyzer		 				##
+######################################################################
+
+ana:
+	firefox soft_hier/flex_cluster_utilities/trace_analyzer/trace_visual/index.html

@@ -35,6 +35,7 @@ private:
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
     static void wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event);
     static void hbm_preload_done_handler(vp::Block *__this, bool value);
+    void reset(bool active);
 
     vp::Trace trace;
     vp::IoSlave input_itf;
@@ -67,6 +68,15 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
     this->has_preload_binary = this->get_js_config()->get("has_preload_binary")->get_int();
     this->hbm_preload_done = (this->has_preload_binary == 0)? 1:0;
 }
+
+void CtrlRegisters::reset(bool active)
+{
+    if (active)
+    {
+        std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << std::endl;
+    }
+}
+
 
 void CtrlRegisters::wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event) {
     CtrlRegisters *_this = (CtrlRegisters *)__this;

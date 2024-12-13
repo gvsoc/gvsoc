@@ -1,0 +1,46 @@
+13648000: 13648: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+13788000: 13788: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+13799000: 13799: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+[Print]: 1
+13938000: 13938: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+14634000: 14634: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 14107 ns ---> 14634 ns | period = 527 ns | runtime = 527 ns
+14787000: 14787: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+15467000: 15467: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+16733000: 16733: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 15518 ns ---> 16733 ns | period = 1215 ns | runtime = 1215 ns
+16915000: 16915: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 16785 ns ---> 16915 ns | period = 130 ns | runtime = 1345 ns
+18568000: 18568: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 16008 ns ---> 18568 ns | period = 2560 ns | uti = 0.800 | runtime = 2560 ns | matmul id = 1
+18835000: 18835: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 18574 ns ---> 18835 ns | period = 261 ns | runtime = 261 ns | id = 1
+18835000: 18835: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 15996 ns ---> 18835 ns | period = 2839 ns | uti = 0.721 | runtime = 2839 ns | matmul id = 1
+19102000: 19102: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 18841 ns ---> 19102 ns | period = 261 ns | runtime = 261 ns | id = 1
+19196000: 19196: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+19278000: 19278: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 19258 ns ---> 19278 ns | period = 20 ns | runtime = 547 ns
+19447000: 19447: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+19504000: 19504: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 19484 ns ---> 19504 ns | period = 20 ns | runtime = 1365 ns
+19504000: 19504: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 19485 ns ---> 19504 ns | period = 19 ns | runtime = 566 ns
+19622000: 19622: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+19898000: 19898: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 19636 ns ---> 19898 ns | period = 262 ns | runtime = 523 ns | id = 2
+19898000: 19898: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 19636 ns ---> 19898 ns | period = 262 ns | runtime = 523 ns | id = 2
+20162000: 20162: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 19901 ns ---> 20162 ns | period = 261 ns | runtime = 784 ns | id = 3
+20162000: 20162: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 19901 ns ---> 20162 ns | period = 261 ns | runtime = 784 ns | id = 3
+20278000: 20278: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+20335000: 20335: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 20315 ns ---> 20335 ns | period = 20 ns | runtime = 586 ns
+20451000: 20451: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+20509000: 20509: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 20489 ns ---> 20509 ns | period = 20 ns | runtime = 606 ns
+20517000: 20517: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 20498 ns ---> 20517 ns | period = 19 ns | runtime = 1384 ns
+20660000: 20660: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+21202000: 21202: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 20688 ns ---> 21202 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21203000: 21203: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 20689 ns ---> 21203 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21312000: 21312: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+21893000: 21893: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 21366 ns ---> 21893 ns | period = 527 ns | runtime = 1133 ns
+22009000: 22009: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+23302000: 23302: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 22087 ns ---> 23302 ns | period = 1215 ns | runtime = 2348 ns
+24451000: 24451: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 22087 ns ---> 24451 ns | period = 2364 ns | runtime = 3748 ns
+24600000: 24600: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 22024 ns ---> 24600 ns | period = 2576 ns | uti = 0.795 | runtime = 5415 ns | matmul id = 2
+24601000: 24601: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 22025 ns ---> 24601 ns | period = 2576 ns | uti = 0.795 | runtime = 5136 ns | matmul id = 2
+24702000: 24702: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+25290000: 25290: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 24764 ns ---> 25290 ns | period = 526 ns | runtime = 4274 ns
+25291000: 25291: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 24764 ns ---> 25291 ns | period = 527 ns | runtime = 2875 ns
+25419000: 25419: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+25574000: 25574: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
+[Performance Counter]: Execution period is 11794 ns
+25593000: 25593: [/chip/ctrl_registers/trace                                      ] Control registers wake up signal work and write 1 to barrier ack output
