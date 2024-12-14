@@ -105,10 +105,10 @@ index 50cb4ac..bc110bf 100644
          int queue = this->get_req_queue(pos_x, pos_y);
  
 diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
-index 867c0e2..7beaec0 100644
+index 867c0e2..f860e33 100644
 --- a/pulp/idma/fe/idma_fe_xdma.cpp
 +++ b/pulp/idma/fe/idma_fe_xdma.cpp
-@@ -46,6 +46,11 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
+@@ -46,6 +46,12 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
  
      // Declare offload master interface for granting blocked transfers
      idma->new_master_port("offload_grant", &this->offload_grant_itf, this);
@@ -117,13 +117,17 @@ index 867c0e2..7beaec0 100644
 +    this->transfer_start_time = 0;
 +    this->num_inflight_transfer = 0;
 +    this->total_idma_used_time = 0;
++    this->TxnList = "";
  }
  
  
-@@ -133,6 +138,11 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -133,6 +139,14 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
      this->next_transfer_id.set(transfer_id + 1);
  
      this->trace.msg(vp::Trace::LEVEL_TRACE, "Allocated transfer ID (id: %d)\n", transfer_id);
++    std::stringstream ss;
++    ss << "| Txn " << transfer_id << " = {src: 0x" << std::hex << this->src.get() << ", dst: 0x" << std::hex << this->dst.get() << ", size: 0x"<< std::hex << size << " }";
++    this->TxnList += ss.str();
 +    if (this->num_inflight_transfer == 0)
 +    {
 +        this->transfer_start_time = this->time.get_time();
@@ -132,7 +136,7 @@ index 867c0e2..7beaec0 100644
  
      // Allocate a new transfer and fill it from registers
      IdmaTransfer *transfer = new IdmaTransfer();
-@@ -170,6 +180,12 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -170,6 +184,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
  void IDmaFeXdma::ack_transfer(IdmaTransfer *transfer)
  {
      this->completed_id.inc(1);
@@ -140,16 +144,27 @@ index 867c0e2..7beaec0 100644
 +    if (this->num_inflight_transfer == 0)
 +    {
 +        this->total_idma_used_time += (this->time.get_time() - this->transfer_start_time)/1000;
-+        this->trace.msg("[iDMA] Finished : %0d ns ---> %0d ns | period = %0d ns | runtime = %0d ns\n", (this->transfer_start_time/1000), (this->time.get_time()/1000), (this->time.get_time() - this->transfer_start_time)/1000, this->total_idma_used_time);
++        this->trace.msg("[iDMA] Finished : %0d ns ---> %0d ns | period = %0d ns | runtime = %0d ns %s\n", (this->transfer_start_time/1000), (this->time.get_time()/1000), (this->time.get_time() - this->transfer_start_time)/1000, this->total_idma_used_time, this->TxnList.c_str());
++        this->TxnList = "";
 +    }
      delete transfer;
  }
  
 diff --git a/pulp/idma/fe/idma_fe_xdma.hpp b/pulp/idma/fe/idma_fe_xdma.hpp
-index 300ef51..05cc215 100644
+index 300ef51..7883152 100644
 --- a/pulp/idma/fe/idma_fe_xdma.hpp
 +++ b/pulp/idma/fe/idma_fe_xdma.hpp
-@@ -82,4 +82,9 @@ private:
+@@ -20,6 +20,9 @@
+ 
+ #pragma once
+ 
++#include <string>
++#include <iostream>
++#include <sstream>
+ #include <vp/vp.hpp>
+ #include <cpu/iss/include/offload.hpp>
+ #include <vp/register.hpp>
+@@ -82,4 +85,10 @@ private:
      vp::Signal<bool> do_transfer_grant;
      // In case a transfer was blocked, gives the transfer which was blocked
      IdmaTransfer *stalled_transfer;
@@ -158,6 +173,7 @@ index 300ef51..05cc215 100644
 +    int64_t transfer_start_time;
 +    int64_t num_inflight_transfer;
 +    int64_t total_idma_used_time;
++    std::string TxnList;
  };
 diff --git a/pulp/snitch/sequencer.cpp b/pulp/snitch/sequencer.cpp
 index 673529f..080f26f 100644
