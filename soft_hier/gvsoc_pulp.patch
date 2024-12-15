@@ -104,6 +104,177 @@ index 50cb4ac..bc110bf 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
+diff --git a/pulp/idma/be/idma_be_axi.cpp b/pulp/idma/be/idma_be_axi.cpp
+index 149cb7f..d99b54a 100644
+--- a/pulp/idma/be/idma_be_axi.cpp
++++ b/pulp/idma/be/idma_be_axi.cpp
+@@ -93,6 +93,14 @@ void IDmaBeAxi::reset(bool active)
+         {
+             this->pending_bursts.pop();
+         }
++        while(this->issued_axi_burst_order_list.size() > 0)
++        {
++            this->issued_axi_burst_order_list.pop();
++        }
++        while(this->OoO_responses_waiting_list.size() > 0)
++        {
++            this->OoO_responses_waiting_list.pop_front();
++        }
+ 
+         // And put back them all as free
+         for (vp::IoReq &req: this->bursts)
+@@ -181,6 +189,7 @@ void IDmaBeAxi::send_read_burst_to_axi()
+ 
+     // Send to AXI interface
+     vp::IoReqStatus status = this->ico_itf.req(req);
++    this->issued_axi_burst_order_list.push(req);
+ 
+     if (status == vp::IoReqStatus::IO_REQ_OK)
+     {
+@@ -206,10 +215,55 @@ void IDmaBeAxi::read_handle_req_end(vp::IoReq *req)
+ {
+     // Remember at which timestamp the burst must be notified
+     this->read_timestamps[req->id] = this->clock.get_cycles() + req->get_latency();
+-    // Queue the requests, they will be notified in order.
+-    this->read_waiting_bursts.push(req);
+-    // Enqueue fsm event at desired timestamp in case the event is not already enqueued before
+-    this->fsm_event.enqueue(std::max(req->get_latency(), (uint64_t)1));
++
++    // Push to OoO_responses_waiting_list
++    this->OoO_responses_waiting_list.push_back(req);
++
++    // Check OoO_responses_waiting_list and order them to read_waiting_bursts
++    std::list<vp::IoReq *>::iterator OoO_iter;
++    while(true){
++        if (this->issued_axi_burst_order_list.size() == 0)
++        {
++            if (this->OoO_responses_waiting_list.size() != 0)
++            {
++                this->trace.msg(vp::Trace::LEVEL_WARNING, "[iDMA ROB] OoO_responses_waiting_list has remaining entry but issued_axi_burst_order_list size is 0\n");
++            } else {
++                break;
++            }
++        }
++
++        if (this->OoO_responses_waiting_list.size() == 0)
++        {
++            break;
++        }
++
++        int matched = 0;
++        vp::IoReq *req_to_check = this->issued_axi_burst_order_list.front();
++        for (OoO_iter = this->OoO_responses_waiting_list.begin(); OoO_iter != this->OoO_responses_waiting_list.end(); ++OoO_iter)
++        {
++            vp::IoReq *req_responsed = *OoO_iter;
++            if (req_to_check == req_responsed)
++            {
++                matched = 1;
++                break;
++            }
++        }
++
++        if (matched == 0)
++        {
++            break;
++        }
++
++        this->issued_axi_burst_order_list.pop();
++        this->read_waiting_bursts.push(req_to_check);
++        this->OoO_responses_waiting_list.erase(OoO_iter);
++    }
++
++    // Enqueue FSM when read_waiting_bursts is not empty
++    if (this->read_waiting_bursts.size() != 0)
++    {
++        this->fsm_event.enqueue(1);
++    }
+ }
+ 
+ 
+@@ -357,29 +411,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+ 
+     // In case we have pending read bursts waiting for pushing data, only do it if the backend
+     // is ready to accept the data in case the destination is not ready
+-    if (_this->read_waiting_bursts.size() != 0 && _this->be->is_ready_to_accept_data())
++    if (_this->read_waiting_bursts.size() != 0 )
+     {
+-        vp::IoReq *req = _this->read_waiting_bursts.front();
+-
+-        // Push the data only once the timestamp has expired to take into account the latency
+-        // returned when the data was read
+-        if (_this->read_timestamps[req->id] <= _this->clock.get_cycles())
++        if (_this->be->is_ready_to_accept_data())
+         {
+-            // Move the burst to a different queue so that we can free the request when it is
+-            // acknowledge
+-            _this->read_waiting_bursts.pop();
+-            _this->read_bursts_waiting_ack.push(req);
+-
+-            // Send the data
+-            _this->be->write_data(req->get_data(), req->get_size());
+-
+-            // Trigger again the FSM since we may continue with another transfer
+-            _this->fsm_event.enqueue();
++            vp::IoReq *req = _this->read_waiting_bursts.front();
++
++            // Push the data only once the timestamp has expired to take into account the latency
++            // returned when the data was read
++            if (_this->read_timestamps[req->id] <= _this->clock.get_cycles())
++            {
++                // Move the burst to a different queue so that we can free the request when it is
++                // acknowledge
++                _this->read_waiting_bursts.pop();
++                _this->read_bursts_waiting_ack.push(req);
++
++                // Send the data
++                _this->be->write_data(req->get_data(), req->get_size());
++
++                // Trigger again the FSM since we may continue with another transfer
++                _this->fsm_event.enqueue();
++            }
++            else
++            {
++                // Otherwise check again when timetamp is reached
++                _this->fsm_event.enqueue(_this->read_timestamps[req->id] - _this->clock.get_cycles());
++            }
+         }
+         else
+         {
+-            // Otherwise check again when timetamp is reached
+-            _this->fsm_event.enqueue(_this->read_timestamps[req->id] - _this->clock.get_cycles());
++            // Enqueue FSM when read_waiting_bursts is not empty
++            _this->fsm_event.enqueue(1);
+         }
+     }
+ }
+@@ -396,4 +458,4 @@ void IDmaBeAxi::update()
+ bool IDmaBeAxi::is_empty()
+ {
+     return this->pending_bursts.empty();
+-}
+\ No newline at end of file
++}
+diff --git a/pulp/idma/be/idma_be_axi.hpp b/pulp/idma/be/idma_be_axi.hpp
+index 211ea51..4f433b6 100644
+--- a/pulp/idma/be/idma_be_axi.hpp
++++ b/pulp/idma/be/idma_be_axi.hpp
+@@ -21,6 +21,7 @@
+ #pragma once
+ 
+ #include <vector>
++#include <list>
+ #include <vp/vp.hpp>
+ #include <vp/itf/io.hpp>
+ #include "../idma.hpp"
+@@ -108,4 +109,8 @@ private:
+     // Current base of the first transfer. This is when a chunk of data to be written is received
+     // to know the base where it should be written.
+     uint64_t current_burst_base;
++
++    // Track the orders of DMA issued requests, for dealing with OoO responses
++    std::queue<vp::IoReq *> issued_axi_burst_order_list;
++    std::list<vp::IoReq *> OoO_responses_waiting_list;
+ };
 diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
 index 867c0e2..f860e33 100644
 --- a/pulp/idma/fe/idma_fe_xdma.cpp
