@@ -4,7 +4,7 @@ build/
 __pycache__/
 soft_hier/build_dynlib_from_github_dramsys5/DRAMSys
 soft_hier/build_dynlib_from_github_dramsys5/cmake*
-soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.*
+flex_cluster_arch*
 *DRAMSysRecordable*
 *debug_binary*
 *gvsoc_config.json
