@@ -1,7 +1,12 @@
 import re
+import argparse
+
+parser = argparse.ArgumentParser(description="Generate C and S header files from a SoftHier configuration file.")
+parser.add_argument("input_file", nargs="?", default="soft_hier/flex_cluster/flex_cluster_arch.py", help="Path to the input Python file")
+args = parser.parse_args()
+input_file = args.input_file
 
 # Read the input Python file
-input_file = 'pulp/pulp/chips/flex_cluster/flex_cluster_arch.py'
 C_header_file = 'soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.h'
 S_header_file = 'soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.inc'
 

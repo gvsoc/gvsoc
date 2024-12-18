@@ -109,10 +109,16 @@ clean_preparation:
 ## 				Make Targets for SoftHier Simulator 				##
 ######################################################################
 
+config_file ?= "soft_hier/flex_cluster/flex_cluster_arch.py"
+ifdef cfg
+	config_file = "$(cfg)"
+endif
+
 config:
 	rm -rf pulp/pulp/chips/flex_cluster
 	cp -rf soft_hier/flex_cluster pulp/pulp/chips/flex_cluster
-	python3 soft_hier/flex_cluster_utilities/config.py
+	cp $(config_file) pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
+	python3 soft_hier/flex_cluster_utilities/config.py $(config_file)
 
 hw:
 	make config
@@ -136,7 +142,11 @@ sw:
 clean_sw:
 	rm -rf sw_build
 
-iter:
+######################################################################
+## 				Make Targets for SoftHier HW + SW	 				##
+######################################################################
+
+hs:
 	make config
 	make TARGETS=pulp.chips.flex_cluster.flex_cluster all
 	make sw
