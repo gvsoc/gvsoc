@@ -102,7 +102,7 @@ uint32_t flex_is_first_core(){
 *  Global Barrier  *
 *******************/
 
-uint32_t flex_get_barrier_amo_value(){
+uint32_t flex_get_enable_value(){
     uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+4;
     return *amo_reg;
 }
@@ -127,7 +127,7 @@ void flex_reset_barrier(uint32_t* barrier){
 }
 
 uint32_t flex_amo_fetch_add(uint32_t* barrier){
-    return __atomic_fetch_add(barrier, flex_get_barrier_amo_value(), __ATOMIC_RELAXED);
+    return __atomic_fetch_add(barrier, flex_get_enable_value(), __ATOMIC_RELAXED);
 }
 
 void flex_intra_cluster_sync(){
@@ -144,9 +144,9 @@ void flex_barrier_init(){
         {
             // __atomic_store_n(barrier, 0, __ATOMIC_RELAXED);
             flex_reset_barrier(barrier);
-            *wakeup_reg = 1;
+            *wakeup_reg = flex_get_enable_value();
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
@@ -160,11 +160,11 @@ void flex_global_barrier(){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
-        if ((flex_get_barrier_num_cluster() - 1) == flex_amo_fetch_add(barrier)) {
+        if ((flex_get_barrier_num_cluster() - flex_get_enable_value()) == flex_amo_fetch_add(barrier)) {
             flex_reset_barrier(barrier);
-            *wakeup_reg = 1;
+            *wakeup_reg = flex_get_enable_value();
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
@@ -187,9 +187,9 @@ void flex_barrier_xy_init(){
                 uint32_t * barrier_x = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,i)*ARCH_SYNC_INTERLEAVE)+8;
                 flex_reset_barrier(barrier_x);
             }
-            *wakeup_reg = 1;
+            *wakeup_reg = flex_get_enable_value();
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
@@ -210,17 +210,17 @@ void flex_global_barrier_xy(){
         uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
 
         //First Barrier X
-        if ((flex_get_barrier_num_cluster_x() - 1) == flex_amo_fetch_add(barrier_x)) {
+        if ((flex_get_barrier_num_cluster_x() - flex_get_enable_value()) == flex_amo_fetch_add(barrier_x)) {
             flex_reset_barrier(barrier_x);
 
             //For cluster synced X, then sync Y
-            if ((flex_get_barrier_num_cluster_y() - 1) == flex_amo_fetch_add(barrier_y))
+            if ((flex_get_barrier_num_cluster_y() - flex_get_enable_value()) == flex_amo_fetch_add(barrier_y))
             {
                 flex_reset_barrier(barrier_y);
-                *wakeup_reg = 1;
+                *wakeup_reg = flex_get_enable_value();
             }
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
@@ -247,10 +247,10 @@ void flex_timer_start(){
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
         {
-            *start_reg = 1;
-            *wakeup_reg = 1;
+            *start_reg = flex_get_enable_value();
+            *wakeup_reg = flex_get_enable_value();
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
@@ -264,10 +264,10 @@ void flex_timer_end(){
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
         {
-            *end_reg = 1;
-            *wakeup_reg = 1;
+            *end_reg = flex_get_enable_value();
+            *wakeup_reg = flex_get_enable_value();
         }
-        *cluster_reg = 1;
+        *cluster_reg = flex_get_enable_value();
     }
 
     flex_intra_cluster_sync();
