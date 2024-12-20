@@ -118,10 +118,10 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
         uint32_t eff_iter = iter - info->systolic_delay;
         uint32_t sub_iter = eff_iter%(info->XW_tile_length + 1);
         uint32_t st_count = eff_iter/(info->XW_tile_length + 1);
-        uint32_t xw_count = st_count * info->XW_tile_length + sub_iter - 1;
+        uint32_t xw_count = (sub_iter < 1)? st_count * info->XW_tile_length : st_count * info->XW_tile_length + sub_iter - 1;
         FlexPosition pos = get_pos(flex_get_cluster_id());
 
-        if (sub_iter == 0)
+        if (sub_iter == 1)
         {
             if (st_count != 0)
             {
@@ -162,6 +162,19 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
             }
         }
     }
+
+    //Final Store
+    if (iter == (info->Z_tile_all * (info->XW_tile_length + 1) + info->systolic_delay + 1))
+    {
+        uint32_t eff_iter = iter - info->systolic_delay;
+        uint32_t st_count = eff_iter/(info->XW_tile_length + 1);
+        FlexPosition pos = get_pos(flex_get_cluster_id());
+
+        info->use_dma1 = 1;
+        info->dma1_dst = hbm_south(pos.x,0) + (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) + (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y + pos.y * info->tile_size_byte_Y;
+        info->dma1_src = local(info->Y_offset);
+        info->dma1_size = info->tile_size_byte_Y;
+    }
 }
 
 void gemm_systolic_wise_compute_redmule_action(GemmSystolicInfo * info, uint32_t iter){
@@ -175,8 +188,8 @@ void gemm_systolic_wise_compute_redmule_action(GemmSystolicInfo * info, uint32_t
         uint32_t eff_iter = iter - info->systolic_delay - 1;
         uint32_t sub_iter = eff_iter%(info->XW_tile_length + 1);
         uint32_t st_count = eff_iter/(info->XW_tile_length + 1);
-        uint32_t xw_count = st_count * info->XW_tile_length + sub_iter - 1;
-        if (sub_iter != 0)
+        uint32_t xw_count = (sub_iter < 1)? st_count * info->XW_tile_length : st_count * info->XW_tile_length + sub_iter - 1;
+        if (sub_iter != 1)
         {
             info->use_redmule = 1;
             info->redmule_x = (xw_count%2 == 0)? info->X_offset_1 : info->X_offset_2;
