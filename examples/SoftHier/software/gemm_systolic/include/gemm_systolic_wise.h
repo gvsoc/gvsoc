@@ -54,6 +54,8 @@ typedef struct GemmSystolicInfo
     uint32_t dma2_dst;
     uint32_t dma2_size;
 
+    uint32_t use_sync_dma;
+
     uint32_t use_redmule;
     uint32_t redmule_x;
     uint32_t redmule_w;
@@ -111,6 +113,7 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
     //Set defualt number
     info->use_dma1 = 0;
     info->use_dma2 = 0;
+    info->use_sync_dma = 0;
 
     //Determine DMA actions
     if ((iter >= info->systolic_delay) && (iter < (info->Z_tile_all * (info->XW_tile_length + 1) + info->systolic_delay)))
@@ -125,10 +128,15 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
         {
             if (st_count != 0)
             {
+                info->use_sync_dma = 1;
                 info->use_dma1 = 1;
                 info->dma1_dst = hbm_south(pos.x,0) + (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) + (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y + pos.y * info->tile_size_byte_Y;
                 info->dma1_src = local(info->Y_offset);
                 info->dma1_size = info->tile_size_byte_Y;
+                info->use_dma2 = 1;
+                info->dma2_dst = local(info->Y_offset);
+                info->dma2_src = zomem(0);
+                info->dma2_size = info->tile_size_byte_Y;
             }
         } else {
             info->use_dma1 = 1;
@@ -241,16 +249,25 @@ void gemm_systolic_wise(
 
         if (flex_is_dm_core())
         {
-            //Asynchronizly execute idma actions
-            if (info.use_dma1) flex_dma_async_1d(info.dma1_dst, info.dma1_src, info.dma1_size);
-            if (info.use_dma2) flex_dma_async_1d(info.dma2_dst, info.dma2_src, info.dma2_size);
-            info.dma_runing = info.use_dma1 | info.use_dma2;
+            if (info.use_sync_dma)
+            {
+                //Synchronizly execute idma actions
+                if (info.use_dma1) {flex_dma_async_1d(info.dma1_dst, info.dma1_src, info.dma1_size); flex_dma_async_wait_all();}
+                if (info.use_dma2) {flex_dma_async_1d(info.dma2_dst, info.dma2_src, info.dma2_size); flex_dma_async_wait_all();}
+                //Compute for next idma actions
+                gemm_systolic_wise_compute_dma_access(&info, i+1);
+            } else {
+                //Asynchronizly execute idma actions
+                if (info.use_dma1) flex_dma_async_1d(info.dma1_dst, info.dma1_src, info.dma1_size);
+                if (info.use_dma2) flex_dma_async_1d(info.dma2_dst, info.dma2_src, info.dma2_size);
+                info.dma_runing = info.use_dma1 | info.use_dma2;
 
-            //Compute for next idma actions
-            gemm_systolic_wise_compute_dma_access(&info, i+1);
+                //Compute for next idma actions
+                gemm_systolic_wise_compute_dma_access(&info, i+1);
 
-            //Wait for idma done
-            if (info.dma_runing) flex_dma_async_wait_all();
+                //Wait for idma done
+                if (info.dma_runing) flex_dma_async_wait_all();
+            }
         }
 
         //Global synchronization
