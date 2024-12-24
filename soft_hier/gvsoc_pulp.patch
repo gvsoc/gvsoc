@@ -73,7 +73,7 @@ index 4124c25..f0621e1 100644
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..bc110bf 100644
+index 50cb4ac..ad2b0bf 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -86,7 +86,51 @@ index 50cb4ac..bc110bf 100644
          {
              vp::IoReq *req = (vp::IoReq *)queue->head();
  
-@@ -173,7 +174,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -100,8 +101,15 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             // to go to the destination
+             int next_x, next_y;
+             _this->get_next_router_pos(to_x, to_y, next_x, next_y);
++#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++            uint8_t collective_type = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[0];
++            bool is_collective_original_node = (queue_index == _this->get_req_queue(_this->x, _this->y));
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d), coll: %d, coll_org: %d, dest_addr: 0x%lx)\n",
++                req, next_x, next_y, collective_type, is_collective_original_node, req->get_addr());
++#else  //No define ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+             _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d))\n",
+                 req, next_x, next_y);
++#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+             // In case the request goes to a queue which is stalled, skip it
+             // we'll retry later
+@@ -140,6 +148,13 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             // Now send to the next position
+             if (to_x == _this->x && to_y == _this->y)
+             {
++#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++                if (collective_type > 1)
++                {
++                    //For reduction we do it on final target
++                    _this->handle_collective(req, collective_type, _this->x, _this->y);
++                }
++#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+                 // If next position is the same as the current one, it means it arrived to
+                 // destination, we need to forward to the fina target
+                 _this->send_to_target(req, _this->x, _this->y);
+@@ -149,6 +164,13 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+                 // Otherwise forward to next position
+                 Router *router = _this->noc->get_router(next_x, next_y);
+ 
++#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++                if (collective_type !=0 && is_collective_original_node == 0)
++                {
++                    _this->handle_collective(req, collective_type, _this->x, _this->y);
++                }
++#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++
+                 if (router == NULL)
+                 {
+                     // It is possible that we don't have any router at the destination if it is on
+@@ -173,7 +195,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Since we removed a request, check in next cycle if there is another one to handle
              _this->fsm_event.enqueue();
  
@@ -95,7 +139,7 @@ index 50cb4ac..bc110bf 100644
          }
  
          // If we didn't any ready request, try with next queue
-@@ -204,7 +205,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+@@ -204,7 +226,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
          req->status = result;
          this->noc->handle_request_end(req);
      }
@@ -104,8 +148,221 @@ index 50cb4ac..bc110bf 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
+@@ -225,6 +247,144 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+     }
+ }
+ 
++#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++/****************************************************
++*                   FP16 Utilities                  *
++****************************************************/
++
++typedef union {
++    float f;
++    struct {
++        uint32_t mantissa : 23;
++        uint32_t exponent : 8;
++        uint32_t sign : 1;
++    } parts;
++} FloatBits;
++
++typedef uint16_t fp16;
++
++// Convert float to FP16 (half-precision)
++fp16 float_to_fp16(float value) {
++    FloatBits floatBits;
++    floatBits.f = value;
++
++    uint16_t sign = floatBits.parts.sign << 15;
++    int32_t exponent = floatBits.parts.exponent - 127 + 15; // adjust bias from 127 to 15
++    uint32_t mantissa = floatBits.parts.mantissa >> 13;     // reduce to 10 bits
++
++    if (exponent <= 0) {
++        if (exponent < -10) return sign;   // too small
++        mantissa = (floatBits.parts.mantissa | 0x800000) >> (1 - exponent);
++        return sign | mantissa;
++    } else if (exponent >= 0x1F) {
++        return sign | 0x7C00;  // overflow to infinity
++    }
++    return sign | (exponent << 10) | mantissa;
++}
++
++// Convert FP16 to float
++float fp16_to_float(fp16 value) {
++    FloatBits floatBits;
++    floatBits.parts.sign = (value >> 15) & 0x1;
++    int32_t exponent = (value >> 10) & 0x1F;
++    floatBits.parts.exponent = (exponent == 0) ? 0 : exponent + 127 - 15;
++    floatBits.parts.mantissa = (value & 0x3FF) << 13;
++    return floatBits.f;
++}
++
++void Router::handle_collective(vp::IoReq *req, uint8_t collective_type, int pos_x, int pos_y)
++{
++    vp::IoMaster *target = this->noc->get_target(pos_x, pos_y);
++
++    if (collective_type == 1)
++    {
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[BroadCast] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), req->get_data(), req->get_size(), 1);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //delete the broadcst write request
++        delete collective_req;
++    } else if (collective_type == 2){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD UINT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        uint16_t * dst = (uint16_t *) req->get_data();
++        uint16_t * src = (uint16_t *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
++        {
++            dst[i] = dst[i] + src[i];
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else if (collective_type == 3){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD INT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        int16_t * dst = (int16_t *) req->get_data();
++        int16_t * src = (int16_t *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
++        {
++            dst[i] = dst[i] + src[i];
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else if (collective_type == 4){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        fp16 * dst = (fp16 *) req->get_data();
++        fp16 * src = (fp16 *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(fp16)); ++i)
++        {
++            dst[i] = float_to_fp16(fp16_to_float(dst[i]) + fp16_to_float(src[i]));
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else {
++        this->trace.fatal("Invalid collective operation: %d\n", collective_type);
++    }
++}
++#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+ 
+ void Router::grant(vp::IoReq *req)
+diff --git a/pulp/floonoc/floonoc_router.hpp b/pulp/floonoc/floonoc_router.hpp
+index e455f21..27c5e95 100644
+--- a/pulp/floonoc/floonoc_router.hpp
++++ b/pulp/floonoc/floonoc_router.hpp
+@@ -22,6 +22,7 @@
+ #pragma once
+ 
+ #include <vp/vp.hpp>
++#define ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+ class FlooNoc;
+ 
+@@ -49,6 +50,10 @@ private:
+     static void fsm_handler(vp::Block *__this, vp::ClockEvent *event);
+     // Called when a request has reached its destination position and should be sent to a target
+     void send_to_target(vp::IoReq *req, int pos_x, int pos_y);
++#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    // Called when a request has collective operation
++    void handle_collective(vp::IoReq *req, uint8_t collective_type, int pos_x, int pos_y);
++#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+     // Get the position of the next router which should handle a request.
+     void get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y);
+     // Get the index of the queue corresponding to a source or destination position
+diff --git a/pulp/idma/be/idma_be.cpp b/pulp/idma/be/idma_be.cpp
+index 4e3a273..237be01 100644
+--- a/pulp/idma/be/idma_be.cpp
++++ b/pulp/idma/be/idma_be.cpp
+@@ -85,6 +85,12 @@ bool IDmaBe::can_accept_transfer()
+     return this->current_transfer_size == 0;
+ }
+ 
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++uint64_t IDmaBe::get_collective_type()
++{
++    return this->current_transfer->parent->collective_type;
++}
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+ 
+ void IDmaBe::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+diff --git a/pulp/idma/be/idma_be.hpp b/pulp/idma/be/idma_be.hpp
+index 4e2d730..b98289b 100644
+--- a/pulp/idma/be/idma_be.hpp
++++ b/pulp/idma/be/idma_be.hpp
+@@ -185,6 +185,13 @@ public:
+      * by the source backend protocol.
+      */
+     virtual void ack_data(uint8_t *data, int size) = 0;
++
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    /**
++     * @brief Get collective operation of current transfer
++     */
++    virtual uint64_t get_collective_type() = 0;
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ };
+ 
+ 
+@@ -221,6 +228,9 @@ public:
+     bool is_ready_to_accept_data() override;
+     void write_data(uint8_t *data, uint64_t size) override;
+     void ack_data(uint8_t *data, int size) override;
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    uint64_t get_collective_type() override;
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+ private:
+     // FSM handler, called to check if any action should be taken after something was updated
 diff --git a/pulp/idma/be/idma_be_axi.cpp b/pulp/idma/be/idma_be_axi.cpp
-index 149cb7f..d99b54a 100644
+index 149cb7f..aeb2d1b 100644
 --- a/pulp/idma/be/idma_be_axi.cpp
 +++ b/pulp/idma/be/idma_be_axi.cpp
 @@ -93,6 +93,14 @@ void IDmaBeAxi::reset(bool active)
@@ -191,7 +448,18 @@ index 149cb7f..d99b54a 100644
  }
  
  
-@@ -357,29 +411,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -273,6 +327,10 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+     req->set_addr(base);
+     req->set_size(size);
+     req->set_data(data);
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    uint8_t * payload_ptr = req->get_payload();
++    payload_ptr[0] = (uint8_t) this->be->get_collective_type();
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+     vp::IoReqStatus status = this->ico_itf.req(req);
+     if (status == vp::IoReqStatus::IO_REQ_OK)
+@@ -357,29 +415,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
      // In case we have pending read bursts waiting for pushing data, only do it if the backend
      // is ready to accept the data in case the destination is not ready
@@ -247,7 +515,7 @@ index 149cb7f..d99b54a 100644
          }
      }
  }
-@@ -396,4 +458,4 @@ void IDmaBeAxi::update()
+@@ -396,4 +462,4 @@ void IDmaBeAxi::update()
  bool IDmaBeAxi::is_empty()
  {
      return this->pending_bursts.empty();
@@ -276,7 +544,7 @@ index 211ea51..4f433b6 100644
 +    std::list<vp::IoReq *> OoO_responses_waiting_list;
  };
 diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
-index 867c0e2..f860e33 100644
+index 867c0e2..234f39b 100644
 --- a/pulp/idma/fe/idma_fe_xdma.cpp
 +++ b/pulp/idma/fe/idma_fe_xdma.cpp
 @@ -46,6 +46,12 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
@@ -292,7 +560,40 @@ index 867c0e2..f860e33 100644
  }
  
  
-@@ -133,6 +139,14 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -87,19 +93,19 @@ void IDmaFeXdma::offload_sync(vp::Block *__this, IssOffloadInsn<uint32_t> *insn)
+             _this->reps.set(insn->arg_a);
+             break;
+         case 0b0000011:
+-            _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmcpy operation (config: 0x%lx, size: 0x%lx)\n",
+-                insn->arg_b, insn->arg_a);
+-            insn->result = _this->enqueue_copy(insn->arg_b, insn->arg_a, insn->granted);
++            _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmcpy collectve operation (config: 0x%lx, size: 0x%lx)\n",
++                ((insn->opcode >> 20) & 0b11111), insn->arg_a);
++            insn->result = _this->enqueue_copy(0b00000, insn->arg_a, insn->granted, ((insn->opcode >> 20) & 0b11111));
+             break;
+         case 0b0000101:
+-            // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat operation (status: 0x%lx)\n",
++            // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat B operation (status: 0x%lx)\n",
+             //     insn->arg_b);
+             insn->result = _this->get_status(insn->arg_b);
+             break;
+         case 0b0000010:
+             _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmcpy operation (config: 0x%lx, size: 0x%lx)\n",
+                 insn->arg_b, insn->arg_a);
+-            insn->result = _this->enqueue_copy(insn->arg_b, insn->arg_a, insn->granted);
++            insn->result = _this->enqueue_copy(insn->arg_b, insn->arg_a, insn->granted, 0);
+             break;
+         case 0b0000100:
+             // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat operation (status: 0x%lx)\n",
+@@ -126,13 +132,21 @@ uint32_t IDmaFeXdma::get_status(uint32_t status)
+ 
+ 
+ 
+-uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
++uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted, uint32_t collective_type)
+ {
+     // Allocate transfer ID
+     uint32_t transfer_id = this->next_transfer_id.get();
      this->next_transfer_id.set(transfer_id + 1);
  
      this->trace.msg(vp::Trace::LEVEL_TRACE, "Allocated transfer ID (id: %d)\n", transfer_id);
@@ -307,7 +608,17 @@ index 867c0e2..f860e33 100644
  
      // Allocate a new transfer and fill it from registers
      IdmaTransfer *transfer = new IdmaTransfer();
-@@ -170,6 +184,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -143,6 +157,9 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+     transfer->dst_stride = this->dst_stride.get();
+     transfer->reps = this->reps.get();
+     transfer->config = config;
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    transfer->collective_type = collective_type;
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+     // Check if middle end can accept a new transfer
+     if (this->me->can_accept_transfer())
+@@ -170,6 +187,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
  void IDmaFeXdma::ack_transfer(IdmaTransfer *transfer)
  {
      this->completed_id.inc(1);
@@ -322,7 +633,7 @@ index 867c0e2..f860e33 100644
  }
  
 diff --git a/pulp/idma/fe/idma_fe_xdma.hpp b/pulp/idma/fe/idma_fe_xdma.hpp
-index 300ef51..7883152 100644
+index 300ef51..6843154 100644
 --- a/pulp/idma/fe/idma_fe_xdma.hpp
 +++ b/pulp/idma/fe/idma_fe_xdma.hpp
 @@ -20,6 +20,9 @@
@@ -335,6 +646,15 @@ index 300ef51..7883152 100644
  #include <vp/vp.hpp>
  #include <cpu/iss/include/offload.hpp>
  #include <vp/register.hpp>
+@@ -51,7 +54,7 @@ private:
+     // Method for offload interface, called when the core is offloading an xdma instruction
+     static void offload_sync(vp::Block *__this, IssOffloadInsn<uint32_t> *insn);
+     // Enqueue a transfer using the current values of the registers
+-    uint32_t enqueue_copy(uint32_t config, uint32_t size, bool &granted);
++    uint32_t enqueue_copy(uint32_t config, uint32_t size, bool &granted, uint32_t collective_type);
+     // Return status
+     uint32_t get_status(uint32_t status);
+ 
 @@ -82,4 +85,10 @@ private:
      vp::Signal<bool> do_transfer_grant;
      // In case a transfer was blocked, gives the transfer which was blocked
@@ -346,6 +666,30 @@ index 300ef51..7883152 100644
 +    int64_t total_idma_used_time;
 +    std::string TxnList;
  };
+diff --git a/pulp/idma/idma.hpp b/pulp/idma/idma.hpp
+index 0a25bcb..348aebe 100644
+--- a/pulp/idma/idma.hpp
++++ b/pulp/idma/idma.hpp
+@@ -23,6 +23,8 @@
+ #include <vector>
+ #include <vp/vp.hpp>
+ 
++#define ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++
+ 
+ 
+ /**
+@@ -47,6 +49,10 @@ public:
+     uint64_t reps;
+     // Transfer config
+     uint64_t config;
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    // Transfer collective type
++    uint64_t collective_type;
++#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
+     // Free rom for additional information
+     std::vector<uint64_t> data;
 diff --git a/pulp/snitch/sequencer.cpp b/pulp/snitch/sequencer.cpp
 index 673529f..080f26f 100644
 --- a/pulp/snitch/sequencer.cpp

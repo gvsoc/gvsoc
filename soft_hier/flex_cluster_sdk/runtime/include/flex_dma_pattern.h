@@ -13,11 +13,17 @@
 #define DMSRC_FUNCT7 0b0000000
 #define DMDST_FUNCT7 0b0000001
 #define DMCPYI_FUNCT7 0b0000010
-#define DMCPY_FUNCT7 0b0000011
+#define DMCPYC_FUNCT7 0b0000011
 #define DMSTATI_FUNCT7 0b0000100
 #define DMSTAT_FUNCT7 0b0000101
 #define DMSTR_FUNCT7 0b0000110
 #define DMREP_FUNCT7 0b0000111
+
+typedef enum {
+    COLLECTIVE_UINT_16,
+    COLLECTIVE_INT_16,
+    COLLECTIVE_FP_16
+} collective_compute_format_t;
 
 #define R_TYPE_ENCODE(funct7, rs2, rs1, funct3, rd, opcode)                    \
     ((funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | \
@@ -96,6 +102,80 @@ inline uint32_t bare_dma_start_2d(uint64_t dst, uint64_t src,
     return reg_txid;
 }
 
+inline uint32_t bare_dma_start_1d_broadcast(uint64_t dst, uint64_t src,
+                                          size_t size) {
+    register uint32_t reg_dst_low asm("a0") = dst >> 0;    // 10
+    register uint32_t reg_dst_high asm("a1") = dst >> 32;  // 11
+    register uint32_t reg_src_low asm("a2") = src >> 0;    // 12
+    register uint32_t reg_src_high asm("a3") = src >> 32;  // 13
+    register uint32_t reg_size asm("a4") = size;           // 14
+
+    // dmsrc a2, a3
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSRC_FUNCT7, 13, 12,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_src_high), "r"(reg_src_low));
+
+    // dmdst a0, a1
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMDST_FUNCT7, 11, 10,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_dst_high), "r"(reg_dst_low));
+
+    // dmcpyi a0, a4, 0b00
+    register uint32_t reg_txid asm("a0");  // 10
+    asm volatile(".word %1\n"
+                 : "=r"(reg_txid)
+                 : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00001, 14, XDMA_FUNCT3,
+                                     10, OP_CUSTOM1)),
+                   "r"(reg_size));
+
+    return reg_txid;
+}
+
+inline uint32_t bare_dma_start_1d_reduction(uint64_t dst, uint64_t src,
+                                          size_t size, collective_compute_format_t fmt) {
+    register uint32_t reg_dst_low asm("a0") = dst >> 0;    // 10
+    register uint32_t reg_dst_high asm("a1") = dst >> 32;  // 11
+    register uint32_t reg_src_low asm("a2") = src >> 0;    // 12
+    register uint32_t reg_src_high asm("a3") = src >> 32;  // 13
+    register uint32_t reg_size asm("a4") = size;           // 14
+
+    // dmsrc a2, a3
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSRC_FUNCT7, 13, 12,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_src_high), "r"(reg_src_low));
+
+    // dmdst a0, a1
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMDST_FUNCT7, 11, 10,
+                                                  XDMA_FUNCT3, 0, OP_CUSTOM1)),
+                 "r"(reg_dst_high), "r"(reg_dst_low));
+
+    // dmcpyi a0, a4, 0b00
+    register uint32_t reg_txid asm("a0");  // 10
+    if (fmt == COLLECTIVE_UINT_16)
+    {
+        asm volatile(".word %1\n"
+                     : "=r"(reg_txid)
+                     : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00010, 14, XDMA_FUNCT3,
+                                         10, OP_CUSTOM1)),
+                       "r"(reg_size));
+    } else if (fmt == COLLECTIVE_INT_16)
+    {
+        asm volatile(".word %1\n"
+                     : "=r"(reg_txid)
+                     : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00011, 14, XDMA_FUNCT3,
+                                         10, OP_CUSTOM1)),
+                       "r"(reg_size));
+    } else {
+        asm volatile(".word %1\n"
+                     : "=r"(reg_txid)
+                     : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00100, 14, XDMA_FUNCT3,
+                                         10, OP_CUSTOM1)),
+                       "r"(reg_size));
+    }
+
+    return reg_txid;
+}
+
 inline void bare_dma_wait_all() {
     // dmstati t0, 2  # 2=status.busy
     asm volatile(
@@ -114,6 +194,16 @@ inline void bare_dma_wait_all() {
 //Basic DMA 1d transfter
 void flex_dma_async_1d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size){
     bare_dma_start_1d(dst_addr, src_addr, transfer_size); //Start iDMA
+}
+
+//Basic DMA 1d transfter with broadcast
+void flex_dma_async_1d_broadcast(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size){
+    bare_dma_start_1d_broadcast(dst_addr, src_addr, transfer_size); //Start iDMA
+}
+
+//Basic DMA 1d transfter with reduction
+void flex_dma_async_1d_reduction(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size, collective_compute_format_t fmt){
+    bare_dma_start_1d_reduction(dst_addr, src_addr, transfer_size, fmt); //Start iDMA
 }
 
 //wait for idma
