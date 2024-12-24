@@ -12,7 +12,7 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    test_dma_2d();
+    hello_world_all_core();
 
     /**************************************/
     /*  Program Execution Region -- Stop  */

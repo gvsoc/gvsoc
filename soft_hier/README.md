@@ -1,7 +1,8 @@
 ## To-Do List
 
-- [ ] Support Main Memory Preloading
+- [x] Support Main Memory Preloading
 - [ ] Update the ReadMe
-	- [ ] Give Notion of MNK notation
-- [ ] Support Printf
-	- **Note** Currently the printf has some bug, please only use cluster 0 for printf.
+	- [ ] Give notion of MNK notation
+	- [ ] Update Make target for HW + SW
+	- [ ] Update CMD for example simulation
+- [x] Support Printf
