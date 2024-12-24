@@ -134,7 +134,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #NoC
         data_noc = FlexMeshNoC(self, 'data_noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
-                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters)
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1)
 
 
         #Debug Memory

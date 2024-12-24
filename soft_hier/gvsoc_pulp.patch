@@ -1,31 +1,35 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..0d77e2d 100644
+index 668a863..57dce68 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
-@@ -36,6 +36,7 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+@@ -36,6 +36,8 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
      this->dim_x = get_js_config()->get_int("dim_x");
      this->dim_y = get_js_config()->get_int("dim_y");
      this->router_input_queue_size = get_js_config()->get_int("router_input_queue_size");
 +    this->atomics = get_js_config()->get_int("atomics");
++    this->collective = get_js_config()->get_int("collective");
  
      // Reserve the array for the target. We may have one target at each node.
      this->targets.resize(this->dim_x * this->dim_y);
 diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
-index 644696a..0a087a5 100644
+index 644696a..f79285a 100644
 --- a/pulp/floonoc/floonoc.hpp
 +++ b/pulp/floonoc/floonoc.hpp
-@@ -108,6 +108,9 @@ public:
+@@ -108,6 +108,12 @@ public:
      // this width so that the bandwidth corresponds to the width.
      uint64_t width;
  
 +    // Whether Support Atomics
-+    bool atomics; 
++    bool atomics;
++
++    // Whether Support Collective
++    bool collective;
 +
  private:
      // Callback called when a target request is asynchronously granted after a denied error was
      // reported
 diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
-index 2aa365c..bb3e393 100644
+index 2aa365c..a062242 100644
 --- a/pulp/floonoc/floonoc.py
 +++ b/pulp/floonoc/floonoc.py
 @@ -47,7 +47,7 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
@@ -33,15 +37,16 @@ index 2aa365c..bb3e393 100644
      """
      def __init__(self, parent: gvsoc.systree.Component, name, width: int,
 -            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
-+            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0):
++            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0):
          super(FlooNoc2dMesh, self).__init__(parent, name)
  
          self.add_sources([
-@@ -64,6 +64,7 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+@@ -64,6 +64,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
          self.add_property('dim_x', dim_x)
          self.add_property('dim_y', dim_y)
          self.add_property('router_input_queue_size', router_input_queue_size)
 +        self.add_property('atomics', atomics)
++        self.add_property('collective', collective)
  
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
@@ -73,7 +78,7 @@ index 4124c25..f0621e1 100644
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..ad2b0bf 100644
+index 50cb4ac..3d12950 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -86,51 +91,44 @@ index 50cb4ac..ad2b0bf 100644
          {
              vp::IoReq *req = (vp::IoReq *)queue->head();
  
-@@ -100,8 +101,15 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -100,8 +101,10 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // to go to the destination
              int next_x, next_y;
              _this->get_next_router_pos(to_x, to_y, next_x, next_y);
-+#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
-+            uint8_t collective_type = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[0];
-+            bool is_collective_original_node = (queue_index == _this->get_req_queue(_this->x, _this->y));
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d))\n",
+-                req, next_x, next_y);
++            uint8_t collective_type = _this->noc->collective? ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[0] : 0;
++            bool is_collective_original_node = _this->noc->collective? (queue_index == _this->get_req_queue(_this->x, _this->y)) : 0;
 +            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d), coll: %d, coll_org: %d, dest_addr: 0x%lx)\n",
 +                req, next_x, next_y, collective_type, is_collective_original_node, req->get_addr());
-+#else  //No define ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
-             _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d))\n",
-                 req, next_x, next_y);
-+#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
              // In case the request goes to a queue which is stalled, skip it
              // we'll retry later
-@@ -140,6 +148,13 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -140,6 +143,11 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Now send to the next position
              if (to_x == _this->x && to_y == _this->y)
              {
-+#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +                if (collective_type > 1)
 +                {
 +                    //For reduction we do it on final target
 +                    _this->handle_collective(req, collective_type, _this->x, _this->y);
 +                }
-+#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
                  // If next position is the same as the current one, it means it arrived to
                  // destination, we need to forward to the fina target
                  _this->send_to_target(req, _this->x, _this->y);
-@@ -149,6 +164,13 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -149,6 +157,11 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                  // Otherwise forward to next position
                  Router *router = _this->noc->get_router(next_x, next_y);
  
-+#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +                if (collective_type !=0 && is_collective_original_node == 0)
 +                {
 +                    _this->handle_collective(req, collective_type, _this->x, _this->y);
 +                }
-+#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +
                  if (router == NULL)
                  {
                      // It is possible that we don't have any router at the destination if it is on
-@@ -173,7 +195,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -173,7 +186,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Since we removed a request, check in next cycle if there is another one to handle
              _this->fsm_event.enqueue();
  
@@ -139,7 +137,7 @@ index 50cb4ac..ad2b0bf 100644
          }
  
          // If we didn't any ready request, try with next queue
-@@ -204,7 +226,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+@@ -204,7 +217,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
          req->status = result;
          this->noc->handle_request_end(req);
      }
@@ -148,11 +146,10 @@ index 50cb4ac..ad2b0bf 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
-@@ -225,6 +247,144 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
-     }
+@@ -226,6 +239,143 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
  }
  
-+#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
+ 
 +/****************************************************
 +*                   FP16 Utilities                  *
 +****************************************************/
@@ -289,30 +286,20 @@ index 50cb4ac..ad2b0bf 100644
 +        this->trace.fatal("Invalid collective operation: %d\n", collective_type);
 +    }
 +}
-+#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
- 
++
  
  void Router::grant(vp::IoReq *req)
+ {
 diff --git a/pulp/floonoc/floonoc_router.hpp b/pulp/floonoc/floonoc_router.hpp
-index e455f21..27c5e95 100644
+index e455f21..6d11f1c 100644
 --- a/pulp/floonoc/floonoc_router.hpp
 +++ b/pulp/floonoc/floonoc_router.hpp
-@@ -22,6 +22,7 @@
- #pragma once
- 
- #include <vp/vp.hpp>
-+#define ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
- 
- class FlooNoc;
- 
-@@ -49,6 +50,10 @@ private:
+@@ -49,6 +49,8 @@ private:
      static void fsm_handler(vp::Block *__this, vp::ClockEvent *event);
      // Called when a request has reached its destination position and should be sent to a target
      void send_to_target(vp::IoReq *req, int pos_x, int pos_y);
-+#ifdef ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +    // Called when a request has collective operation
 +    void handle_collective(vp::IoReq *req, uint8_t collective_type, int pos_x, int pos_y);
-+#endif //ENABLE_NOC_SIMPLE_COLLECTIVE_IMPLEMENTATION
      // Get the position of the next router which should handle a request.
      void get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y);
      // Get the index of the queue corresponding to a source or destination position
