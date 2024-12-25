@@ -1,10 +1,10 @@
-# SoftHier Simulation Model in GVSoC
+# SoftHier Simulation Model in GVSoC 🚀
 
-## SoftHier Architecture Overview
+## SoftHier Architecture Overview 🏗️
 
 ![SoftHier Architecture Diagram](docs/figures/SoftHier_Arch.png)
 
-## OS Requirements Installation
+## OS Requirements Installation 🖥️
 
 The following instructions are designed for a fresh installation of Ubuntu 22.04 (Jammy Jellyfish).
 
@@ -14,7 +14,7 @@ To install the required packages, run:
 sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
 ```
 
-## Toolchain and Shell Requirements
+## Toolchain and Shell Requirements 🔧
 
 GVSoC requires the following tools and versions:
 
@@ -30,9 +30,9 @@ Also please make sure you are using the bash shell for SoftHier Simulation:
 bash
 ```
 
-## Getting Started with SoftHier Simulation
+## Getting Started with SoftHier Simulation 🚀
 
-### Clone the Repository and Set Up the Environment
+### Clone the Repository and Set Up the Environment 🏁
 
 Follow these steps to set up the SoftHier simulation environment:
 
@@ -49,15 +49,20 @@ Follow these steps to set up the SoftHier simulation environment:
    source sourceme.sh
    ```
 
-### Build and Run the SoftHier Simulation Model
+### Build and Run the SoftHier Simulation Model 🧱
 
-1. **Build the SoftHier hardware model**:
+1. **Build the SoftHier hardware model**: 🛠️
 
    ```bash
    make hw
    ```
+The default configuration file is located at `soft_hier/flex_cluster/flex_cluster_arch.py`. To use a custom architecture configuration, specify the file path as follows:
 
-2. **Run the simulation** with an example binary:
+   ```bash
+   cfg=<path/to/your/architecture/configuration/file> make hw
+   ```
+
+2. **Run the simulation** with an example binary: 🎮
 
    ```bash
    ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
@@ -67,14 +72,14 @@ Follow these steps to set up the SoftHier simulation environment:
    - `--trace`: Indicates which component's trace logs should be generated during the simulation.
 
 
-### Build the Default Binary
+### Build the Default Binary 💾
 To build the default binary from the source code in `soft_hier/flex_cluster_sdk/app_example`, run:
    ```bash
    make sw
    ```
 The generated binary `sw_build/softhier.elf` and the dump file `sw_build/softhier.dump` will be located in the `sw_build` directory.
 
-### Build a Custom Binary
+### Build a Custom Binary ✏️
 To build your own binary:
 
 1. Prepare your source code in a folder with a `CMakeLists.txt` that defines the source files and include paths. For example:
@@ -96,12 +101,48 @@ To build your own binary:
 This will compile the binary using the specified folder. The generated binary `sw_build/softhier.elf` and the dump file `sw_build/softhier.dump` will be located in the `sw_build` directory.
 
 
+### Build Customized Hardware and Software (Highly Recommended) 🧩
 
-## SoftHier Simulation Tutorial
+For convenient and flexible development, use the `hs` Makefile target to build both hardware and software together. This is particularly useful for custom architecture configurations and software development. Run:
+
+```bash
+cfg=<path/to/your/architecture/configuration/file> app=<folder/of/your/code> make hs
+```
+
+We provide example architecture configurations and software source code in the repository. Try the following:
+
+#### Example 1: Hello World 🌍
+```bash
+cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs; make run
+```
+
+#### Example 2: Systolic GEMM Dataflow 🎯
+1. **512-bit NoC Bus, GEMM Store Considered**
+   ```bash
+   cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs; make run
+   ```
+
+2. **512-bit NoC Bus, No GEMM Store**
+   ```bash
+   cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic_nostore make hs; make run
+   ```
+
+3. **1024-bit NoC Bus, GEMM Store Considered**
+   ```bash
+   cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs; make run
+   ```
+
+4. **1024-bit NoC Bus, No GEMM Store**
+   ```bash
+   cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic_nostore make hs; make run
+   ```
+
+
+## SoftHier Simulation Tutorial 📖
 
 All SoftHier model source code can be found in the `soft_hier/flex_cluster/` directory. The software stack is located in the `soft_hier/flex_cluster_sdk/runtime` directory.
 
-### SoftHier Architecture Configuration
+### SoftHier Architecture Configuration ⚙️
 
 The architecture configuration is managed through the Python file `soft_hier/flex_cluster/flex_cluster_arch.py`, which includes parameters such as:
 
@@ -179,7 +220,7 @@ class FlexClusterArch:
         self.noc_link_width          = 512
 ```
 
-### SoftHier Software
+### SoftHier Software 💻
 
 The entry point for programs on the SoftHier architecture is located in the file `soft_hier/flex_cluster_sdk/app_example/main.c`. By default, it runs an example of GEMM (General Matrix Multiply) using one cluster.
 

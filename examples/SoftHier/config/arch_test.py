@@ -21,8 +21,8 @@ class FlexClusterArch:
     def __init__(self):
 
         #Cluster
-        self.num_cluster_x           = 64
-        self.num_cluster_y           = 64
+        self.num_cluster_x           = 4
+        self.num_cluster_y           = 4
         self.num_core_per_cluster    = 3
 
         self.cluster_tcdm_bank_width = 64

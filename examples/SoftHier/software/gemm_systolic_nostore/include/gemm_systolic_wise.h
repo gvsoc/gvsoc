@@ -192,6 +192,7 @@ void gemm_systolic_wise(
         gemm_systolic_wise_compute_dma_access(&info, 0);
     }
 
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_start();
     flex_global_barrier_xy();
  
     for (int i = 0; i < info.total_iter; ++i)
@@ -226,6 +227,7 @@ void gemm_systolic_wise(
         //Global synchronization
         flex_global_barrier_xy();
     }
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_end();
 }
 
 

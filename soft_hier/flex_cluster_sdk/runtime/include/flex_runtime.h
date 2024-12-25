@@ -241,36 +241,12 @@ void flex_eoc(uint32_t val){
 
 void flex_timer_start(){
     volatile uint32_t * start_reg    = ARCH_SOC_REGISTER_EOC + 8;
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
-
-    if (flex_is_dm_core()){
-        if (flex_get_cluster_id() == 0)
-        {
-            *start_reg = flex_get_enable_value();
-            *wakeup_reg = flex_get_enable_value();
-        }
-        *cluster_reg = flex_get_enable_value();
-    }
-
-    flex_intra_cluster_sync();
+    *start_reg = flex_get_enable_value();
 }
 
 void flex_timer_end(){
     volatile uint32_t * end_reg = ARCH_SOC_REGISTER_EOC + 12;
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
-
-    if (flex_is_dm_core()){
-        if (flex_get_cluster_id() == 0)
-        {
-            *end_reg = flex_get_enable_value();
-            *wakeup_reg = flex_get_enable_value();
-        }
-        *cluster_reg = flex_get_enable_value();
-    }
-
-    flex_intra_cluster_sync();
+    *end_reg = flex_get_enable_value();
 }
 
 /*******************
