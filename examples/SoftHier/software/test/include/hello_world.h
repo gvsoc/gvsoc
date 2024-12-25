@@ -241,7 +241,7 @@ void test_dma_broadcat_rowwise(){
     //do redcution
     if (flex_is_dm_core() && flex_get_cluster_id() == 0)
     {
-        flex_dma_async_1d_reduction(remote_pos(left_pos(pos),0), local(0), 64, COLLECTIVE_INT_16);
+        flex_dma_async_1d_reduction(remote_pos(left_pos(pos),0), local(0), 64, COLLECTIVE_REDADD_INT_16);
         // flex_dma_async_1d(remote_pos(left_pos(pos),0), local(0), 4096);
         flex_dma_async_wait_all();
     }

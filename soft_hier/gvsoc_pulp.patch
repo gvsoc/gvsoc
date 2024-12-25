@@ -78,7 +78,7 @@ index 4124c25..f0621e1 100644
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..3d12950 100644
+index 50cb4ac..441f6cb 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -146,7 +146,7 @@ index 50cb4ac..3d12950 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
-@@ -226,6 +239,143 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+@@ -226,6 +239,212 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
  }
  
  
@@ -278,6 +278,75 @@ index 50cb4ac..3d12950 100644
 +        for (int i = 0; i < (req->get_size()/sizeof(fp16)); ++i)
 +        {
 +            dst[i] = float_to_fp16(fp16_to_float(dst[i]) + fp16_to_float(src[i]));
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else if (collective_type == 5){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX UINT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        uint16_t * dst = (uint16_t *) req->get_data();
++        uint16_t * src = (uint16_t *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
++        {
++            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else if (collective_type == 6){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX INT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        int16_t * dst = (int16_t *) req->get_data();
++        int16_t * src = (int16_t *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
++        {
++            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
++        }
++        //delete the broadcst write request
++        delete collective_req;
++        delete[] tmp_array;
++    } else if (collective_type == 7){
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
++        req->get_addr(), req->get_size(), pos_x, pos_y);
++
++        //Generate a broadcst write request
++        uint8_t* tmp_array = new uint8_t[req->get_size()];
++        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
++        //Send to target
++        vp::IoReqStatus result = target->req(collective_req);
++        if (result != vp::IO_REQ_OK)
++        {
++            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
++        }
++        //Execute reduction
++        fp16 * dst = (fp16 *) req->get_data();
++        fp16 * src = (fp16 *) collective_req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(fp16)); ++i)
++        {
++            dst[i] = float_to_fp16(fp16_to_float(dst[i]) > fp16_to_float(src[i]) ? fp16_to_float(dst[i]) : fp16_to_float(src[i]));
 +        }
 +        //delete the broadcst write request
 +        delete collective_req;
