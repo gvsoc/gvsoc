@@ -154,7 +154,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Control register
         narrow_interco.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
         for cluster_id in range(num_clusters):
-            csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ())
+            csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ(),cluster_id)
             pass
 
         #HBM Preloader

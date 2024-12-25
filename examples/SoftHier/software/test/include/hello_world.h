@@ -5,6 +5,7 @@
 #include "flex_printf.h"
 #include "flex_redmule.h"
 #include "flex_dma_pattern.h"
+#include "flex_group_barrier.h"
 
 void hello_world_core0(){
     flex_global_barrier_xy();//Global barrier
@@ -53,6 +54,59 @@ void test_global_barrier(){
     {
         flex_global_barrier_xy();//Global barrier
     }
+}
+
+void test_group_barrier(){
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
+    {
+        reset_sync_group();
+    }
+    flex_global_barrier_xy();//Global barrier
+    GridSyncGroupInfo info = grid_sync_group_init(2,2);
+    flex_global_barrier_xy();//Global barrier
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
+    {
+        printf("Hello World\n");
+        if (info.valid_grid == 1)
+        {
+            printf("[PASSED] It is a valid synchronization group\n");
+        } else {
+            printf("[FAILED] Set a invalid synchronization group\n");
+        }
+        display_cluster_to_group_mapping();
+        printf("Then we analysis GridSyncGroupInfo of each cluster\n");
+    }
+    flex_global_barrier_xy();//Global barrier
+    for (int cid = 0; cid < ARCH_NUM_CLUSTER; ++cid)
+    {
+        if (flex_get_core_id() == 0 && flex_get_cluster_id() == cid)
+        {
+            printf("[Cluster %3d] All Info: \n", cid);
+            printf("-- valid_grid = %0d \n", info.valid_grid);
+            printf("-- grid_x_dim = %0d \n", info.grid_x_dim);
+            printf("-- grid_y_dim = %0d \n", info.grid_y_dim);
+            printf("-- grid_x_num = %0d \n", info.grid_x_num);
+            printf("-- grid_y_num = %0d \n", info.grid_y_num);
+            printf("-- this_grid_id = %0d \n", info.this_grid_id);
+            printf("-- this_grid_id_x = %0d \n", info.this_grid_id_x);
+            printf("-- this_grid_id_y = %0d \n", info.this_grid_id_y);
+            printf("-- this_grid_left_most = %0d \n", info.this_grid_left_most);
+            printf("-- this_grid_right_most = %0d \n", info.this_grid_right_most);
+            printf("-- this_grid_top_most = %0d \n", info.this_grid_top_most);
+            printf("-- this_grid_bottom_most = %0d \n", info.this_grid_bottom_most);
+            printf("-- this_grid_cluster_num = %0d \n", info.this_grid_cluster_num);
+            printf("-- this_grid_cluster_num_x = %0d \n", info.this_grid_cluster_num_x);
+            printf("-- this_grid_cluster_num_y = %0d \n", info.this_grid_cluster_num_y);
+            printf("-- sync_x_cluster = %0d \n", info.sync_x_cluster);
+            printf("-- sync_y_cluster = %0d \n", info.sync_y_cluster);
+            printf("-- sync_x_point = 0x%0x \n", (uint32_t)info.sync_x_point);
+            printf("-- sync_y_point = 0x%0x \n", (uint32_t)info.sync_y_point);
+        }
+        flex_global_barrier_xy();//Global barrier
+    }
+    flex_global_barrier_xy();//Global barrier
+    grid_sync_group_barrier_xy(&info); //Group barrier
+    grid_sync_group_barrier_xy(&info); //Group barrier
 }
 
 void test_dma(){

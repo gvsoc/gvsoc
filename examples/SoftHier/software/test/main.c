@@ -12,7 +12,7 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    hello_world_all_core();
+    test_group_barrier();
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
