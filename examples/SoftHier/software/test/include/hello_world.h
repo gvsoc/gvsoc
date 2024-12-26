@@ -343,4 +343,166 @@ void test_dma_broadcat_rowwise(){
     }
     flex_global_barrier_xy();//Global barrier
 }
+
+// void test_RVV_isa(){
+//     flex_global_barrier_xy();//Global barrier
+//     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0){
+//         unsigned int avl = 128;
+//         unsigned int vl;
+//         uint16_t * x = (uint16_t *)local(0x0000);
+//         uint16_t * y = (uint16_t *)local(0x1000);
+
+//         //vector initialization
+//         asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl) : "r"(avl));
+//         printf("Try to set vector length %0d, then we get %0d \n", avl, vl);
+
+//         //initialize x
+//         for (int i = 0; i < avl; ++i)
+//         {
+//             x[i] = i % 4;
+//             y[i] = i;
+//         }
+
+//         //show x
+//         printf("x = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", x[i]);
+//         }
+//         printf("}\n");
+
+//         //show y
+//         printf("y = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", y[i]);
+//         }
+//         printf("}\n");
+
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vse16.v v0, (%0)" ::"r"(y));
+
+//         printf("Test vector movement\n");
+
+//         //show x
+//         printf("x = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", x[i]);
+//         }
+//         printf("}\n");
+
+//         //show y
+//         printf("y = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", y[i]);
+//         }
+//         printf("}\n");
+
+//         asm volatile("vmv.v.x v8, %0" ::"r"(6));
+//         asm volatile("vse16.v v8, (%0)" ::"r"(y));
+
+//         printf("Test vmv.v.x\n");
+
+//         //show x
+//         printf("x = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", x[i]);
+//         }
+//         printf("}\n");
+
+//         //show y
+//         printf("y = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", y[i]);
+//         }
+//         printf("}\n");
+
+//         asm volatile("vredmax.vs v0, v8, v0");
+//         asm volatile("vse16.v v0, (%0)" ::"r"(x));
+
+//         printf("Test vredmax.vs\n");
+
+//         //show x
+//         printf("x = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", x[i]);
+//         }
+//         printf("}\n");
+
+//         //show y
+//         printf("y = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", y[i]);
+//         }
+//         printf("}\n");
+
+//         asm volatile("vmv.v.x v8, %0" ::"r"(1));
+//         asm volatile("vsll.vv v0, v8, v0");
+//         asm volatile("vse16.v v0, (%0)" ::"r"(x));
+
+//         printf("Test vsll.vv\n");
+
+//         //show x
+//         printf("x = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", x[i]);
+//         }
+//         printf("}\n");
+
+//         //show y
+//         printf("y = {");
+//         for (int i = 0; i < 32; ++i)
+//         {
+//             printf("%0d, ", y[i]);
+//         }
+//         printf("}\n");
+
+
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vle16.v v0, (%0)" ::"r"(x));
+//         asm volatile("vmv.v.x v8, %0" ::"r"(3));
+
+
+//     }
+//     flex_global_barrier_xy();//Global barrier
+// }
 #endif

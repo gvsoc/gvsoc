@@ -77,6 +77,7 @@ class ClusterArch:
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
+                        spatz_core_list,    spatz_num_vlsu,     spatz_num_fu,
                         data_bandwidth,     auto_fetch=False):
 
         self.nb_core                = nb_core_per_cluster
@@ -84,12 +85,17 @@ class ClusterArch:
         self.cluster_id             = cluster_id
         self.auto_fetch             = auto_fetch
         self.barrier_irq            = 19
-        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
+        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core + len(spatz_core_list)*spatz_num_vlsu, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
         self.stack_area             = Area(stack_base, stack_size)
         self.zomem_area             = Area(zomem_base, zomem_size)
         self.sync_area              = Area(sync_base, sync_size)
         self.reg_area               = Area(reg_base, reg_size)
         self.insn_area              = Area(insn_base, insn_size)
+
+        #Spatz
+        self.spatz_core_list        = spatz_core_list
+        self.spatz_num_vlsu         = spatz_num_vlsu
+        self.spatz_num_fu           = spatz_num_fu
 
         #RedMule
         self.redmule_ce_height      = redmule_ce_height
@@ -215,11 +221,11 @@ class ClusterUnit(gvsoc.systree.Component):
         for core_id in range(0, arch.nb_core):
             cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
-                core_id=core_id, htif=False))
+                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu))
 
             fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
-                core_id=core_id, htif=False))
+                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu))
             if xfrep:
                 fpu_sequencers.append(Sequencer(self, f'fpu_sequencer{core_id}', latency=0))
 
@@ -315,6 +321,13 @@ class ClusterUnit(gvsoc.systree.Component):
             cores_ico[core_id].o_MAP(narrow_axi.i_INPUT())
             cores[core_id].o_FETCH(instr_router.i_INPUT())
             cores[core_id].o_REDMULE(redmule.i_CORE_ACC())
+            if core_id in arch.spatz_core_list:
+                spatz_index = arch.spatz_core_list.index(core_id)
+                for vlsu_port in range(arch.spatz_num_vlsu):
+                    vlsu_router = router.Router(self, f'spatz_{core_id}_vlsu_{vlsu_port}_router', bandwidth=arch.tcdm.bank_width)
+                    vlsu_router.add_mapping("output")
+                    self.bind(cores[core_id], f'vlsu_{vlsu_port}', vlsu_router, 'input')
+                    self.bind(vlsu_router, 'output', tcdm, f'in_{arch.nb_core + spatz_index*arch.spatz_num_vlsu + vlsu_port}')
 
         for core_id in range(0, arch.nb_core):
             fp_cores[core_id].o_DATA( cores_ico[core_id].i_INPUT() )

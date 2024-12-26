@@ -116,27 +116,15 @@ We provide example architecture configurations and software source code in the r
 cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs; make run
 ```
 
-#### Example 2: Systolic GEMM Dataflow 🎯
-1. **512-bit NoC Bus, GEMM Store Considered**
+#### Example 2:  Dataflow 🎯
+1. **Systolic GEMM on 512-bit NoC Bus**
    ```bash
    cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs; make run
    ```
-
-2. **512-bit NoC Bus, No GEMM Store**
-   ```bash
-   cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic_nostore make hs; make run
-   ```
-
-3. **1024-bit NoC Bus, GEMM Store Considered**
+2. **Systolic GEMM on 1024-bit NoC Bus**
    ```bash
    cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs; make run
    ```
-
-4. **1024-bit NoC Bus, No GEMM Store**
-   ```bash
-   cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic_nostore make hs; make run
-   ```
-
 
 ## SoftHier Simulation Tutorial 📖
 

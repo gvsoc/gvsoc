@@ -45,7 +45,7 @@ with open(S_header_file, 'w') as file:
     for attr_name, attr_value in attributes.items():
         # Convert attribute name to uppercase and prefix with 'ARCH_'
         define_name = f'ARCH_{attr_name.upper()}'
-        if define_name == 'ARCH_HBM_PLACEMENT':
+        if define_name == 'ARCH_HBM_PLACEMENT' or define_name == 'ARCH_SPATZ_ATTACED_CORE_LIST':
             continue
             pass
         file.write(f'.set {define_name}, {attr_value}\n')

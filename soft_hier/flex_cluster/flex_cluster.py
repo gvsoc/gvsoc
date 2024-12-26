@@ -95,6 +95,9 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         idma_outstand_burst =   arch.idma_outstand_burst,
                                         num_cluster_x       =   arch.num_cluster_x,
                                         num_cluster_y       =   arch.num_cluster_y,
+                                        spatz_core_list     =   arch.spatz_attaced_core_list,
+                                        spatz_num_vlsu      =   arch.spatz_num_vlsu_port,
+                                        spatz_num_fu        =   arch.spatz_num_function_unit,
                                         data_bandwidth      =   arch.noc_link_width/8)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
