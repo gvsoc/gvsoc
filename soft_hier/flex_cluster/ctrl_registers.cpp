@@ -37,6 +37,7 @@ public:
 private:
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
     static void wakeup_event_handler(vp::Block *__this, vp::ClockEvent *event);
+    static void debug_stop_event_handler(vp::Block *__this, vp::ClockEvent *event);
     static void hbm_preload_done_handler(vp::Block *__this, bool value);
     void reset(bool active);
 
@@ -51,6 +52,7 @@ private:
     vp::WireMaster<bool> * barrier_ack_itf_array;
     vp::WireSlave<bool> hbm_preload_done_itf;
     vp::ClockEvent * wakeup_event;
+    vp::ClockEvent * debug_stop_event;
     int64_t timer_start;
     uint32_t num_cluster_x;
     uint32_t num_cluster_y;
@@ -84,6 +86,7 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
     }
     this->new_slave_port("hbm_preload_done", &this->hbm_preload_done_itf);
     this->wakeup_event = this->event_new(&CtrlRegisters::wakeup_event_handler);
+    this->debug_stop_event = this->event_new(&CtrlRegisters::debug_stop_event_handler);
     this->timer_start = 0;
     this->hbm_preload_done = (this->has_preload_binary == 0)? 1:0;
 }
@@ -93,7 +96,14 @@ void CtrlRegisters::reset(bool active)
     if (active)
     {
         std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << std::endl;
+        // this->event_enqueue(this->debug_stop_event, 10000);
     }
+}
+
+void CtrlRegisters::debug_stop_event_handler(vp::Block *__this, vp::ClockEvent *event){
+    CtrlRegisters *_this = (CtrlRegisters *)__this;
+    std::cout << "[Debug Stop]: Stop simulation at cycle: " << _this->clock.get_cycles() << std::endl;
+    _this->time.get_engine()->quit(1);
 }
 
 
