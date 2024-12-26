@@ -56,6 +56,25 @@ void test_global_barrier(){
     }
 }
 
+void test_global_barrier_polling(){
+    // flex_global_barrier_xy_polling();
+    for (int i = 0; i < 300; ++i)
+    {
+        flex_global_barrier_xy_polling();
+    }
+}
+
+void compare_hw_sync_and_polling_sync()
+{
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_start();
+    test_global_barrier();
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_end();
+
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_start();
+    test_global_barrier_polling();
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_end();
+}
+
 void test_group_barrier(){
     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
     {
@@ -100,13 +119,19 @@ void test_group_barrier(){
             printf("-- sync_x_cluster = %0d \n", info.sync_x_cluster);
             printf("-- sync_y_cluster = %0d \n", info.sync_y_cluster);
             printf("-- sync_x_point = 0x%0x \n", (uint32_t)info.sync_x_point);
+            printf("-- sync_x_piter = 0x%0x \n", (uint32_t)info.sync_x_piter);
             printf("-- sync_y_point = 0x%0x \n", (uint32_t)info.sync_y_point);
+            printf("-- sync_y_piter = 0x%0x \n", (uint32_t)info.sync_y_piter);
         }
         flex_global_barrier_xy();//Global barrier
     }
     flex_global_barrier_xy();//Global barrier
+    grid_sync_group_barrier_xy_polling(&info); //Group barrier
     grid_sync_group_barrier_xy(&info); //Group barrier
-    grid_sync_group_barrier_xy(&info); //Group barrier
+    for (int i = 0; i < 10; ++i)
+    {
+        grid_sync_group_barrier_xy_polling(&info); //Group barrier
+    }
 }
 
 void test_dma(){

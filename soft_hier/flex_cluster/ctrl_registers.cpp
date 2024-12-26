@@ -96,7 +96,6 @@ void CtrlRegisters::reset(bool active)
     if (active)
     {
         std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << std::endl;
-        // this->event_enqueue(this->debug_stop_event, 10000);
     }
 }
 
@@ -247,6 +246,9 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
             wakeup_payload.timestamp = _this->clock.get_cycles() + _this->num_cluster_x + _this->num_cluster_y;
             _this->wakeup_timestamp_queue.push(wakeup_payload);
             _this->event_enqueue(_this->wakeup_event, 1);
+        } else if (offset == 40) {
+            //Stop at Time
+            _this->event_enqueue(_this->debug_stop_event, value);
         }
     }
 
