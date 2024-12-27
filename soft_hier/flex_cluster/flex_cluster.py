@@ -137,7 +137,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #NoC
         data_noc = FlexMeshNoC(self, 'data_noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
-                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1)
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1,
+                interleave_enable=arch.hbm_edge_interleaving, interleave_region_base=arch.hbm_start_base, interleave_region_size=arch.hbm_node_addr_space * 2 * (arch.num_cluster_x + arch.num_cluster_y),
+                interleave_granularity=int(math.log2(arch.noc_link_width/8)), interleave_bit_start=int(math.log2(arch.hbm_node_addr_space)),
+                interleave_bit_width=int(math.log2(min(arch.num_cluster_x, arch.num_cluster_y, (min([num for num in arch.hbm_placement if num != 0], default=1))))))
 
 
         #Debug Memory
@@ -152,7 +155,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #Debug memory
         narrow_interco.o_MAP(debug_mem.i_INPUT())
-        narrow_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_addr_space * (arch.hbm_placement[0] + arch.hbm_placement[1] + arch.hbm_placement[2] + arch.hbm_placement[3]), rm_base=False)
+        narrow_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_addr_space * 2 * (arch.num_cluster_x + arch.num_cluster_y), rm_base=False)
 
         #Control register
         narrow_interco.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
@@ -195,7 +198,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for node_id in range(arch.num_cluster_y):
             itf_router = router.Router(self, f'west_{node_id}')
             itf_router.add_mapping('output')
-            if arch.hbm_placement[0] != 0:
+            if arch.hbm_placement[0] > node_id:
                 hbm_interlever = L1_interleaver(self, f'west_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
@@ -209,7 +212,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for node_id in range(arch.num_cluster_x):
             itf_router = router.Router(self, f'north_{node_id}')
             itf_router.add_mapping('output')
-            if arch.hbm_placement[1] != 0:
+            if arch.hbm_placement[1] > node_id:
                 hbm_interlever = L1_interleaver(self, f'north_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
@@ -223,7 +226,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for node_id in range(arch.num_cluster_y):
             itf_router = router.Router(self, f'east_{node_id}')
             itf_router.add_mapping('output')
-            if arch.hbm_placement[2] != 0:
+            if arch.hbm_placement[2] > node_id:
                 hbm_interlever = L1_interleaver(self, f'east_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
@@ -237,7 +240,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         for node_id in range(arch.num_cluster_x):
             itf_router = router.Router(self, f'south_{node_id}')
             itf_router.add_mapping('output')
-            if arch.hbm_placement[3] != 0:
+            if arch.hbm_placement[3] > node_id:
                 hbm_interlever = L1_interleaver(self, f'south_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):

@@ -1,21 +1,27 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..57dce68 100644
+index 668a863..1137c6f 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
-@@ -36,6 +36,8 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+@@ -36,6 +36,14 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
      this->dim_x = get_js_config()->get_int("dim_x");
      this->dim_y = get_js_config()->get_int("dim_y");
      this->router_input_queue_size = get_js_config()->get_int("router_input_queue_size");
 +    this->atomics = get_js_config()->get_int("atomics");
 +    this->collective = get_js_config()->get_int("collective");
++    this->interleave_enable = get_js_config()->get_int("interleave_enable");
++    this->interleave_region_base = get_js_config()->get_int("interleave_region_base");
++    this->interleave_region_size = get_js_config()->get_int("interleave_region_size");
++    this->interleave_granularity = get_js_config()->get_int("interleave_granularity");
++    this->interleave_bit_start = get_js_config()->get_int("interleave_bit_start");
++    this->interleave_bit_width = get_js_config()->get_int("interleave_bit_width");
  
      // Reserve the array for the target. We may have one target at each node.
      this->targets.resize(this->dim_x * this->dim_y);
 diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
-index 644696a..f79285a 100644
+index 644696a..47834d0 100644
 --- a/pulp/floonoc/floonoc.hpp
 +++ b/pulp/floonoc/floonoc.hpp
-@@ -108,6 +108,12 @@ public:
+@@ -108,6 +108,20 @@ public:
      // this width so that the bandwidth corresponds to the width.
      uint64_t width;
  
@@ -25,36 +31,70 @@ index 644696a..f79285a 100644
 +    // Whether Support Collective
 +    bool collective;
 +
++    // Whether Support Interleaving
++    uint64_t interleave_enable;
++    uint64_t interleave_region_base;
++    uint64_t interleave_region_size;
++    uint64_t interleave_granularity;
++    uint64_t interleave_bit_start;
++    uint64_t interleave_bit_width;
++
  private:
      // Callback called when a target request is asynchronously granted after a denied error was
      // reported
 diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
-index 2aa365c..a062242 100644
+index 2aa365c..d19cea8 100644
 --- a/pulp/floonoc/floonoc.py
 +++ b/pulp/floonoc/floonoc.py
-@@ -47,7 +47,7 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+@@ -47,7 +47,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
          before the source output queue is stalled.
      """
      def __init__(self, parent: gvsoc.systree.Component, name, width: int,
 -            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
-+            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0):
++            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
++            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
          super(FlooNoc2dMesh, self).__init__(parent, name)
  
          self.add_sources([
-@@ -64,6 +64,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+@@ -64,6 +65,14 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
          self.add_property('dim_x', dim_x)
          self.add_property('dim_y', dim_y)
          self.add_property('router_input_queue_size', router_input_queue_size)
 +        self.add_property('atomics', atomics)
 +        self.add_property('collective', collective)
++        self.add_property('interleave_enable', interleave_enable)
++        self.add_property('interleave_region_base', interleave_region_base)
++        self.add_property('interleave_region_size', interleave_region_size)
++        self.add_property('interleave_granularity', interleave_granularity)
++        self.add_property('interleave_bit_start', interleave_bit_start)
++        self.add_property('interleave_bit_width', interleave_bit_width)
  
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
 diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..f0621e1 100644
+index 4124c25..9d286d4 100644
 --- a/pulp/floonoc/floonoc_network_interface.cpp
 +++ b/pulp/floonoc/floonoc_network_interface.cpp
-@@ -130,6 +130,11 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -111,6 +111,18 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         // Get base from current burst
+         uint64_t base = _this->pending_burst_base;
+ 
++        //If support interleaving
++        if (_this->noc->interleave_enable && base >= _this->noc->interleave_region_base && base < _this->noc->interleave_region_base + _this->noc->interleave_region_size)
++        {
++            uint32_t mask = ((1 << _this->noc->interleave_bit_width) - 1);
++            uint32_t range1 = (base >> _this->noc->interleave_granularity) & mask;
++            uint32_t range2 = (base >> _this->noc->interleave_bit_start) & mask;
++            base &= ~(mask << _this->noc->interleave_granularity);
++            base &= ~(mask << _this->noc->interleave_bit_start);
++            base |= (range1 << _this->noc->interleave_bit_start);
++            base |= (range2 << _this->noc->interleave_granularity);
++        }
++
+         // Size must be at max the noc width to respect the bandwidth
+         uint64_t size = std::min(_this->noc->width, _this->pending_burst_size);
+         // And must not cross a page to fall into one target
+@@ -130,6 +142,11 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          req->set_size(size);
          req->set_data(_this->pending_burst_data);
          req->set_is_write(burst->get_is_write());
@@ -66,7 +106,7 @@ index 4124c25..f0621e1 100644
  
          // Get the target entry corresponding to the current base
          Entry *entry = _this->noc->get_entry(base, size);
-@@ -174,8 +179,8 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -174,8 +191,8 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
              // And forward to the first router which is at the same position as the network
              // interface

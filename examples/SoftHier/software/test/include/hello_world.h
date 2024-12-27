@@ -343,4 +343,15 @@ void test_dma_broadcat_rowwise(){
     }
     flex_global_barrier_xy();//Global barrier
 }
+
+void test_HBM_interleaving(){
+    flex_global_barrier_xy();//Global barrier
+    if (flex_is_dm_core() && flex_get_cluster_id() == 0)
+    {
+        //move data from HBM to Cluster L1
+        flex_dma_async_1d(local(0),hbm_addr(0), 256*256);
+        flex_dma_async_wait_all();
+    }
+    flex_global_barrier_xy();//Global barrier
+}
 #endif

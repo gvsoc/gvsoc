@@ -64,6 +64,7 @@ class FlexClusterArch:
         self.hbm_node_addr_space     = 0x04000000
         self.num_hbm_ch_per_node     = 1
         self.hbm_placement           = [4,0,0,4]
+        self.hbm_edge_interleaving   = 0
 
         #NoC
         self.noc_outstanding         = 64

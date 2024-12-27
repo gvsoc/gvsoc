@@ -50,10 +50,12 @@ class FlexMeshNoC(FlooNoc2dMesh):
         before the source output queue is stalled.
     """
     def __init__(self, parent: gvsoc.systree.Component, name, width: int, nb_x_clusters: int,
-            nb_y_clusters: int, ni_outstanding_reqs: int=2, router_input_queue_size: int=2, atomics: int=0, collective: int=0):
+            nb_y_clusters: int, ni_outstanding_reqs: int=2, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
+            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
         # The total grid contains 1 more node on each direction for the targets
         super(FlexMeshNoC, self).__init__(parent, name, width, dim_x=nb_x_clusters+2, dim_y=nb_y_clusters+2,
-                                          ni_outstanding_reqs=ni_outstanding_reqs, router_input_queue_size=router_input_queue_size, atomics=atomics, collective=collective)
+                                          ni_outstanding_reqs=ni_outstanding_reqs, router_input_queue_size=router_input_queue_size, atomics=atomics, collective=collective,
+                                          interleave_enable=interleave_enable, interleave_region_base=interleave_region_base, interleave_region_size=interleave_region_size, interleave_granularity=interleave_granularity, interleave_bit_start=interleave_bit_start, interleave_bit_width=interleave_bit_width)
 
         for tile_x in range(0, nb_x_clusters):
             for tile_y in range(0, nb_y_clusters):
