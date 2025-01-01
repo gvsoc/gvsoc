@@ -118,7 +118,7 @@ index 4124c25..9d286d4 100644
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..441f6cb 100644
+index 50cb4ac..57af5df 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -148,7 +148,7 @@ index 50cb4ac..441f6cb 100644
              // Now send to the next position
              if (to_x == _this->x && to_y == _this->y)
              {
-+                if (collective_type > 1)
++                if (collective_type > 1 && req->get_is_write())
 +                {
 +                    //For reduction we do it on final target
 +                    _this->handle_collective(req, collective_type, _this->x, _this->y);
@@ -160,7 +160,7 @@ index 50cb4ac..441f6cb 100644
                  // Otherwise forward to next position
                  Router *router = _this->noc->get_router(next_x, next_y);
  
-+                if (collective_type !=0 && is_collective_original_node == 0)
++                if (collective_type !=0 && is_collective_original_node == 0 && req->get_is_write())
 +                {
 +                    _this->handle_collective(req, collective_type, _this->x, _this->y);
 +                }
