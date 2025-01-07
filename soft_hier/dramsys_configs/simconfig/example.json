@@ -2,7 +2,7 @@
     "simconfig": {
         "AddressOffset": 0,
         "CheckTLM2Protocol": false,
-        "DatabaseRecording": true,
+        "DatabaseRecording": false,
         "Debug": false,
         "EnableWindowing": false,
         "PowerAnalysis": false,
