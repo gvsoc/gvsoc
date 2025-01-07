@@ -73,7 +73,6 @@ third_party/DRAMSys/libDRAMSys_Simulator.so:
 	@if soft_hier/build_dynlib_from_github_dramsys5/dynamic_load/a.out ; then \
         echo "Test libaray succeeded"; \
 		rm soft_hier/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
-		rm DRAMSysRecordable* ; \
     else \
 		rm soft_hier/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
 		rm third_party/DRAMSys/libDRAMSys_Simulator.so; \
