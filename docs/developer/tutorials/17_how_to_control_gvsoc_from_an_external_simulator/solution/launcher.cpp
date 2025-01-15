@@ -88,10 +88,11 @@ int MyLauncher::run(std::string config_path)
         gvsoc->step(1000000000);
     }
 
+    gvsoc->quit(0);
+
     // Wait for simulation termination and exit code returned by simulated test
     int retval = gvsoc->join();
 
-    gvsoc->stop();
     gvsoc->close();
 
     return retval;
