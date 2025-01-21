@@ -196,57 +196,57 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         ## west
         for node_id in range(arch.num_cluster_y):
-            itf_router = router.Router(self, f'west_{node_id}')
-            itf_router.add_mapping('output')
             if arch.hbm_placement[0] > node_id:
+                itf_router = router.Router(self, f'west_{node_id}')
+                itf_router.add_mapping('output')
                 hbm_interlever = L1_interleaver(self, f'west_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
                     self.bind(hbm_interlever, f'out_{sub_hbm}', hbm_list_west[int(node_id%(arch.hbm_placement[0]*arch.num_hbm_ch_per_node))*arch.num_hbm_ch_per_node + sub_hbm], 'input')
                     pass
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=0, y=node_id+1)
+                data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=0, y=node_id+1)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_addr_space
 
         ## north
         for node_id in range(arch.num_cluster_x):
-            itf_router = router.Router(self, f'north_{node_id}')
-            itf_router.add_mapping('output')
             if arch.hbm_placement[1] > node_id:
+                itf_router = router.Router(self, f'north_{node_id}')
+                itf_router.add_mapping('output')
                 hbm_interlever = L1_interleaver(self, f'north_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
                     self.bind(hbm_interlever, f'out_{sub_hbm}', hbm_list_north[int(node_id%(arch.hbm_placement[1]*arch.num_hbm_ch_per_node))*arch.num_hbm_ch_per_node + sub_hbm], 'input')
                     pass
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=arch.num_cluster_y+1)
+                data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=arch.num_cluster_y+1)
             pass
         hbm_edge_start_base += arch.num_cluster_x*arch.hbm_node_addr_space
 
         ## east
         for node_id in range(arch.num_cluster_y):
-            itf_router = router.Router(self, f'east_{node_id}')
-            itf_router.add_mapping('output')
             if arch.hbm_placement[2] > node_id:
+                itf_router = router.Router(self, f'east_{node_id}')
+                itf_router.add_mapping('output')
                 hbm_interlever = L1_interleaver(self, f'east_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
                     self.bind(hbm_interlever, f'out_{sub_hbm}', hbm_list_east[int(node_id%(arch.hbm_placement[2]*arch.num_hbm_ch_per_node))*arch.num_hbm_ch_per_node + sub_hbm], 'input')
                     pass
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=arch.num_cluster_x+1, y=node_id+1)
+                data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=arch.num_cluster_x+1, y=node_id+1)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_addr_space
 
         ## south
         for node_id in range(arch.num_cluster_x):
-            itf_router = router.Router(self, f'south_{node_id}')
-            itf_router.add_mapping('output')
             if arch.hbm_placement[3] > node_id:
+                itf_router = router.Router(self, f'south_{node_id}')
+                itf_router.add_mapping('output')
                 hbm_interlever = L1_interleaver(self, f'south_hbm_interleaver_{node_id}', nb_slaves=arch.num_hbm_ch_per_node, nb_masters=1, interleaving_bits=int(math.log2(arch.noc_link_width/8)))
                 self.bind(itf_router, 'output', hbm_interlever, 'in_0')
                 for sub_hbm in range(arch.num_hbm_ch_per_node):
                     self.bind(hbm_interlever, f'out_{sub_hbm}', hbm_list_south[int(node_id%(arch.hbm_placement[3]*arch.num_hbm_ch_per_node))*arch.num_hbm_ch_per_node + sub_hbm], 'input')
                     pass
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=0)
+                data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=0)
             pass
 
 
