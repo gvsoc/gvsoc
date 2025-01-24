@@ -20,6 +20,10 @@ jobs:
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
+
+      - name: Clone additional repository
+        run: |
+          git clone https://github.com/gvsoc/riscv-tests.git -b gvsoc
       - name: build all targets
         run: |
           set -x
@@ -47,6 +51,11 @@ jobs:
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/fp32_computation_vector.elf run
+      - name: Run RISCV tests
+        run: |
+          set -x
+          source sourceme_systemc.sh
+          cd riscv-tests/isa && make GVSOC=1 run
 
   # Removed due to no space left on eth machine
   # build_eth:
