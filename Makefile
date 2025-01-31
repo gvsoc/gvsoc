@@ -154,11 +154,16 @@ hs:
 ## 				Make Targets for Run Simulator		 				##
 ######################################################################
 
+preload_arg ?= ""
+ifdef pld
+	pld_path = $(abspath $(pld))
+	preload_arg = --preload $(pld_path)
+endif
 run:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run --trace=/chip/cluster_0/redmule
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=/chip/cluster_0/redmule
 
 runv:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run --trace=redmule --trace=idma --trace=/chip/ctrl_registers | tee sw_build/analyze_trace.txt
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=/chip/ctrl_registers | tee sw_build/analyze_trace.txt
 
 ######################################################################
 ## 				Make Targets for Trace Analyzer		 				##

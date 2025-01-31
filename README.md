@@ -126,6 +126,31 @@ cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test ma
    cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs; make run
    ```
 
+#### Example 3:  GEMM with HBM Preloading 🚀
+The `examples/SoftHier/assembled/HBM_preload_example/` directory contains:
+- **`config/`** – Architecture configuration files.
+- **`preload/`** – Preloaded data files.
+- **`software/`** – Multi-cluster GEMM software.
+
+1. **Generating HBM Preload Data**
+To generate an HBM preload binary from NumPy data, run:
+```bash
+python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py
+```
+This will create the preload binary at:
+```
+examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf
+```
+
+2. **Running SoftHier with HBM Preload**
+To run SoftHier with the preloaded HBM data, use:
+```bash
+cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py \
+app=examples/SoftHier/assembled/HBM_preload_example/software \
+pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf \
+make hs run
+```
+
 ## SoftHier Simulation Tutorial 📖
 
 All SoftHier model source code can be found in the `soft_hier/flex_cluster/` directory. The software stack is located in the `soft_hier/flex_cluster_sdk/runtime` directory.
