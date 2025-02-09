@@ -163,11 +163,16 @@ run:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=/chip/cluster_0/redmule
 
 runv:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=/chip/ctrl_registers | tee sw_build/analyze_trace.txt
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=cluster_registers | tee sw_build/analyze_trace.txt
 
 ######################################################################
 ## 				Make Targets for Trace Analyzer		 				##
 ######################################################################
 
-ana:
-	firefox soft_hier/flex_cluster_utilities/trace_analyzer/trace_visual/index.html
+trace_file ?= sw_build/analyze_trace.txt
+ifdef trace
+	trace_file = $(trace)
+endif
+pfto:
+	python soft_hier/flex_cluster_utilities/trace_perfetto/parse.py $(trace_file) sw_build/roi.json
+	python soft_hier/flex_cluster_utilities/trace_perfetto/visualize.py sw_build/roi.json -o sw_build/perfetto.json

@@ -122,6 +122,11 @@ uint32_t flex_get_barrier_num_cluster_y(){
     return *info_reg;
 }
 
+void flex_annotate_barrier(uint32_t type){
+    volatile uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+20;
+    *info_reg = type;
+}
+
 void flex_reset_barrier(uint32_t* barrier){
     *barrier = 0;
 }
@@ -160,11 +165,13 @@ void flex_global_barrier(){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
         if ((flex_get_barrier_num_cluster() - flex_get_enable_value()) == flex_amo_fetch_add(barrier)) {
             flex_reset_barrier(barrier);
             *wakeup_reg = flex_get_enable_value();
         }
         *cluster_reg = flex_get_enable_value();
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();
@@ -177,6 +184,7 @@ void flex_global_barrier_polling(){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
         // Remember previous iteration
         uint32_t prev_barrier_iteration = *barrier_iter;
 
@@ -186,6 +194,7 @@ void flex_global_barrier_polling(){
         } else {
             while((*barrier_iter) == prev_barrier_iteration);
         }
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();
@@ -221,6 +230,7 @@ void flex_global_barrier_xy(){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
 
         FlexPosition        pos          = get_pos(flex_get_cluster_id());
         uint32_t            pos_x_middel = (flex_get_barrier_num_cluster_x())/2;
@@ -242,6 +252,8 @@ void flex_global_barrier_xy(){
             }
         }
         *cluster_reg = flex_get_enable_value();
+
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();
@@ -252,6 +264,7 @@ void flex_global_barrier_xy_polling(){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
 
         FlexPosition        pos          = get_pos(flex_get_cluster_id());
         uint32_t            pos_x_middel = (flex_get_barrier_num_cluster_x())/2;
@@ -282,6 +295,8 @@ void flex_global_barrier_xy_polling(){
         } else {
             while((*barrier_ix) == prev_barrier_iter_x);
         }
+
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();

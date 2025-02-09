@@ -126,6 +126,7 @@ void grid_sync_group_barrier_xy(GridSyncGroupInfo * info){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
 
     	volatile uint32_t * cluster_wfi_reg  = ARCH_CLUSTER_REG_BASE;
 
@@ -141,6 +142,8 @@ void grid_sync_group_barrier_xy(GridSyncGroupInfo * info){
             }
         }
         *cluster_wfi_reg = flex_get_enable_value();
+
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();
@@ -151,6 +154,7 @@ void grid_sync_group_barrier_xy_polling(GridSyncGroupInfo * info){
     flex_intra_cluster_sync();
 
     if (flex_is_dm_core()){
+        flex_annotate_barrier(0);
 
         // Remember previous iteration
         uint32_t prev_barrier_iter_x     = *(info->sync_x_piter);
@@ -173,6 +177,7 @@ void grid_sync_group_barrier_xy_polling(GridSyncGroupInfo * info){
         } else {
             while((*(info->sync_x_piter)) == prev_barrier_iter_x);
         }
+        flex_annotate_barrier(0);
     }
 
     flex_intra_cluster_sync();

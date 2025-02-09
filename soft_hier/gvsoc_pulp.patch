@@ -773,7 +773,7 @@ index 211ea51..3e21a6f 100644
 +    std::list<vp::IoReq *> OoO_responses_waiting_list;
  };
 diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
-index 867c0e2..234f39b 100644
+index 867c0e2..52894f6 100644
 --- a/pulp/idma/fe/idma_fe_xdma.cpp
 +++ b/pulp/idma/fe/idma_fe_xdma.cpp
 @@ -46,6 +46,12 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
@@ -814,7 +814,7 @@ index 867c0e2..234f39b 100644
              break;
          case 0b0000100:
              // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat operation (status: 0x%lx)\n",
-@@ -126,13 +132,21 @@ uint32_t IDmaFeXdma::get_status(uint32_t status)
+@@ -126,13 +132,30 @@ uint32_t IDmaFeXdma::get_status(uint32_t status)
  
  
  
@@ -827,7 +827,16 @@ index 867c0e2..234f39b 100644
  
      this->trace.msg(vp::Trace::LEVEL_TRACE, "Allocated transfer ID (id: %d)\n", transfer_id);
 +    std::stringstream ss;
-+    ss << "| Txn " << transfer_id << " = {src: 0x" << std::hex << this->src.get() << ", dst: 0x" << std::hex << this->dst.get() << ", size: 0x"<< std::hex << size << " }";
++    if (config == 0)
++    {
++        ss << "| Txn " << transfer_id << " = {type: 1D, src: 0x" << std::hex << this->src.get() \
++        << ", dst: 0x" << std::hex << this->dst.get() << ", size: 0x"<< std::hex << size << " }";
++    } else {
++        ss << "| Txn " << transfer_id << " = {type: 2D, src: 0x" << std::hex << this->src.get() << ", src_stride: 0x" << std::hex << this->src_stride.get() \
++        << ", dst: 0x" << std::hex << this->dst.get() << ", dst_stride: 0x" << std::hex << this->dst_stride.get() \
++        << ", repeats: 0x" << std::hex << this->reps.get() << ", size: 0x"<< std::hex << size << " }";
++    }
++
 +    this->TxnList += ss.str();
 +    if (this->num_inflight_transfer == 0)
 +    {
@@ -837,7 +846,7 @@ index 867c0e2..234f39b 100644
  
      // Allocate a new transfer and fill it from registers
      IdmaTransfer *transfer = new IdmaTransfer();
-@@ -143,6 +157,9 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -143,6 +166,9 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
      transfer->dst_stride = this->dst_stride.get();
      transfer->reps = this->reps.get();
      transfer->config = config;
@@ -847,7 +856,7 @@ index 867c0e2..234f39b 100644
  
      // Check if middle end can accept a new transfer
      if (this->me->can_accept_transfer())
-@@ -170,6 +187,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -170,6 +196,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
  void IDmaFeXdma::ack_transfer(IdmaTransfer *transfer)
  {
      this->completed_id.inc(1);

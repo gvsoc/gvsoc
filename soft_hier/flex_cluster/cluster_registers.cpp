@@ -65,6 +65,9 @@ private:
 
     vp::IoReq * global_barrier_query;
     int global_barrier_mutex;
+
+    uint16_t global_sync_enable;
+    uint64_t global_sync_timestamp;
 };
 
 ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
@@ -86,6 +89,9 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
 
     this->global_barrier_query = NULL;
     this->global_barrier_mutex = 0;
+
+    this->global_sync_enable = 0;
+    this->global_sync_timestamp = 0;
 
     this->barrier_req_itf.resize(this->nb_cores);
     for (int i=0; i<this->nb_cores; i++)
@@ -115,9 +121,26 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
     uint64_t size = req->get_size();
     uint32_t *data = (uint32_t *) req->get_data();
 
-    _this->trace.msg("Received IO req (offset: 0x%llx, size: 0x%llx, is_write: %d) -- Cluster ID: %0d\n", offset, size, is_write, _this->cluster_id);
+    // _this->trace.msg("Received IO req (offset: 0x%llx, size: 0x%llx, is_write: %d) -- Cluster ID: %0d\n", offset, size, is_write, _this->cluster_id);
 
-    data[0] = _this->cluster_id;
+    if (is_write && offset == 0 && _this->global_barrier_query == NULL)
+    {
+        if (_this->global_barrier_mutex == 1)
+        {
+            _this->global_barrier_mutex = 0;
+            // _this->trace.msg("Core Access <After> Globale Barrier\n");
+            return vp::IO_REQ_OK;
+        }else{
+            _this->global_barrier_query = req;
+            // _this->trace.msg("Core Access <Before> Globale Barrier\n");
+            return vp::IO_REQ_PENDING;
+        }
+    }
+
+    if (!is_write && offset == 0)
+    {
+        data[0] = _this->cluster_id;
+    }
 
     if(offset == 4){
         data[0] = 1;
@@ -135,17 +158,19 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         data[0] = _this->num_cluster_y;
     }
 
-    if (is_write && _this->global_barrier_query == NULL)
-    {
-        if (_this->global_barrier_mutex == 1)
+    if(is_write && offset == 20){
+        if (_this->global_sync_enable == 0)
         {
-            _this->global_barrier_mutex = 0;
-            _this->trace.msg("Core Access <After> Globale Barrier\n");
-            return vp::IO_REQ_OK;
-        }else{
-            _this->global_barrier_query = req;
-            _this->trace.msg("Core Access <Before> Globale Barrier\n");
-            return vp::IO_REQ_PENDING;
+            _this->global_sync_enable = 1;
+            _this->global_sync_timestamp = _this->time.get_time()/1000;
+        } else {
+            uint32_t type = data[0];
+            _this->global_sync_enable = 0;
+            _this->trace.msg("Cluster Sync: %d ns -> %d ns | period = %d ns | Type = %d\n",
+                _this->global_sync_timestamp,
+                _this->time.get_time()/1000,
+                _this->time.get_time()/1000 - _this->global_sync_timestamp,
+                type);
         }
     }
 
@@ -158,7 +183,7 @@ void ClusterRegisters::global_barrier_sync(vp::Block *__this, bool value)
 {
     ClusterRegisters *_this = (ClusterRegisters *)__this;
 
-    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Globale Barrier Triggered\n");
+    // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Globale Barrier Triggered\n");
 
     if (_this->global_barrier_query == NULL)
     {
@@ -176,11 +201,11 @@ void ClusterRegisters::barrier_sync(vp::Block *__this, bool value, int id)
     ClusterRegisters *_this = (ClusterRegisters *)__this;
     _this->barrier_status.set(_this->barrier_status.get() | (value << id));
 
-    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Barrier sync (id: %d, status: 0x%x)\n", id, _this->barrier_status.get());
+    // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Barrier sync (id: %d, status: 0x%x)\n", id, _this->barrier_status.get());
 
     if (_this->barrier_status.get() == (1ULL << _this->nb_cores) - 1)
     {
-        _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Barrier reached\n");
+        // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Barrier reached\n");
 
         _this->barrier_status.set(0);
         _this->barrier_ack_itf.sync(1);

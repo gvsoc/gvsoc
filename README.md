@@ -119,11 +119,11 @@ cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test ma
 #### Example 2:  Dataflow 🎯
 1. **Systolic GEMM on 512-bit NoC Bus**
    ```bash
-   cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs; make run
+   cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs; make runv
    ```
 2. **Systolic GEMM on 1024-bit NoC Bus**
    ```bash
-   cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs; make run
+   cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs; make runv
    ```
 
 #### Example 3:  GEMM with HBM Preloading 🚀
@@ -148,8 +148,24 @@ To run SoftHier with the preloaded HBM data, use:
 cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py \
 app=examples/SoftHier/assembled/HBM_preload_example/software \
 pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf \
-make hs run
+make hs runv
 ```
+
+## SoftHier Visualization 📈
+
+To visualize a SoftHier simulation, follow these steps:
+1. Run with the `runv` Makefile target.
+2. Generate a Perfetto-format trace file using the `pfto` target.
+An integrated example
+```bash
+<args> make hs runv pfto
+```
+
+The trace file will be saved at:  
+📂 `sw_build/perfetto.json`
+
+To view the trace, open the following URL in your browser:  
+👉 [Perfetto UI](https://ui.perfetto.dev/)
 
 ## SoftHier Simulation Tutorial 📖
 
