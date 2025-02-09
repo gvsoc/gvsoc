@@ -520,13 +520,17 @@ index 4e2d730..b98289b 100644
  private:
      // FSM handler, called to check if any action should be taken after something was updated
 diff --git a/pulp/idma/be/idma_be_axi.cpp b/pulp/idma/be/idma_be_axi.cpp
-index 149cb7f..aeb2d1b 100644
+index 149cb7f..1637603 100644
 --- a/pulp/idma/be/idma_be_axi.cpp
 +++ b/pulp/idma/be/idma_be_axi.cpp
-@@ -93,6 +93,14 @@ void IDmaBeAxi::reset(bool active)
+@@ -93,6 +93,18 @@ void IDmaBeAxi::reset(bool active)
          {
              this->pending_bursts.pop();
          }
++        while(this->write_axi_sending_bursts.size() > 0)
++        {
++            this->write_axi_sending_bursts.pop();
++        }
 +        while(this->issued_axi_burst_order_list.size() > 0)
 +        {
 +            this->issued_axi_burst_order_list.pop();
@@ -538,7 +542,28 @@ index 149cb7f..aeb2d1b 100644
  
          // And put back them all as free
          for (vp::IoReq &req: this->bursts)
-@@ -181,6 +189,7 @@ void IDmaBeAxi::send_read_burst_to_axi()
+@@ -141,13 +153,18 @@ void IDmaBeAxi::enqueue_burst(uint64_t base, uint64_t size, bool is_write)
+     req->set_addr(base);
+     req->set_size(size);
+ 
++    IDmaBeAxiWriteBurstInfo info;
++    info.base = base;
++    info.size = size;
++
+     this->pending_bursts.push(req);
++    this->write_axi_sending_bursts.push(info);
+ 
+     // It case it is the first burst, set the pending base, this is used for writing bursts to know next
+     // req address
+-    if (this->pending_bursts.size() == 1)
++    if (this->write_axi_sending_bursts.size() == 1)
+     {
+-        this->current_burst_base = this->pending_bursts.front()->get_addr();
++        this->current_burst_base = this->write_axi_sending_bursts.front().base;
+     }
+ 
+     // And trigger the FSM in case it needs to be processed now
+@@ -181,6 +198,7 @@ void IDmaBeAxi::send_read_burst_to_axi()
  
      // Send to AXI interface
      vp::IoReqStatus status = this->ico_itf.req(req);
@@ -546,7 +571,7 @@ index 149cb7f..aeb2d1b 100644
  
      if (status == vp::IoReqStatus::IO_REQ_OK)
      {
-@@ -206,10 +215,55 @@ void IDmaBeAxi::read_handle_req_end(vp::IoReq *req)
+@@ -206,10 +224,55 @@ void IDmaBeAxi::read_handle_req_end(vp::IoReq *req)
  {
      // Remember at which timestamp the burst must be notified
      this->read_timestamps[req->id] = this->clock.get_cycles() + req->get_latency();
@@ -606,7 +631,26 @@ index 149cb7f..aeb2d1b 100644
  }
  
  
-@@ -273,6 +327,10 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+@@ -263,7 +326,18 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+     vp::IoReq *req = new vp::IoReq();
+ 
+     uint64_t base = this->current_burst_base;
++
++    //next burst base
+     this->current_burst_base += size;
++    this->write_axi_sending_bursts.front().size -= size;
++    if (this->write_axi_sending_bursts.front().size == 0)
++    {
++        this->write_axi_sending_bursts.pop();
++        if (this->write_axi_sending_bursts.size() > 0)
++        {
++            this->current_burst_base = this->write_axi_sending_bursts.front().base;
++        }
++    }
+ 
+     this->trace.msg(vp::Trace::LEVEL_TRACE, "Write data (req: %p, base: 0x%lx, size: 0x%lx)\n",
+         req, base, size);
+@@ -273,6 +347,10 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
      req->set_addr(base);
      req->set_size(size);
      req->set_data(data);
@@ -617,7 +661,18 @@ index 149cb7f..aeb2d1b 100644
  
      vp::IoReqStatus status = this->ico_itf.req(req);
      if (status == vp::IoReqStatus::IO_REQ_OK)
-@@ -357,29 +415,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -312,10 +390,6 @@ void IDmaBeAxi::write_handle_req_end(vp::IoReq *req)
+     if (burst->get_size() == 0)
+     {
+         this->pending_bursts.pop();
+-        if (this->pending_bursts.size() > 0)
+-        {
+-            this->current_burst_base = this->pending_bursts.front()->get_addr();
+-        }
+         this->free_bursts.push(burst);
+         // Notify the backend since it may schedule another burst
+         this->be->update();
+@@ -357,29 +431,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
      // In case we have pending read bursts waiting for pushing data, only do it if the backend
      // is ready to accept the data in case the destination is not ready
@@ -673,7 +728,7 @@ index 149cb7f..aeb2d1b 100644
          }
      }
  }
-@@ -396,4 +462,4 @@ void IDmaBeAxi::update()
+@@ -396,4 +478,4 @@ void IDmaBeAxi::update()
  bool IDmaBeAxi::is_empty()
  {
      return this->pending_bursts.empty();
@@ -681,10 +736,10 @@ index 149cb7f..aeb2d1b 100644
 \ No newline at end of file
 +}
 diff --git a/pulp/idma/be/idma_be_axi.hpp b/pulp/idma/be/idma_be_axi.hpp
-index 211ea51..4f433b6 100644
+index 211ea51..3e21a6f 100644
 --- a/pulp/idma/be/idma_be_axi.hpp
 +++ b/pulp/idma/be/idma_be_axi.hpp
-@@ -21,6 +21,7 @@
+@@ -21,11 +21,17 @@
  #pragma once
  
  #include <vector>
@@ -692,7 +747,23 @@ index 211ea51..4f433b6 100644
  #include <vp/vp.hpp>
  #include <vp/itf/io.hpp>
  #include "../idma.hpp"
-@@ -108,4 +109,8 @@ private:
+ #include "idma_be.hpp"
+ 
++typedef struct IDmaBeAxiWriteBurstInfo {
++    uint64_t base;
++    uint64_t size;
++} IDmaBeAxiWriteBurstInfo;
++
+ /**
+  * @brief AXI backend
+  *
+@@ -105,7 +111,14 @@ private:
+     // processed.
+     std::queue<vp::IoReq *> pending_bursts;
+ 
++    // Queue of pending bursts for write axi transactions. This only contains write bursts. This is decoupled from pending_bursts
++    std::queue<IDmaBeAxiWriteBurstInfo> write_axi_sending_bursts;
++
      // Current base of the first transfer. This is when a chunk of data to be written is received
      // to know the base where it should be written.
      uint64_t current_burst_base;
