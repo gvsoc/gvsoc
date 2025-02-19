@@ -1,5 +1,5 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..1137c6f 100644
+index 668a863..7dee724 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
 @@ -36,6 +36,14 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
@@ -17,6 +17,15 @@ index 668a863..1137c6f 100644
  
      // Reserve the array for the target. We may have one target at each node.
      this->targets.resize(this->dim_x * this->dim_y);
+@@ -71,7 +79,7 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+             // this array indexed by the position
+             this->targets[this->entries[id].y * this->dim_x + this->entries[id].x] = itf;
+ 
+-            this->trace.msg(vp::Trace::LEVEL_DEBUG, "Adding target (name: %s, base: 0x%x, size: 0x%x, x: %d, y: %d)\n",
++            this->trace.msg(vp::Trace::LEVEL_DEBUG, "Adding target (name: %s, base: 0x%llx, size: 0x%llx, x: %d, y: %d)\n",
+                 mapping.first.c_str(), this->entries[id].base, this->entries[id].size, this->entries[id].x, this->entries[id].y);
+ 
+             id++;
 diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
 index 644696a..ff5a5d5 100644
 --- a/pulp/floonoc/floonoc.hpp
@@ -88,9 +97,18 @@ index 2aa365c..d19cea8 100644
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
 diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..9d286d4 100644
+index 4124c25..989877d 100644
 --- a/pulp/floonoc/floonoc_network_interface.cpp
 +++ b/pulp/floonoc/floonoc_network_interface.cpp
+@@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         // In case the burst is being handled for the first time, initialize the current burst
+         if (_this->pending_burst_size == 0)
+         {
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%x, size: 0x%x, is_write: %d)\n",
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%llx, size: 0x%x, is_write: %d)\n",
+                 burst, burst->get_addr(), burst->get_size(), burst->get_is_write());
+ 
+             // By default, we consider the whole burst as valid. In one of the burst request is\
 @@ -111,6 +111,18 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          // Get base from current burst
          uint64_t base = _this->pending_burst_base;
@@ -122,17 +140,35 @@ index 4124c25..9d286d4 100644
  
          // Get the target entry corresponding to the current base
          Entry *entry = _this->noc->get_entry(base, size);
+@@ -137,7 +154,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         {
+             // If any request of the burst is invalid because no target was found, make the whole
+             // burst invalid.
+-            _this->trace.force_warning("No entry found for burst (base: 0x%x, size: 0x%x)",
++            _this->trace.force_warning("No entry found for burst (base: 0x%llx, size: 0x%x)",
+                 base, size);
+             burst->status = vp::IO_REQ_INVALID;
+ 
 @@ -174,8 +191,8 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
              // And forward to the first router which is at the same position as the network
              // interface
 -            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, destination: (%d, %d))\n",
 -                req, base, size, entry->x, entry->y);
-+            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, op_code: %0d, destination: (%d, %d))\n",
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%llx, size: 0x%x, op_code: %0d, destination: (%d, %d))\n",
 +                req, base, size, req->get_opcode(), entry->x, entry->y);
  
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
+@@ -232,7 +249,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
+     uint8_t *data = req->get_data();
+     uint64_t size = req->get_size();
+ 
+-    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%x, size: 0x%x, is_write: %d, op: %d)\n",
++    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%llx, size: 0x%x, is_write: %d, op: %d)\n",
+         req, offset, size, req->get_is_write(), req->get_opcode());
+ 
+     // Just enqueue it and trigger the FSM which will check if it must be processed now
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
 index 50cb4ac..5f3e567 100644
 --- a/pulp/floonoc/floonoc_router.cpp
@@ -475,9 +511,18 @@ index e455f21..6d11f1c 100644
      void get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y);
      // Get the index of the queue corresponding to a source or destination position
 diff --git a/pulp/idma/be/idma_be.cpp b/pulp/idma/be/idma_be.cpp
-index 4e3a273..237be01 100644
+index 4e3a273..9cc0290 100644
 --- a/pulp/idma/be/idma_be.cpp
 +++ b/pulp/idma/be/idma_be.cpp
+@@ -59,7 +59,7 @@ IdmaBeConsumer *IDmaBe::get_be_consumer(uint64_t base, uint64_t size, bool is_re
+ // no active transfer
+ void IDmaBe::enqueue_transfer(IdmaTransfer *transfer)
+ {
+-    this->trace.msg(vp::Trace::LEVEL_TRACE, "Queueing burst (burst: %p, src: 0x%x, dst: 0x%x, size: 0x%x)\n",
++    this->trace.msg(vp::Trace::LEVEL_TRACE, "Queueing burst (burst: %p, src: 0x%llx, dst: 0x%llx, size: 0x%x)\n",
+         transfer, transfer->src, transfer->dst, transfer->size);
+ 
+     // Push the transfer into the queue, we will need it later when the bursts are coming back
 @@ -85,6 +85,12 @@ bool IDmaBe::can_accept_transfer()
      return this->current_transfer_size == 0;
  }
@@ -928,6 +973,19 @@ index 0a25bcb..348aebe 100644
  
      // Free rom for additional information
      std::vector<uint64_t> data;
+diff --git a/pulp/idma/idma_functional.cpp b/pulp/idma/idma_functional.cpp
+index e402244..d478579 100644
+--- a/pulp/idma/idma_functional.cpp
++++ b/pulp/idma/idma_functional.cpp
+@@ -181,7 +181,7 @@ vp::IoReqStatus IDma::req(vp::Block *__this, vp::IoReq *req)
+     uint8_t *data = req->get_data();
+     uint64_t size = req->get_size();
+ 
+-    _this->trace.msg("IDma access (offset: 0x%x, size: 0x%x, is_write: %d)\n", offset, size, req->get_is_write());
++    _this->trace.msg("IDma access (offset: 0x%llx, size: 0x%x, is_write: %d)\n", offset, size, req->get_is_write());
+ 
+     if (!req->get_is_write() && size == 8)
+     {
 diff --git a/pulp/snitch/sequencer.cpp b/pulp/snitch/sequencer.cpp
 index 673529f..080f26f 100644
 --- a/pulp/snitch/sequencer.cpp

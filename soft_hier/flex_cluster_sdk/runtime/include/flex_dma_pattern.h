@@ -212,17 +212,17 @@ inline void bare_dma_wait_all() {
 *************************************/
 
 //Basic DMA 1d transfter
-void flex_dma_async_1d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size){
+void flex_dma_async_1d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size){
     bare_dma_start_1d(dst_addr, src_addr, transfer_size); //Start iDMA
 }
 
 //Basic DMA 1d transfter with broadcast
-void flex_dma_async_1d_broadcast(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size){
+void flex_dma_async_1d_broadcast(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size){
     bare_dma_start_1d_broadcast(dst_addr, src_addr, transfer_size); //Start iDMA
 }
 
 //Basic DMA 1d transfter with reduction
-void flex_dma_async_1d_reduction(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size, collective_compute_format_t fmt){
+void flex_dma_async_1d_reduction(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, collective_compute_format_t fmt){
     bare_dma_start_1d_reduction(dst_addr, src_addr, transfer_size, fmt); //Start iDMA
 }
 
@@ -236,7 +236,7 @@ void flex_dma_async_wait_all(){
 *************************************/
 
 //Basic DMA 2d transfter
-void flex_dma_sync_2d(uint32_t dst_addr, uint32_t src_addr, size_t transfer_size, size_t dst_stride, size_t src_stride, size_t repeat){
+void flex_dma_sync_2d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, size_t dst_stride, size_t src_stride, size_t repeat){
     if (is_hbm_region(dst_addr))
     {
         for (int i = 0; i < repeat; i++)
