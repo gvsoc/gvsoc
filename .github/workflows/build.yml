@@ -44,6 +44,14 @@ jobs:
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary soft_hier/dma_dram_test.bin image flash run
           ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
+      - name: Run SoftHier ReadMe
+        run: |
+          source sourceme.sh
+          cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
+          cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs runv
+          cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
+          python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py
+          cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py app=examples/SoftHier/assembled/HBM_preload_example/software pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf make hs runv
 
   # Removed due to no space left on eth machine
   # build_eth:
