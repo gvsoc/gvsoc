@@ -62,9 +62,8 @@ class FlexClusterArch:
         #HBM
         self.hbm_start_base          = 0xc0000000
         self.hbm_node_addr_space     = 0x00200000
-        self.num_hbm_ch_per_node     = 1
-        self.hbm_placement           = [4,4,0,0]
-        self.hbm_edge_interleaving   = 0
+        self.num_node_per_ctrl       = 1
+        self.hbm_chan_placement      = [4,4,0,0]
 
         #NoC
         self.noc_outstanding         = 64

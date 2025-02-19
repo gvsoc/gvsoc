@@ -11,10 +11,10 @@
 #define remote_xy(x,y,offset)       (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(x,y)*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_pos(pos,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(pos.x,pos.y)*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define hbm_addr(offset)            (ARCH_HBM_START_BASE+offset)
-#define hbm_west(hid,offset)        (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_ADDR_SPACE+offset)
-#define hbm_north(hid,offset)       (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*ARCH_NUM_CLUSTER_Y+offset)
-#define hbm_east(hid,offset)        (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*(ARCH_NUM_CLUSTER_Y+ARCH_NUM_CLUSTER_X)+offset)
-#define hbm_south(hid,offset)       (ARCH_HBM_START_BASE+(hid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*2*ARCH_NUM_CLUSTER_Y+ARCH_HBM_NODE_ADDR_SPACE*ARCH_NUM_CLUSTER_X+offset)
+#define hbm_west(nid,offset)        (ARCH_HBM_START_BASE+(nid)*ARCH_HBM_NODE_ADDR_SPACE+offset)
+#define hbm_north(nid,offset)       (ARCH_HBM_START_BASE+(nid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*ARCH_NUM_CLUSTER_Y+offset)
+#define hbm_east(nid,offset)        (ARCH_HBM_START_BASE+(nid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*(ARCH_NUM_CLUSTER_Y+ARCH_NUM_CLUSTER_X)+offset)
+#define hbm_south(nid,offset)       (ARCH_HBM_START_BASE+(nid)*ARCH_HBM_NODE_ADDR_SPACE+ARCH_HBM_NODE_ADDR_SPACE*2*ARCH_NUM_CLUSTER_Y+ARCH_HBM_NODE_ADDR_SPACE*ARCH_NUM_CLUSTER_X+offset)
 #define is_hbm_region(addr)         (addr >= ARCH_HBM_START_BASE)
 
 /*******************
