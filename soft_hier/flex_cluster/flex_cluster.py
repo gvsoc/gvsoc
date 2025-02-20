@@ -28,7 +28,7 @@ from pulp.chips.flex_cluster.cluster_unit import ClusterUnit, ClusterArch
 from pulp.chips.flex_cluster.ctrl_registers import CtrlRegisters
 from pulp.chips.flex_cluster.flex_cluster_arch import FlexClusterArch
 from pulp.chips.flex_cluster.flex_mesh_noc import FlexMeshNoC
-from pulp.cluster.l1_interleaver import L1_interleaver
+from pulp.chips.flex_cluster.hbm_ctrl import hbm_ctrl
 import memory.dramsys
 import math
 
@@ -169,25 +169,25 @@ class FlexClusterSystem(gvsoc.systree.Component):
         hbm_ctrl_list_west = []
         for hbm_ct in range(num_hbm_ctrl_y):
             nb_slaves=ctrl_chan_west
-            hbm_ctrl_list_west.append(L1_interleaver(self, f'west_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8))))
+            hbm_ctrl_list_west.append(hbm_ctrl(self, f'west_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space))
             pass
 
         hbm_ctrl_list_north = []
         for hbm_ct in range(num_hbm_ctrl_x):
             nb_slaves=ctrl_chan_north
-            hbm_ctrl_list_north.append(L1_interleaver(self, f'north_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8))))
+            hbm_ctrl_list_north.append(hbm_ctrl(self, f'north_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space))
             pass
 
         hbm_ctrl_list_east = []
         for hbm_ct in range(num_hbm_ctrl_y):
             nb_slaves=ctrl_chan_east
-            hbm_ctrl_list_east.append(L1_interleaver(self, f'east_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8))))
+            hbm_ctrl_list_east.append(hbm_ctrl(self, f'east_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space))
             pass
 
         hbm_ctrl_list_south = []
         for hbm_ct in range(num_hbm_ctrl_x):
             nb_slaves=ctrl_chan_south
-            hbm_ctrl_list_south.append(L1_interleaver(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8))))
+            hbm_ctrl_list_south.append(hbm_ctrl(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space))
             pass
 
         #NoC
