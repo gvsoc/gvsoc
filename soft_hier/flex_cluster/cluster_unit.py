@@ -22,6 +22,7 @@ import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.chips.flex_cluster.light_redmule import LightRedmule
 from pulp.chips.flex_cluster.hwpe_interleaver import HWPEInterleaver
+from pulp.chips.flex_cluster.util_dumpper import UtilDumpper
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
 from pulp.snitch.zero_mem import ZeroMem
 from elftools.elf.elffile import *
@@ -246,8 +247,15 @@ class ClusterUnit(gvsoc.systree.Component):
             num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, nb_cores=arch.nb_core,
             boot_addr=boot_addr, cluster_id=arch.cluster_id)
 
+        #data dumpper
+        data_dumpper = UtilDumpper(self, 'data_dumpper', arch.cluster_id)
+        data_dumpper_ctrl_base = arch.reg_area.base + arch.reg_area.size
+        data_dumpper_ctrl_size = 20
+        data_dumpper_input_base = arch.tcdm.area.base + arch.tcdm.area.size
+        data_dumpper_input_size = arch.tcdm.area.size
+
         # Cluster DMA
-        idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size,
+        idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size + data_dumpper_input_size,
             tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
 
         #stack memory
@@ -282,6 +290,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
         #binding to cluster registers
         narrow_axi.o_MAP(cluster_registers.i_INPUT(), base=arch.reg_area.base, size=arch.reg_area.size, rm_base=True)
+
+        #binding to data dumpper
+        narrow_axi.o_MAP(data_dumpper.i_CTRL(), base=data_dumpper_ctrl_base, size=data_dumpper_ctrl_size, rm_base=True)
 
         #binding to redmule
         narrow_axi.o_MAP(redmule.i_INPUT(), base=arch.redmule_area.base, size=arch.redmule_area.size, rm_base=True)
@@ -363,7 +374,10 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster DMA
         idma.o_AXI(wide_axi_from_idma.i_INPUT())
-        idma.o_TCDM(tcdm.i_DMA_INPUT())
+        data_dumpper_arbiter = router.Router(self, 'data_dumpper_arbiter')
+        data_dumpper_arbiter.o_MAP(tcdm.i_DMA_INPUT())
+        data_dumpper_arbiter.o_MAP(data_dumpper.i_INPUT(), base=data_dumpper_input_base, size=data_dumpper_input_size, rm_base=True)
+        idma.o_TCDM(data_dumpper_arbiter.i_INPUT())
 
     def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'fetchen', signature='wire<bool>')

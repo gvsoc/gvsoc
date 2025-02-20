@@ -3,6 +3,7 @@
 
 #include "flex_runtime.h"
 #include "flex_cluster_arch.h"
+#include <stddef.h>
 
 /********************************************
 *  iDMA Trigger Fucntions (Customized ISA)  *
