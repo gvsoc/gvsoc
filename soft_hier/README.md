@@ -9,7 +9,11 @@
 - [ ] SoftHier tutorial
 	- [ ] SoftHier architecture configuration
 		- [ ] Familiarize with basic runtime
+	- [ ] HBM Preload and Postload
 	- [ ] Synchronization
+		- [ ] global sync
+		- [ ] intra cluster sync
+		- [ ] group cluster sync
 	- [ ] DMA
 	- [ ] RedMulE
 	- [ ] Spatz
