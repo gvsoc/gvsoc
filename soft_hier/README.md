@@ -7,7 +7,10 @@
 	- [x] Update CMD for example simulation
 - [x] Support Printf
 - [ ] SoftHier tutorial
+	- [ ] SoftHier architecture configuration
+		- [ ] Familiarize with basic runtime
 	- [ ] Synchronization
 	- [ ] DMA
 	- [ ] RedMulE
 	- [ ] Spatz
+	- [ ] Group synchronization
