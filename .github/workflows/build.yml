@@ -31,6 +31,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
           gcc --version
+          make third_party/gnu_toolchain
           source sourceme.sh
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
