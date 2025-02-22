@@ -99,6 +99,15 @@ third_party/toolchain:
 	wget https://github.com/pulp-platform/pulp-riscv-gnu-toolchain/releases/download/v1.0.16/v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
 	tar -xvjf v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2
 
+third_party/gnu_toolchain:
+	mkdir -p third_party/gnu_toolchain
+	cd third_party/gnu_toolchain; \
+	git clone --recursive https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; \
+	cd pulp-riscv-gnu-toolchain; \
+	mkdir install; \
+	./configure --prefix=$(abspath install) --with-arch=rv32imafd --with-abi=ilp32d --with-cmodel=medlow --enable-multilib; \
+	make
+
 softhier_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs build-toolchain
 
 clean_preparation:
