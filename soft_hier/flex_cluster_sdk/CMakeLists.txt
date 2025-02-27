@@ -20,7 +20,7 @@ endif()
 
 
 if (NOT INCLUDE_DIRS)
-    set(INCLUDE_DIRS "")
+    set(INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/runtime/include)
 endif()
 
 # Set the linker script
@@ -29,7 +29,7 @@ set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/runtime/flex_memory.ld)
 
 add_custom_command(
     OUTPUT softhier.elf
-    COMMAND ${COMPILER} -I ${CMAKE_SOURCE_DIR}/runtime/include -I ${INCLUDE_DIRS} -T ${LINKER_SCRIPT} -nostartfiles -mabi=ilp32d -mcmodel=medany -march=rv32imafd -g -O3 -ffast-math -fno-builtin-printf -fno-common -ffunction-sections -Wl,--gc-sections -o softhier.elf ${CMAKE_SOURCE_DIR}/runtime/flex_start.s ${SOURCES}
+    COMMAND ${COMPILER} -I ${CMAKE_SOURCE_DIR}/runtime/include -I ${INCLUDE_DIRS} -T ${LINKER_SCRIPT} -nostartfiles -mabi=ilp32d -mcmodel=medlow -march=rv32imafd -g -O3 -ffast-math -fno-builtin-printf -fno-common -ffunction-sections -Wl,--gc-sections -o softhier.elf ${CMAKE_SOURCE_DIR}/runtime/flex_start.s ${SOURCES}
     COMMENT "Generating softhier.elf"
 )
 
