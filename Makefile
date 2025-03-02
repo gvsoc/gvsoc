@@ -98,16 +98,16 @@ third_party/toolchain:
 	cd third_party/toolchain && \
 	wget https://github.com/pulp-platform/pulp-riscv-gnu-toolchain/releases/download/v1.0.16/v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
 	tar -xvjf v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
-	wget https://github.com/husterZC/gun_toolchain/releases/download/v1.0.0/toolchain.tar.xz &&\
-	tar -xvjf toolchain.tar.xz
+	wget https://github.com/husterZC/gun_toolchain/releases/download/v2.0.0/toolchain.tar.xz &&\
+	tar -xvf toolchain.tar.xz
 
 third_party/gnu_toolchain:
 	mkdir -p third_party/gnu_toolchain
 	cd third_party/gnu_toolchain; \
-	git clone --recursive https://github.com/pulp-platform/pulp-riscv-gnu-toolchain; \
-	cd pulp-riscv-gnu-toolchain; \
+	git clone https://github.com/riscv/riscv-gnu-toolchain; \
+	cd riscv-gnu-toolchain/; git reset --hard 935b263; \
 	mkdir install; \
-	./configure --prefix=$(abspath install) --with-arch=rv32imafd --with-abi=ilp32d --with-cmodel=medlow --enable-multilib; \
+	./configure --prefix=$(abspath install) --with-arch=rv32gcv_zfh --with-abi=ilp32d --with-cmodel=medlow --enable-multilib; \
 	make
 
 softhier_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs build-toolchain
@@ -148,6 +148,7 @@ endif
 sw:
 	rm -rf sw_build && mkdir sw_build
 	cd sw_build && $(CMAKE) $(sw_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
+	@! grep -q "ebreak" sw_build/softhier.dump || (echo "Error: 'ebreak' found in sw_build/softhier.dump" && exit 1)
 
 clean_sw:
 	rm -rf sw_build
@@ -175,6 +176,9 @@ run:
 
 runv:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=cluster_registers | tee sw_build/analyze_trace.txt
+
+rund:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace-level=6 --trace=/chip/cluster_0/pe2/insn
 
 ######################################################################
 ## 				Make Targets for Trace Analyzer		 				##

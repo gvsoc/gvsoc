@@ -104,7 +104,7 @@ void flex_redmule_trigger(uint32_t x_addr, uint32_t w_addr, uint32_t y_addr, red
 }
 
 uint32_t flex_redmule_wait(){
-    volatile uint32_t * redmule_reg  = ARCH_REDMULE_REG_BASE + 40;
+    volatile uint32_t * redmule_reg  = (volatile uint32_t *) (ARCH_REDMULE_REG_BASE + 40);
     return (*redmule_reg);
 }
 

@@ -100,10 +100,10 @@ GridSyncGroupInfo grid_sync_group_init(uint32_t grid_x_dim, uint32_t grid_y_dim)
 
 	info.sync_x_cluster = (info.this_grid_left_most + info.this_grid_right_most)/2;
 	info.sync_y_cluster = (info.this_grid_bottom_most + info.this_grid_top_most)/2;
-	info.sync_x_point   = ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,pos.y              )*ARCH_SYNC_INTERLEAVE)+24;
-    info.sync_x_piter   = ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,pos.y              )*ARCH_SYNC_INTERLEAVE)+28;
-    info.sync_y_point   = ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,info.sync_y_cluster)*ARCH_SYNC_INTERLEAVE)+32;
-    info.sync_y_piter   = ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,info.sync_y_cluster)*ARCH_SYNC_INTERLEAVE)+36;
+	info.sync_x_point   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,pos.y              )*ARCH_SYNC_INTERLEAVE)+24);
+    info.sync_x_piter   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,pos.y              )*ARCH_SYNC_INTERLEAVE)+28);
+    info.sync_y_point   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,info.sync_y_cluster)*ARCH_SYNC_INTERLEAVE)+32);
+    info.sync_y_piter   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(info.sync_x_cluster,info.sync_y_cluster)*ARCH_SYNC_INTERLEAVE)+36);
 
 	if (flex_get_core_id() == 0)
 	{
@@ -111,8 +111,8 @@ GridSyncGroupInfo grid_sync_group_init(uint32_t grid_x_dim, uint32_t grid_y_dim)
 		insert_cluster_to_group(flex_get_cluster_id(), info.this_grid_id);
 
 		//Reset synchronization point
-		volatile uint32_t * local_sync_point_for_group_level1 = ARCH_SYNC_BASE+(flex_get_cluster_id()*ARCH_SYNC_INTERLEAVE)+24;
-		volatile uint32_t * local_sync_point_for_group_level2 = ARCH_SYNC_BASE+(flex_get_cluster_id()*ARCH_SYNC_INTERLEAVE)+32;
+		volatile uint32_t * local_sync_point_for_group_level1 = (volatile uint32_t *) (ARCH_SYNC_BASE+(flex_get_cluster_id()*ARCH_SYNC_INTERLEAVE)+24);
+		volatile uint32_t * local_sync_point_for_group_level2 = (volatile uint32_t *) (ARCH_SYNC_BASE+(flex_get_cluster_id()*ARCH_SYNC_INTERLEAVE)+32);
 		*local_sync_point_for_group_level1 = 0;
 		*local_sync_point_for_group_level2 = 0;
 	}
@@ -128,7 +128,7 @@ void grid_sync_group_barrier_xy(GridSyncGroupInfo * info){
     if (flex_is_dm_core()){
         flex_annotate_barrier(0);
 
-    	volatile uint32_t * cluster_wfi_reg  = ARCH_CLUSTER_REG_BASE;
+    	volatile uint32_t * cluster_wfi_reg  = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
 
         //First Barrier X
         if ((info->this_grid_cluster_num_x - flex_get_enable_value()) == flex_amo_fetch_add(info->sync_x_point)) {

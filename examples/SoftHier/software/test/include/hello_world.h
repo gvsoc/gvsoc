@@ -354,4 +354,17 @@ void test_HBM_interleaving(){
     }
     flex_global_barrier_xy();//Global barrier
 }
+
+void test_FP16(){
+    flex_global_barrier_xy();//Global barrier
+    if (flex_is_first_core() && flex_get_cluster_id() == 0)
+    {
+        _Float16 a = 0.1;
+        float c = (float)a;
+        printf("my float16 is %f\n", c);
+        _Float16 sum = a + a;
+        printf("sum result is %f\n", (float)sum);
+    }
+    flex_global_barrier_xy();//Global barrier
+}
 #endif

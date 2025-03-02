@@ -72,7 +72,7 @@ FlexPosition bottom_pos(FlexPosition pos) {
 }
 
 uint32_t flex_get_cluster_id(){
-    uint32_t * cluster_reg      = ARCH_CLUSTER_REG_BASE;
+    volatile uint32_t * cluster_reg      = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
     return *cluster_reg;
 }
 
@@ -103,27 +103,27 @@ uint32_t flex_is_first_core(){
 *******************/
 
 uint32_t flex_get_enable_value(){
-    volatile uint32_t * amo_reg      = ARCH_CLUSTER_REG_BASE+4;
+    volatile uint32_t * amo_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+4);
     return *amo_reg;
 }
 
 uint32_t flex_get_barrier_num_cluster(){
-    volatile uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+8;
+    volatile uint32_t * info_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+8);
     return *info_reg;
 }
 
 uint32_t flex_get_barrier_num_cluster_x(){
-    volatile uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+12;
+    volatile uint32_t * info_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+12);
     return *info_reg;
 }
 
 uint32_t flex_get_barrier_num_cluster_y(){
-    volatile uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+16;
+    volatile uint32_t * info_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+16);
     return *info_reg;
 }
 
 void flex_annotate_barrier(uint32_t type){
-    volatile uint32_t * info_reg      = ARCH_CLUSTER_REG_BASE+20;
+    volatile uint32_t * info_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+20);
     *info_reg = type;
 }
 
@@ -140,9 +140,9 @@ void flex_intra_cluster_sync(){
 }
 
 void flex_barrier_init(){
-    volatile uint32_t * barrier      = ARCH_SYNC_BASE;
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+    volatile uint32_t * barrier      = (volatile uint32_t *) ARCH_SYNC_BASE;
+    volatile uint32_t * wakeup_reg   = (volatile uint32_t *) ARCH_SOC_REGISTER_WAKEUP;
+    volatile uint32_t * cluster_reg  = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
 
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
@@ -158,9 +158,9 @@ void flex_barrier_init(){
 }
 
 void flex_global_barrier(){
-    volatile uint32_t * barrier      = ARCH_SYNC_BASE;
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+    volatile uint32_t * barrier      = (volatile uint32_t *) ARCH_SYNC_BASE;
+    volatile uint32_t * wakeup_reg   = (volatile uint32_t *) ARCH_SOC_REGISTER_WAKEUP;
+    volatile uint32_t * cluster_reg  = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
 
     flex_intra_cluster_sync();
 
@@ -178,8 +178,8 @@ void flex_global_barrier(){
 }
 
 void flex_global_barrier_polling(){
-    volatile uint32_t * barrier      = ARCH_SYNC_BASE;
-    volatile uint32_t * barrier_iter = ARCH_SYNC_BASE + 4;
+    volatile uint32_t * barrier      = (volatile uint32_t *) ARCH_SYNC_BASE;
+    volatile uint32_t * barrier_iter = (volatile uint32_t *) (ARCH_SYNC_BASE + 4);
 
     flex_intra_cluster_sync();
 
@@ -204,9 +204,9 @@ void flex_barrier_xy_init(){
     FlexPosition        pos          = get_pos(flex_get_cluster_id());
     uint32_t            pos_x_middel = (ARCH_NUM_CLUSTER_X)/2;
     uint32_t            pos_y_middel = (ARCH_NUM_CLUSTER_Y)/2;
-    volatile uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
-    volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-    volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+    volatile uint32_t * barrier_y    = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16);
+    volatile uint32_t * wakeup_reg   = (volatile uint32_t *) ARCH_SOC_REGISTER_WAKEUP;
+    volatile uint32_t * cluster_reg  = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
 
     if (flex_is_dm_core()){
         if (flex_get_cluster_id() == 0)
@@ -214,7 +214,7 @@ void flex_barrier_xy_init(){
             flex_reset_barrier(barrier_y);
             for (int i = 0; i < ARCH_NUM_CLUSTER_Y; ++i)
             {
-                uint32_t * barrier_x = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,i)*ARCH_SYNC_INTERLEAVE)+8;
+                volatile uint32_t * barrier_x = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,i)*ARCH_SYNC_INTERLEAVE)+8);
                 flex_reset_barrier(barrier_x);
             }
             *wakeup_reg = flex_get_enable_value();
@@ -235,10 +235,10 @@ void flex_global_barrier_xy(){
         FlexPosition        pos          = get_pos(flex_get_cluster_id());
         uint32_t            pos_x_middel = (flex_get_barrier_num_cluster_x())/2;
         uint32_t            pos_y_middel = (flex_get_barrier_num_cluster_y())/2;
-        volatile uint32_t * barrier_x    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8;
-        volatile uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
-        volatile uint32_t * wakeup_reg   = ARCH_SOC_REGISTER_WAKEUP;
-        volatile uint32_t * cluster_reg  = ARCH_CLUSTER_REG_BASE;
+        volatile uint32_t * barrier_x    = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8);
+        volatile uint32_t * barrier_y    = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16);
+        volatile uint32_t * wakeup_reg   = (volatile uint32_t *) ARCH_SOC_REGISTER_WAKEUP;
+        volatile uint32_t * cluster_reg  = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
 
         //First Barrier X
         if ((flex_get_barrier_num_cluster_x() - flex_get_enable_value()) == flex_amo_fetch_add(barrier_x)) {
@@ -269,10 +269,10 @@ void flex_global_barrier_xy_polling(){
         FlexPosition        pos          = get_pos(flex_get_cluster_id());
         uint32_t            pos_x_middel = (flex_get_barrier_num_cluster_x())/2;
         uint32_t            pos_y_middel = (flex_get_barrier_num_cluster_y())/2;
-        volatile uint32_t * barrier_x    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8;
-        volatile uint32_t * barrier_ix   = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+12;
-        volatile uint32_t * barrier_y    = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16;
-        volatile uint32_t * barrier_iy   = ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+20;
+        volatile uint32_t * barrier_x    = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+8);
+        volatile uint32_t * barrier_ix   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos.y       )*ARCH_SYNC_INTERLEAVE)+12);
+        volatile uint32_t * barrier_y    = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+16);
+        volatile uint32_t * barrier_iy   = (volatile uint32_t *) (ARCH_SYNC_BASE+(cluster_index(pos_x_middel,pos_y_middel)*ARCH_SYNC_INTERLEAVE)+20);
 
         // Remember previous iteration
         uint32_t prev_barrier_iter_x     = *barrier_ix;
@@ -307,7 +307,7 @@ void flex_global_barrier_xy_polling(){
 *******************/
 
 void flex_eoc(uint32_t val){
-    volatile uint32_t * eoc_reg = ARCH_SOC_REGISTER_EOC;
+    volatile uint32_t * eoc_reg = (volatile uint32_t *) ARCH_SOC_REGISTER_EOC;
     *eoc_reg = val;
 }
 
@@ -316,12 +316,12 @@ void flex_eoc(uint32_t val){
 *******************/
 
 void flex_timer_start(){
-    volatile uint32_t * start_reg    = ARCH_SOC_REGISTER_EOC + 8;
+    volatile uint32_t * start_reg    = (volatile uint32_t *) (ARCH_SOC_REGISTER_EOC + 8);
     *start_reg = flex_get_enable_value();
 }
 
 void flex_timer_end(){
-    volatile uint32_t * end_reg = ARCH_SOC_REGISTER_EOC + 12;
+    volatile uint32_t * end_reg = (volatile uint32_t *) (ARCH_SOC_REGISTER_EOC + 12);
     *end_reg = flex_get_enable_value();
 }
 
@@ -351,7 +351,7 @@ void flex_print_int(uint32_t data){
 ************************/
 
 void flex_sat(uint32_t val){
-    volatile uint32_t * sat_reg = ARCH_SOC_REGISTER_EOC + 40;
+    volatile uint32_t * sat_reg = (volatile uint32_t *) (ARCH_SOC_REGISTER_EOC + 40);
     *sat_reg = val;
 }
 

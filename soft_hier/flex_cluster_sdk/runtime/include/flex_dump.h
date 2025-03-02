@@ -10,27 +10,27 @@
 ************************/
 
 void flex_dump_open(){
-    volatile uint32_t * dump_reg = ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE;
+    volatile uint32_t * dump_reg = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE);
     *dump_reg = flex_get_enable_value();
 }
 
 void flex_dump_stamp(){
-    volatile uint32_t * dump_reg = ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 4;
+    volatile uint32_t * dump_reg = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 4);
     *dump_reg = flex_get_enable_value();
 }
 
 void flex_dump_close(){
-    volatile uint32_t * dump_reg = ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 8;
+    volatile uint32_t * dump_reg = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 8);
     *dump_reg = flex_get_enable_value();
 }
 
 void flex_dump_set_lower_base(uint32_t val){
-    volatile uint32_t * dump_reg = ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 12;
+    volatile uint32_t * dump_reg = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 12);
     *dump_reg = val;
 }
 
 void flex_dump_set_upper_base(uint32_t val){
-    volatile uint32_t * dump_reg = ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 16;
+    volatile uint32_t * dump_reg = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE + ARCH_CLUSTER_REG_SIZE + 16);
     *dump_reg = val;
 }
 
