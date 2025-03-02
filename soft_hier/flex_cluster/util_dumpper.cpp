@@ -92,7 +92,7 @@ vp::IoReqStatus UtilDumpper::ctrl_req(vp::Block *__this, vp::IoReq *req)
         {
             uint64_t base_addr = (_this->base_upper << 32) | _this->base_lower;
             fprintf(_this->dump_file, "\n");
-            fprintf(_this->dump_file, ".0x%llx:\n", base_addr);
+            fprintf(_this->dump_file, "HBM offset == .0x%016llx:\n", base_addr);
         }
     } else if (offset == 8 && is_write)
     {
@@ -134,7 +134,7 @@ vp::IoReqStatus UtilDumpper::input_req(vp::Block *__this, vp::IoReq *req)
             uint32_t len = size / 2;
             for (int i = 0; i < len; ++i)
             {
-                fprintf(_this->dump_file, "%04x\n", ptr[i]);
+                fprintf(_this->dump_file, "  0x%04x\n", ptr[i]);
             }
         }
     }

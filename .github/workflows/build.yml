@@ -52,6 +52,14 @@ jobs:
           cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
           python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py
           cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py app=examples/SoftHier/assembled/HBM_preload_example/software pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf make hs runv
+      - name: Run SoftHier Tutorial
+        run: |
+          source sourceme.sh
+          make -C tutorial/0_softhier_architecture_introduction/ all
+          make -C tutorial/1_HBM_accesses/ hbm_pld
+          make -C tutorial/1_HBM_accesses/ hbm_l1
+          make -C tutorial/1_HBM_accesses/ l1_hbm
+          make -C tutorial/1_HBM_accesses/ hbm_dump
 
   # Removed due to no space left on eth machine
   # build_eth:
