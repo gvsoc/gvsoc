@@ -107,7 +107,7 @@ third_party/gnu_toolchain:
 	git clone https://github.com/riscv/riscv-gnu-toolchain; \
 	cd riscv-gnu-toolchain/; git reset --hard 935b263; \
 	mkdir install; \
-	./configure --prefix=$(abspath install) --with-arch=rv32gv_zfh --with-abi=ilp32d --with-cmodel=medlow --enable-multilib; \
+	./configure --prefix=$(abspath third_party/gnu_toolchain/riscv-gnu-toolchain/install) --with-arch=rv32gv_zfh --with-abi=ilp32d --with-cmodel=medlow --enable-multilib; \
 	make
 
 softhier_preparation: drmasys_apply_patch build-systemc build-dramsys build-configs build-toolchain
