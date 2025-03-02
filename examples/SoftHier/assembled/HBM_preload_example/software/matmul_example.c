@@ -32,8 +32,8 @@ void gemm(const uint32_t A, const uint32_t B, const uint32_t C, const uint32_t K
         uint32_t cluster_id = flex_get_cluster_id();
         uint32_t core_id = flex_get_core_id();
         {
-            for (auto i = 0; i < M; i += 256) {
-                for (auto j = 0; j < N; j += 256) {
+            for (int i = 0; i < M; i += 256) {
+                for (int j = 0; j < N; j += 256) {
                     {
                         int gi = get_pos(cluster_id).x;
                         int gj = get_pos(cluster_id).y;
@@ -47,8 +47,8 @@ void gemm(const uint32_t A, const uint32_t B, const uint32_t C, const uint32_t K
                                 }
                                 flex_intra_cluster_sync();
                                 {
-                                    for (auto ci = 0; ci < 64; ci += 64) {
-                                        for (auto cj = 0; cj < 64; cj += 64) {
+                                    for (int ci = 0; ci < 64; ci += 64) {
+                                        for (int cj = 0; cj < 64; cj += 64) {
                                             uint32_t accumulator;
                                             accumulator = 0;
                                             if(flex_is_dm_core())
@@ -59,7 +59,7 @@ void gemm(const uint32_t A, const uint32_t B, const uint32_t C, const uint32_t K
                                             flex_intra_cluster_sync();
 
                                             {
-                                                for (auto bK = 0; bK < K; bK += 64) {
+                                                for (int bK = 0; bK < K; bK += 64) {
                                                     uint32_t local_A;
                                                     local_A = 8192;
                                                     uint32_t local_B;
@@ -161,8 +161,8 @@ void main()
     if (flex_is_first_core() && (flex_get_cluster_id()==0))
     {
         printf("[Check Results] First 3 Row Elements:\n");
-        for (auto C_i = 0; C_i < 3; C_i++) {
-            for (auto C_j = 0; C_j < M; C_j++) {
+        for (int C_i = 0; C_i < 3; C_i++) {
+            for (int C_j = 0; C_j < M; C_j++) {
                 show_progress_animated(C_j + C_i * M,M*3);
                 if (((uint16_t *)(hbm_addr(C)))[C_j + C_i * M] != ((uint16_t *)(hbm_addr(G)))[C_j + C_i * M])
                 {
@@ -188,6 +188,5 @@ void main()
     }
     flex_global_barrier_xy();
     flex_eoc(eoc_val);
-    return 0;
 }
 

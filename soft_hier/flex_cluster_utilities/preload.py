@@ -11,7 +11,7 @@ NP_DTYPE_TO_C = {
     np.dtype('uint32'): 'uint32_t',
     np.dtype('int64'): 'int64_t',
     np.dtype('uint64'): 'uint64_t',
-    np.dtype('float16'): 'float16',
+    np.dtype('float16'): '_Float16',
     np.dtype('float32'): 'float',
     np.dtype('float64'): 'double',
 }
