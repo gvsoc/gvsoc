@@ -339,7 +339,10 @@ int main()
     return 0;
 }
 ```
-
+Try:
+```bash
+make hbm_dump
+```
 After simulation, you’ll find a file named **`dump_0`** in the SoftHier repository root. It contains the hex data from HBM:
 
 ```

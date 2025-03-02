@@ -9,7 +9,7 @@
 - [ ] SoftHier tutorial
 	- [x] SoftHier architecture configuration
 		- [x] Familiarize with basic runtime
-	- [ ] HBM Preload and Postload
+	- [x] HBM Pre-load and Post-load
 	- [ ] Compute with Snitch core
 	- [ ] Compute with RedMulE
 	- [ ] Compute with Spatz
