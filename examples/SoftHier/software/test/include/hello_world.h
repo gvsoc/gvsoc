@@ -356,16 +356,30 @@ void test_HBM_interleaving(){
 }
 
 #include "flex_libfp16.h"
-
 void test_FP16(){
     flex_global_barrier_xy();//Global barrier
     if (flex_is_first_core() && flex_get_cluster_id() == 0)
     {
-        volatile fp16 * ptr = (volatile fp16 *)0;
-        for (int i = 0; i < 8; ++i)
+        fp16 a = 0x3800;
+        fp16 b = 0x3C00;
+        fp16 c = 0x0000;
+        printf("a           = %f\n", fp16_to_float(a));
+        printf("b           = %f\n", fp16_to_float(b));
+        asm_fp16_div(&a, &b, &c);
+        printf("a / b       = %f\n", fp16_to_float(c));
+        asm_fp16_exp(&a, &c);
+        printf("exp(a)      = %f\n", fp16_to_float(c));
+        asm_fp16_sigmoid(&a, &c);
+        printf("sigmoid(a)  = %f\n", fp16_to_float(c));
+        int cmp = asm_fp16_compare(&a, &b);
+        if (cmp < 0)
         {
-            float a = fp16_to_float(ptr[i]);
-            printf("local float is %f\n", a);
+            printf("compare a&b : a < b\n");
+        } else if (cmp == 0)
+        {
+            printf("compare a&b : a == b\n");
+        } else {
+            printf("compare a&b : a > b\n");
         }
     }
     flex_global_barrier_xy();//Global barrier
