@@ -174,6 +174,10 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         }
     }
 
+    if(offset == 24){
+        data[0] = 0;
+    }
+
     // _this->regmap.access(offset, size, data, is_write);
 
     return vp::IO_REQ_OK;

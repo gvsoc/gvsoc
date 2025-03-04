@@ -48,6 +48,8 @@ jobs:
         run: |
           source sourceme.sh
           cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
+          cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/test make hs run
+          cfg=examples/SoftHier/config/arch_test_16x16.py app=examples/SoftHier/software/test make hs run
           cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs runv
           cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
           python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py

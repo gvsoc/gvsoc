@@ -107,6 +107,11 @@ uint32_t flex_get_enable_value(){
     return *amo_reg;
 }
 
+uint32_t flex_get_disable_value(){
+    volatile uint32_t * amo_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+24);
+    return *amo_reg;
+}
+
 uint32_t flex_get_barrier_num_cluster(){
     volatile uint32_t * info_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+8);
     return *info_reg;
@@ -128,7 +133,7 @@ void flex_annotate_barrier(uint32_t type){
 }
 
 void flex_reset_barrier(uint32_t* barrier){
-    *barrier = 0;
+    *barrier = flex_get_disable_value();
 }
 
 uint32_t flex_amo_fetch_add(uint32_t* barrier){
