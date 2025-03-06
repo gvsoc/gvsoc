@@ -49,7 +49,6 @@ jobs:
           source sourceme.sh
           cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
           cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/test make hs run
-          cfg=examples/SoftHier/config/arch_test_16x16.py app=examples/SoftHier/software/test make hs run
           cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs runv
           cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
           python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py
@@ -62,6 +61,14 @@ jobs:
           make -C tutorial/1_HBM_accesses/ hbm_l1
           make -C tutorial/1_HBM_accesses/ l1_hbm
           make -C tutorial/1_HBM_accesses/ hbm_dump
+      - name: SoftHier Scale Check
+        run: |
+          source sourceme.sh
+          cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_16x16.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_32x32.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_64x64.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_128x128.py app=examples/SoftHier/software/scale_check make hs run
 
   # Removed due to no space left on eth machine
   # build_eth:
