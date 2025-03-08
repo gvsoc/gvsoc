@@ -155,34 +155,14 @@ We provide several macros in `soft_hier/flex_cluster_sdk/runtime/include/flex_ru
 
 We provide several APIs for local and global synchronizations in `soft_hier/flex_cluster_sdk/runtime/include/flex_runtime.h`
 #### 🔄 Intra-Cluster Synchronization  
-To synchronize cores within a **single cluster**, use:  
-
-🔹 `flex_intra_cluster_sync()`  
-This function enables **fast intra-cluster synchronization**.  
+To synchronize cores within a **single cluster**, use:  `flex_intra_cluster_sync()` .
 
 #### 🌍 Global Cluster Synchronization  
 For synchronizing **all clusters**, we use an **XY cluster synchronization strategy**. The following APIs are provided:  
 
-📌 **Initialize Global Barrier**  
-🔹 `flex_barrier_xy_init()`  
-✅ Call **once at the beginning** of the program. No further calls are needed.  
-
-📌 **XY Strategy Synchronization (Recommended) 🏎️**  
-🔹 `flex_global_barrier_xy()`  
-✅ Synchronizes all clusters using an **XY strategy** with **semi-hardware support** (recommended).  
-
-📌 **Polling-Based Synchronization ⏳**  
-🔹 `flex_global_barrier_xy_polling()`  
-✅ Synchronizes all clusters using a **pure software-based polling approach**.  
-
-
-#### 🛠️ Summary of Synchronization
-| Function | Purpose | Support |
-|----------|---------|---------|
-| `flex_intra_cluster_sync()` | Sync cores within a cluster | 🔹 Fast software sync |
-| `flex_barrier_xy_init()` | Initializes XY synchronization | 🔹 One-time setup |
-| `flex_global_barrier_xy()` | Sync all clusters with **semi-HW support** | 🔥 Recommended |
-| `flex_global_barrier_xy_polling()` | Sync all clusters with **pure software polling** | 🐢 Slower |
+- `flex_barrier_xy_init()`. Initialize Global Barrier, Call **once at the beginning** of the program. No further calls are needed.  
+- `flex_global_barrier_xy()` : Synchronizes all clusters using an **XY strategy** with **semi-hardware support** (recommended).  
+- `flex_global_barrier_xy_polling()`: Synchronizes all clusters using an **XY strategy** with a **pure software-based polling approach**.  
 
 
 ### HBM Addressing 💾
