@@ -273,4 +273,12 @@ int asm_fp16_compare(const fp16 *a, const fp16 *b)
         return 1;    // positive => av > bv
     }
 }
+
+#define VFR_TYPE_ENCODE(funct6, m, vs2, vs1, funct3, vd, opcode)                    \
+    ((funct6 << 26) | (m << 25) | (vs2 << 20) | (vs1 << 15) | (funct3 << 12) | (vd << 7) | \
+     (opcode))
+
+inline void asm_rvv_exp(uint32_t vs1_num, uint32_t vd_num){
+    asm volatile(".word %0\n"::"i"(VFR_TYPE_ENCODE(0b001100, 0b1, 0b00000, vs1_num, 0b001, vd_num, 0b1010111)));
+}
 #endif

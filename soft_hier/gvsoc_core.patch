@@ -1,3 +1,42 @@
+diff --git a/models/cpu/iss/flexfloat/flexfloat.c b/models/cpu/iss/flexfloat/flexfloat.c
+index c26426a1..9dfe38b4 100644
+--- a/models/cpu/iss/flexfloat/flexfloat.c
++++ b/models/cpu/iss/flexfloat/flexfloat.c
+@@ -537,6 +537,22 @@ INLINE void ff_add(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b
+     #endif
+ }
+ 
++#include <math.h>
++
++INLINE void ff_exp(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b) {
++    assert((dest->desc.exp_bits == a->desc.exp_bits) && (dest->desc.frac_bits == a->desc.frac_bits) &&
++           (a->desc.exp_bits == b->desc.exp_bits) && (a->desc.frac_bits == b->desc.frac_bits));
++    dest->value = (fp_t)exp((double)a->value);
++    #ifdef FLEXFLOAT_TRACKING
++    dest->exact_value = (fp_t)exp((double)a->exact_value);
++    if(dest->tracking_fn) (dest->tracking_fn)(dest, dest->tracking_arg);
++    #endif
++    flexfloat_sanitize(dest);
++    #ifdef FLEXFLOAT_STATS
++    if(StatsEnabled) getOpStats(dest->desc)->add += 1;
++    #endif
++}
++
+ INLINE void ff_sub(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b) {
+     assert((dest->desc.exp_bits == a->desc.exp_bits) && (dest->desc.frac_bits == a->desc.frac_bits) &&
+            (a->desc.exp_bits == b->desc.exp_bits) && (a->desc.frac_bits == b->desc.frac_bits));
+diff --git a/models/cpu/iss/flexfloat/flexfloat.h b/models/cpu/iss/flexfloat/flexfloat.h
+index e7791f10..4f4ca654 100644
+--- a/models/cpu/iss/flexfloat/flexfloat.h
++++ b/models/cpu/iss/flexfloat/flexfloat.h
+@@ -231,6 +231,7 @@ long double ff_get_longdouble(const flexfloat_t *obj);
+ 
+ void ff_inverse(flexfloat_t *dest, const flexfloat_t *a);
+ void ff_add(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b);
++void ff_exp(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b);
+ void ff_sub(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b);
+ void ff_mul(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b);
+ void ff_div(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b);
 diff --git a/models/cpu/iss/include/cores/snitch/class.hpp b/models/cpu/iss/include/cores/snitch/class.hpp
 index f767246b..280f6b26 100644
 --- a/models/cpu/iss/include/cores/snitch/class.hpp
@@ -119,7 +158,7 @@ index 00000000..fde9d634
 +    return iss_insn_next(iss, insn, pc);
 +}
 diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
-index 188f2877..fec7666b 100644
+index 188f2877..8121e890 100644
 --- a/models/cpu/iss/include/isa/rv32v.hpp
 +++ b/models/cpu/iss/include/isa/rv32v.hpp
 @@ -20,6 +20,11 @@
@@ -134,27 +173,247 @@ index 188f2877..fec7666b 100644
  static inline iss_reg_t vadd_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_ADDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
      return iss_insn_next(iss, insn, pc);
-@@ -728,6 +733,15 @@ static inline iss_reg_t vfmax_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -308,41 +313,65 @@ static inline iss_reg_t vwmaccsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t p
+ 
+ static inline iss_reg_t vredsum_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
      return iss_insn_next(iss, insn, pc);
  }
  
+ static inline iss_reg_t vredand_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDANDVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredor_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDORVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredxor_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDXORVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredmin_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDMINVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredminu_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDMINUVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredmax_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDMAXVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vredmaxu_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_REDMAXUVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+@@ -455,34 +484,58 @@ static inline iss_reg_t vremu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+ // }
+ static inline iss_reg_t vle8_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VLE8V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, REG_OUT(0), -1, -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vle16_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VLE16V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, REG_OUT(0), -1, -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vle32_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VLE32V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, REG_OUT(0), -1, -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vle64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VLE64V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, REG_OUT(0), -1, -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vse8_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VSE8V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, -1, REG_OUT(0), -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vse16_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VSE16V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, -1, REG_OUT(0), -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vse32_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VSE32V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, -1, REG_OUT(0), -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vse64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL3(lib_VSE64V , REG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint64_t delay = iss->spatz.timing_insn(2, -1, REG_OUT(0), -1, iss->spatz.max_vlsu_latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    iss->spatz.max_vlsu_latency = 0;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+@@ -696,12 +749,27 @@ static inline iss_reg_t vfadd_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
++static inline iss_reg_t vfexp_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FEXPVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
++static inline iss_reg_t vfexp_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FEXPVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
++
+ static inline iss_reg_t vfsub_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FSUBVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vfsub_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FSUBVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+@@ -721,28 +789,61 @@ static inline iss_reg_t vfmin_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+ 
+ static inline iss_reg_t vfmax_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMAXVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vfmax_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMAXVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    return iss_insn_next(iss, insn, pc);
++}
++
 +static inline iss_reg_t vfdiv_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL4(lib_FDIVVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
 +    return iss_insn_next(iss, insn, pc);
 +}
 +static inline iss_reg_t vfdiv_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL4(lib_FDIVVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
-+    return iss_insn_next(iss, insn, pc);
-+}
-+
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
  static inline iss_reg_t vfmul_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_FMULVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
      return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vfmul_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMULVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+ static inline iss_reg_t vfmacc_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMACCVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ static inline iss_reg_t vfmacc_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMACCVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    uint32_t latency = (VL/NUM_FPU);
++    uint64_t delay = iss->spatz.timing_insn(0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..429b658e 100644
+index 26cb748e..271229d1 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
-@@ -584,7 +584,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+@@ -31,6 +31,12 @@
+ #include <fenv.h>
+ #include "assert.h"
+ 
++#include <cstdint>
++
++inline uint32_t clog2(uint32_t x) {
++    return (x <= 1) ? 0 : 32 - __builtin_clz(x - 1);
++}
++
+ 
+ #pragma STDC FENV_ACCESS ON
+ 
+@@ -93,6 +99,7 @@
+ #define LMUL iss->spatz.LMUL_t
+ #define VL iss->csr.vl.value
+ #define VSTART iss->csr.vstart.value
++#define NUM_FPU (CONFIG_GVSOC_ISS_SPATZ_FPU  * ((64 + SEW - 1) / (SEW)))
+ 
+ 
+ static inline void printBin(int size, bool *a,const char name[]){
+@@ -584,7 +591,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
  
@@ -185,7 +444,64 @@ index 26cb748e..429b658e 100644
  
  
  static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
-@@ -3591,6 +3614,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3418,6 +3448,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+     }
+ }
+ 
++static inline void lib_FEXPVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++        
++        myAbsU(iss, SEW, vs1, i, &data1);
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++
++        if(!mask(vm,bin)){
++        int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++        FLOAT_EXEC_2(ff_exp, data1, data2, e, m, res);
++        restoreFFRoundingMode(old);
++        intToBinU(SEW, res, resBin);
++        writeToVReg(iss, SEW, vd, i, resBin);
++        }
++    }
++}
++
++static inline void lib_FEXPVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++    data1 = rs1;
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++        
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++
++        if(!mask(vm,bin)){
++            int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++            FLOAT_EXEC_2(ff_exp, data1, data2, e, m, res);
++            restoreFFRoundingMode(old);
++            intToBinU(SEW, res, resBin);
++            writeToVReg(iss, SEW, vd, i, resBin);
++
++        }        
++    }
++}
++
+ static inline void lib_FSUBVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
+     bool bin[8];
+     unsigned long int res, data1, data2;
+@@ -3591,6 +3671,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -241,7 +557,7 @@ index 26cb748e..429b658e 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5584,8 +5656,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5584,8 +5713,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          uint32_t addr = this->io_pending_addr;        
          uint32_t addr_aligned = addr & ~(4 - 1);
          int size = addr_aligned + 4 - addr;
@@ -250,7 +566,7 @@ index 26cb748e..429b658e 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5600,9 +5670,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5600,9 +5727,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          this->io_pending_size -= size;
          this->io_pending_addr += size;
  
@@ -259,11 +575,11 @@ index 26cb748e..429b658e 100644
          if (err == vp::IO_REQ_OK){
 -            // this->event->enqueue(this->io_req.get_latency() + 1);
 +            // printf("[Spatz IO] port = %d, latency = %d\n", this->next_io, this->io_req.get_latency());
-+            iss->exec.stall_cycles = (iss->exec.stall_cycles > this->io_req.get_latency())? iss->exec.stall_cycles : this->io_req.get_latency();
++            iss->spatz.max_vlsu_latency = (iss->spatz.max_vlsu_latency > this->io_req.get_latency())? iss->spatz.max_vlsu_latency : this->io_req.get_latency();
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5682,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5739,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -273,10 +589,49 @@ index 26cb748e..429b658e 100644
      }
      else{
          this->waiting_io_response = false;
+@@ -6907,6 +7038,18 @@ static inline iss_reg_t lib_VSETVLI(Iss *iss, int idxRs1, int idxRd, int rs1, is
+         }else{
+             AVL = VL;
+         }
++
++    if (iss->spatz.busy == 0 && rs1 != 0)
++    {
++        iss->spatz.busy = 1;
++        iss->spatz.time_start = iss->top.clock.get_cycles();
++    }
++    if (iss->spatz.busy == 1 && rs1 == 0)
++    {
++        iss->spatz.busy = 0;
++        iss->spatz.runtime += iss->top.clock.get_cycles() - iss->spatz.time_start;
++        iss->spatz.trace.msg("[LightVectEng] Finished : %0d ns ---> %0d ns | period = %0d ns | runtime = %0d ns\n", iss->spatz.time_start, iss->top.clock.get_cycles(), iss->top.clock.get_cycles() - iss->spatz.time_start, iss->spatz.runtime);
++    }
+     return VL;
+ }
+ 
+@@ -6943,6 +7086,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+         }else{
+             AVL = VL;
+         }
++
+     return VL;
+     }
+ }
 diff --git a/models/cpu/iss/include/spatz.hpp b/models/cpu/iss/include/spatz.hpp
-index 8b348cd0..f7a09d40 100644
+index 8b348cd0..07772060 100644
 --- a/models/cpu/iss/include/spatz.hpp
 +++ b/models/cpu/iss/include/spatz.hpp
+@@ -29,9 +29,9 @@ typedef uint8_t iss_Vel_t;
+ #define ISS_NB_VREGS 32
+ //#define NB_VEL VLEN/SEW
+ //#define NB_VEL 256/8
+-#define NB_VEL 2048/8//???????????????????????
++#define NB_VEL 16384/8//???????????????????????
+ //#define VLMAX NB_VEL*iss->spatz.LMUL
+-#define VLMAX (int)((2048*LMUL)/SEW)
++#define VLMAX (int)((16384*LMUL)/SEW)
+ 
+ #define XLEN = ISS_REG_WIDTH
+ #define FLEN = ISS_REG_WIDTH
 @@ -86,7 +86,7 @@ public:
      Vlsu(Iss &iss);
      void build();
@@ -294,8 +649,25 @@ index 8b348cd0..f7a09d40 100644
  
  private:
      Iss &iss;
+@@ -133,6 +134,16 @@ public:
+ 
+     VRegfile vregfile;
+     Vlsu vlsu;
++    vp::Trace trace;
++    bool busy;
++    uint64_t time_start;
++    uint64_t runtime;
++
++    //Scoreboard
++    uint64_t reg_score_board [ISS_NB_VREGS];
++    uint64_t unit_score_board [3]; //fpu, slide, vlsu
++    uint64_t max_vlsu_latency;
++    uint64_t timing_insn(int uint_id, int vd, int vs1, int vs2, uint64_t latency, uint64_t timestamp);
+ 
+ };
+ 
 diff --git a/models/cpu/iss/isa_gen/isa_rvv.py b/models/cpu/iss/isa_gen/isa_rvv.py
-index 3c39da9e..8c4cf5e7 100644
+index 3c39da9e..d6074537 100644
 --- a/models/cpu/iss/isa_gen/isa_rvv.py
 +++ b/models/cpu/iss/isa_gen/isa_rvv.py
 @@ -81,6 +81,8 @@ class Rv32v(IsaSubset):
@@ -307,46 +679,150 @@ index 3c39da9e..8c4cf5e7 100644
              Instr('vadd.vv'       ,   Format_OPV  ,    '000000 - ----- ----- 000 ----- 1010111'),#inst[25] = VM , VM = 0 mask enable
              Instr('vadd.vi'       ,   Format_OPIVI,    '000000 - ----- ----- 011 ----- 1010111'),
              Instr('vadd.vx'       ,   Format_OPV  ,    '000000 - ----- ----- 100 ----- 1010111'),
-@@ -205,7 +207,7 @@ class Rv32v(IsaSubset):
-             Instr('vfadd.vf'      ,   Format_OPVF ,    '000000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+@@ -201,84 +203,90 @@ class Rv32v(IsaSubset):
  
-             Instr('vfsub.vv'      ,   Format_OPV  ,    '000010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
--            Instr('vfsub.vf'      ,   Format_OPVF ,    '000010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+ 
+-            Instr('vfadd.vv'      ,   Format_OPV  ,    '000000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfadd.vf'      ,   Format_OPVF ,    '000000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfadd.vv'      ,   Format_OPV  ,    '000000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfadd.vf'      ,   Format_OPVF ,    '000000 - ----- ----- 101 ----- 1010111'),
++
++            Instr('vfexp.vv'      ,   Format_OPV  ,    '001100 - ----- ----- 001 ----- 1010111'),
++            Instr('vfexp.vf'      ,   Format_OPVF ,    '001100 - ----- ----- 101 ----- 1010111'),
++
++            Instr('vfsub.vv'      ,   Format_OPV  ,    '000010 - ----- ----- 001 ----- 1010111'),
 +            Instr('vfsub.vf'      ,   Format_OPVF ,    '000010 - ----- ----- 101 ----- 1010111'),
  
-             Instr('vfrsub.vf'     ,   Format_OPVF  ,    '100111 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsub.vv'      ,   Format_OPV  ,    '000010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsub.vf'      ,   Format_OPVF ,    '000010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfrsub.vf'     ,   Format_OPVF  ,    '100111 - ----- ----- 101 ----- 1010111'),
  
-@@ -215,11 +217,14 @@ class Rv32v(IsaSubset):
-             Instr('vfmax.vv'      ,   Format_OPV  ,    '000110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
-             Instr('vfmax.vf'      ,   Format_OPVF ,    '000110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+-            Instr('vfrsub.vf'     ,   Format_OPVF  ,    '100111 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmin.vv'      ,   Format_OPV  ,    '000100 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmin.vf'      ,   Format_OPVF ,    '000100 - ----- ----- 101 ----- 1010111'),
  
--            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmin.vv'      ,   Format_OPV  ,    '000100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmin.vf'      ,   Format_OPVF ,    '000100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmax.vv'      ,   Format_OPV  ,    '000110 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmax.vf'      ,   Format_OPVF ,    '000110 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfmax.vv'      ,   Format_OPV  ,    '000110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmax.vf'      ,   Format_OPVF ,    '000110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
 +            Instr('vfdiv.vv'      ,   Format_OPV  ,    '100000 - ----- ----- 001 ----- 1010111'),
 +            Instr('vfdiv.vf'      ,   Format_OPVF ,    '100000 - ----- ----- 101 ----- 1010111'),
-+
-+            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111'),
-             Instr('vfmul.vf'      ,   Format_OPVF ,    '100100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
  
-             Instr('vfmacc.vv'     ,   Format_OPV  ,    '101100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmul.vf'      ,   Format_OPVF ,    '100100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmul.vf'      ,   Format_OPVF ,    '100100 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfmacc.vv'     ,   Format_OPV  ,    '101100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 -            Instr('vfmacc.vf'     ,   Format_OPVF ,    '101100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmacc.vv'     ,   Format_OPV  ,    '101100 - ----- ----- 001 ----- 1010111'),
 +            Instr('vfmacc.vf'     ,   Format_OPVF ,    '101100 - ----- ----- 101 ----- 1010111'),
  
-             Instr('vfnmacc.vv'    ,   Format_OPV  ,    '101101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
-             Instr('vfnmacc.vf'    ,   Format_OPVF ,    '101101 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
-@@ -242,11 +247,11 @@ class Rv32v(IsaSubset):
-             Instr('vfnmsub.vv'    ,   Format_OPV  ,    '101011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
-             Instr('vfnmsub.vf'    ,   Format_OPVF ,    '101011 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+-            Instr('vfnmacc.vv'    ,   Format_OPV  ,    '101101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfnmacc.vf'    ,   Format_OPVF ,    '101101 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfnmacc.vv'    ,   Format_OPV  ,    '101101 - ----- ----- 001 ----- 1010111'),
++            Instr('vfnmacc.vf'    ,   Format_OPVF ,    '101101 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfmsac.vv'     ,   Format_OPV  ,    '101110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmsac.vf'     ,   Format_OPVF ,    '101110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmsac.vv'     ,   Format_OPV  ,    '101110 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmsac.vf'     ,   Format_OPVF ,    '101110 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfnmsac.vv'    ,   Format_OPV  ,    '101111 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfnmsac.vf'    ,   Format_OPVF ,    '101111 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfnmsac.vv'    ,   Format_OPV  ,    '101111 - ----- ----- 001 ----- 1010111'),
++            Instr('vfnmsac.vf'    ,   Format_OPVF ,    '101111 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfmadd.vv'     ,   Format_OPV  ,    '101000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmadd.vf'     ,   Format_OPVF ,    '101000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmadd.vv'     ,   Format_OPV  ,    '101000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmadd.vf'     ,   Format_OPVF ,    '101000 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfnmadd.vv'    ,   Format_OPV  ,    '101001 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfnmadd.vf'    ,   Format_OPVF ,    '101001 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfnmadd.vv'    ,   Format_OPV  ,    '101001 - ----- ----- 001 ----- 1010111'),
++            Instr('vfnmadd.vf'    ,   Format_OPVF ,    '101001 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfmsub.vv'     ,   Format_OPV  ,    '101010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmsub.vf'     ,   Format_OPVF ,    '101010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmsub.vv'     ,   Format_OPV  ,    '101010 - ----- ----- 001 ----- 1010111'),
++            Instr('vfmsub.vf'     ,   Format_OPVF ,    '101010 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfnmsub.vv'    ,   Format_OPV  ,    '101011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfnmsub.vf'    ,   Format_OPVF ,    '101011 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfnmsub.vv'    ,   Format_OPV  ,    '101011 - ----- ----- 001 ----- 1010111'),
++            Instr('vfnmsub.vf'    ,   Format_OPVF ,    '101011 - ----- ----- 101 ----- 1010111'),
  
 -            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 +            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111'),
  
-             Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
++            Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111'),
  
 -            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 +            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111'),
-             Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
++            Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111'),
  
-             Instr('vfwadd.vv'        ,   Format_OPV  ,    '110000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwadd.vv'        ,   Format_OPV  ,    '110000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwadd.vf'        ,   Format_OPVF ,    '110000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwadd.wv'        ,   Format_OPV  ,    '110100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwadd.wf'        ,   Format_OPVF ,    '110100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwadd.vv'        ,   Format_OPV  ,    '110000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwadd.vf'        ,   Format_OPVF ,    '110000 - ----- ----- 101 ----- 1010111'),
++            Instr('vfwadd.wv'        ,   Format_OPV  ,    '110100 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwadd.wf'        ,   Format_OPVF ,    '110100 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfwsub.vv'        ,   Format_OPV  ,    '110010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwsub.vf'        ,   Format_OPVF ,    '110010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwsub.wv'        ,   Format_OPV  ,    '110110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwsub.wf'        ,   Format_OPVF ,    '110110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwsub.vv'        ,   Format_OPV  ,    '110010 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwsub.vf'        ,   Format_OPVF ,    '110010 - ----- ----- 101 ----- 1010111'),
++            Instr('vfwsub.wv'        ,   Format_OPV  ,    '110110 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwsub.wf'        ,   Format_OPVF ,    '110110 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfwmul.vv'        ,   Format_OPV  ,    '111000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwmul.vf'        ,   Format_OPVF ,    '111000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwmul.vv'        ,   Format_OPV  ,    '111000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwmul.vf'        ,   Format_OPVF ,    '111000 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfwmacc.vv'       ,   Format_OPV  ,    '111100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwmacc.vf'       ,   Format_OPVF ,    '111100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwmacc.vv'       ,   Format_OPV  ,    '111100 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwmacc.vf'       ,   Format_OPVF ,    '111100 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfwmsac.vv'       ,   Format_OPV  ,    '111110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwmsac.vf'       ,   Format_OPVF ,    '111110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwmsac.vv'       ,   Format_OPV  ,    '111110 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwmsac.vf'       ,   Format_OPVF ,    '111110 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfwnmsac.vv'      ,   Format_OPV  ,    '111111 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfwnmsac.vf'      ,   Format_OPVF ,    '111111 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfwnmsac.vv'      ,   Format_OPV  ,    '111111 - ----- ----- 001 ----- 1010111'),
++            Instr('vfwnmsac.vf'      ,   Format_OPVF ,    '111111 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfsgnj.vv'        ,   Format_OPV  ,    '001000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsgnj.vf'        ,   Format_OPVF ,    '001000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfsgnj.vv'        ,   Format_OPV  ,    '001000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfsgnj.vf'        ,   Format_OPVF ,    '001000 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfsgnjn.vv'       ,   Format_OPV  ,    '001001 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsgnjn.vf'       ,   Format_OPVF ,    '001001 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfsgnjn.vv'       ,   Format_OPV  ,    '001001 - ----- ----- 001 ----- 1010111'),
++            Instr('vfsgnjn.vf'       ,   Format_OPVF ,    '001001 - ----- ----- 101 ----- 1010111'),
+ 
+-            Instr('vfsgnjx.vv'       ,   Format_OPV  ,    '001010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsgnjx.vf'       ,   Format_OPVF ,    '001010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfsgnjx.vv'       ,   Format_OPV  ,    '001010 - ----- ----- 001 ----- 1010111'),
++            Instr('vfsgnjx.vf'       ,   Format_OPVF ,    '001010 - ----- ----- 101 ----- 1010111'),
+ 
+             Instr('vfcvt.xu.f.v'     ,   Format_OPV  ,    '010010 - ----- 00000 001 ----- 1010111', tags=['fp_op', 'nseq']),
+ 
 diff --git a/models/cpu/iss/src/snitch/decode.cpp b/models/cpu/iss/src/snitch/decode.cpp
 index 6bf10c9b..a6efa5a0 100644
 --- a/models/cpu/iss/src/snitch/decode.cpp
@@ -399,10 +875,68 @@ index c7b46b87..d4cb9adb 100644
      // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
      this->event = this->top.event_new((vp::Block *)this, handle_event);
 diff --git a/models/cpu/iss/src/spatz.cpp b/models/cpu/iss/src/spatz.cpp
-index e4cb6c51..d9bb7764 100644
+index e4cb6c51..44812d5a 100644
 --- a/models/cpu/iss/src/spatz.cpp
 +++ b/models/cpu/iss/src/spatz.cpp
-@@ -34,17 +34,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+@@ -8,8 +8,17 @@
+ 
+ 
+ Spatz::Spatz(Iss &iss)
+-    : vregfile(iss), vlsu(iss)
++    : vregfile(iss), vlsu(iss), busy(0), time_start(0), runtime(0), max_vlsu_latency(0)
+ {
++    iss.top.traces.new_trace("spatz/trace", &this->trace, vp::DEBUG);
++    for (int i = 0; i < ISS_NB_VREGS; ++i)
++    {
++        this->reg_score_board[i] = 0;
++    }
++    for (int i = 0; i < 3; ++i)
++    {
++        this->unit_score_board[i] = 0;
++    }
+ }
+ 
+ void Spatz::build()
+@@ -25,6 +34,38 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
+     VRegfile::reset(true);
+ }
+ 
++uint64_t Spatz::timing_insn(int uint_id, int vd, int vs1, int vs2, uint64_t latency, uint64_t timestamp)
++{
++    uint64_t meet_point = timestamp;
++    uint64_t future_point = 0;
++    uint64_t delay = 0;
++    if (uint_id >= 0)
++    {
++        meet_point = (this->unit_score_board[uint_id] > meet_point)? this->unit_score_board[uint_id] : meet_point;
++    }
++
++    if (vs1 >= 0)
++    {
++        meet_point = (this->reg_score_board[vs1] > meet_point)? this->reg_score_board[vs1] : meet_point;
++    }
++
++    if (vs2 >= 0)
++    {
++        meet_point = (this->reg_score_board[vs2] > meet_point)? this->reg_score_board[vs2] : meet_point;
++    }
++
++    delay = meet_point - timestamp;
++    future_point = meet_point + latency;
++
++    this->unit_score_board[uint_id] = future_point;
++    if (vd >= 0)
++    {
++        this->reg_score_board[vd] = future_point;
++    }
++
++    return delay;
++}
++
+ 
+ 
+ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+@@ -34,17 +75,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
  
  Vlsu::Vlsu(Iss &iss) : iss(iss)
  {
@@ -423,7 +957,7 @@ index e4cb6c51..d9bb7764 100644
  }
  inline void VRegfile::reset(bool active){
      if (active){
-@@ -56,9 +56,9 @@ inline void VRegfile::reset(bool active){
+@@ -56,9 +97,9 @@ inline void VRegfile::reset(bool active){
      }
  }
  

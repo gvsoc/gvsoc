@@ -1,0 +1,62 @@
+#ifndef _HELLO_WORLD_H_
+#define _HELLO_WORLD_H_
+
+#include "flex_runtime.h"
+#include "flex_printf.h"
+#include "flex_libfp16.h"
+
+
+void test_spatz(){
+    flex_global_barrier_xy();//Global barrier
+    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
+    {
+        uint32_t vl;
+        uint16_t * x = (uint16_t *)local(0x1000);
+        uint16_t * y = (uint16_t *)local(0x2000);
+
+        //initialize vector
+        for (int i = 0; i < 8; ++i)
+        {
+            x[i] = 0x3800; //0.5 
+            y[i] = 0x0000; //0.0
+        }
+
+        //log out initialization
+        printf("[Initialize Vector X]\n");
+        for (int i = 0; i < 8; ++i)
+        {
+            printf("  %f\n", fp16_to_float(x[i]));
+        }
+        printf("[Initialize Vector Y]\n");
+        for (int i = 0; i < 8; ++i)
+        {
+            printf("  %f\n", fp16_to_float(y[i]));
+        }
+        asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl) : "r"(8));
+        asm volatile("vle16.v v0,  (%0)" ::"r"(x));
+        asm volatile("vfadd.vv v8, v0, v0");
+        asm volatile("vse16.v v8,  (%0)" ::"r"(y));
+        printf("[Vector Operation: Y = X + X]\n");
+        for (int i = 0; i < 8; ++i)
+        {
+            printf("  %f\n", fp16_to_float(y[i]));
+        }
+        asm volatile("vfmul.vv v8, v0, v0");
+        asm volatile("vse16.v v8,  (%0)" ::"r"(y));
+        printf("[Vector Operation: Y = X * X]\n");
+        for (int i = 0; i < 8; ++i)
+        {
+            printf("  %f\n", fp16_to_float(y[i]));
+        }
+        asm_rvv_exp(0,8);
+        asm volatile("vse16.v v8,  (%0)" ::"r"(y));
+        printf("[Vector Operation: Y = exp(X)]\n");
+        for (int i = 0; i < 8; ++i)
+        {
+            printf("  %f\n", fp16_to_float(y[i]));
+        }
+    }
+    flex_global_barrier_xy();//Global barrier
+}
+
+#endif
