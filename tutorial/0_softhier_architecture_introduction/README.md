@@ -151,13 +151,13 @@ We provide several macros in `soft_hier/flex_cluster_sdk/runtime/include/flex_ru
 - `remote_pos(pos, offset)`
 
 
-### 🚀 Cluster Local and Global Synchronization  
+### Cluster Local and Global Synchronization 🚀
 
 We provide several APIs for local and global synchronizations in `soft_hier/flex_cluster_sdk/runtime/include/flex_runtime.h`
-#### 🔄 Intra-Cluster Synchronization  
+#### Intra-Cluster Synchronization  
 To synchronize cores within a **single cluster**, use:  `flex_intra_cluster_sync()` .
 
-#### 🌍 Global Cluster Synchronization  
+#### Global Cluster Synchronization  
 For synchronizing **all clusters**, we use an **XY cluster synchronization strategy**. The following APIs are provided:  
 
 - `flex_barrier_xy_init()`. Initialize Global Barrier, Call **once at the beginning** of the program. No further calls are needed.  
