@@ -145,9 +145,11 @@ ifdef app
 	sw_cmake_arg = "-DSRC_DIR=$(app_path)"
 endif
 
+arch_cmake_arg := $(shell if grep "spatz_attaced_core_list" $(config_file) | grep "\[\]" > /dev/null 2>&1; then echo "-DRISCV_ARCH=rv32imafd_zfh"; else echo "-DRISCV_ARCH=rv32imafdv_zfh"; fi)
+
 sw:
 	rm -rf sw_build && mkdir sw_build
-	cd sw_build && $(CMAKE) $(sw_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
+	cd sw_build && $(CMAKE) $(sw_cmake_arg) $(arch_cmake_arg) ../soft_hier/flex_cluster_sdk/ && make
 	@! grep -q "ebreak" sw_build/softhier.dump || (echo "Error: 'ebreak' found in sw_build/softhier.dump" && exit 1)
 
 clean_sw:
@@ -178,7 +180,7 @@ runv:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=spatz --trace=cluster_registers | tee sw_build/analyze_trace.txt
 
 rund:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace-level=6 --trace=/chip/cluster_0/pe0/insn
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace-level=6 --trace=/chip/cluster_4/pe0/insn
 
 ######################################################################
 ## 				Make Targets for Trace Analyzer		 				##
