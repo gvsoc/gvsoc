@@ -79,7 +79,7 @@ class ClusterArch:
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
                         spatz_core_list,    spatz_num_vlsu,     spatz_num_fu,
-                        data_bandwidth,     auto_fetch=False):
+                        data_bandwidth,     auto_fetch=False,   multi_idma_enable=0):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base
@@ -110,6 +110,7 @@ class ClusterArch:
         self.idma_outstand_txn      = idma_outstand_txn
         self.idma_outstand_burst    = idma_outstand_burst
         self.data_bandwidth         = data_bandwidth
+        self.multi_idma_enable      = multi_idma_enable
 
         #Global Information
         self.num_cluster_x          = num_cluster_x
@@ -255,8 +256,16 @@ class ClusterUnit(gvsoc.systree.Component):
         data_dumpper_input_size = arch.tcdm.area.size
 
         # Cluster DMA
-        idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size + data_dumpper_input_size,
-            tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
+        if arch.multi_idma_enable:
+            idma_list = []
+            for x in range(arch.nb_core):
+                idma_list.append(SnitchDma(self, f'idma_{x}', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size + data_dumpper_input_size,
+                tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst))
+                pass
+        else:
+            idma = SnitchDma(self, 'idma', loc_base=arch.tcdm.area.base, loc_size=arch.tcdm.area.size + data_dumpper_input_size,
+                tcdm_width=(arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width), transfer_queue_size=arch.idma_outstand_txn, burst_queue_size=arch.idma_outstand_burst)
+            pass
 
         #stack memory
         stack_mem = memory.Memory(self, 'stack_mem', size=arch.stack_area.size)
@@ -316,8 +325,15 @@ class ClusterUnit(gvsoc.systree.Component):
         
 
         # iDMA connection
-        cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
-        idma.o_OFFLOAD_GRANT(cores[arch.nb_core-1].i_OFFLOAD_GRANT())
+        if arch.multi_idma_enable:
+            for x in range(arch.nb_core):
+                cores[x].o_OFFLOAD(idma_list[x].i_OFFLOAD())
+                idma_list[x].o_OFFLOAD_GRANT(cores[x].i_OFFLOAD_GRANT())
+                pass
+        else:
+            cores[arch.nb_core-1].o_OFFLOAD(idma.i_OFFLOAD())
+            idma.o_OFFLOAD_GRANT(cores[arch.nb_core-1].i_OFFLOAD_GRANT())
+            pass
 
         # Cores
         for core_id in range(0, arch.nb_core):
@@ -373,11 +389,18 @@ class ClusterUnit(gvsoc.systree.Component):
         self.bind(self, 'sync_irq', cluster_registers, 'global_barrier_req')
 
         # Cluster DMA
-        idma.o_AXI(wide_axi_from_idma.i_INPUT())
         data_dumpper_arbiter = router.Router(self, 'data_dumpper_arbiter')
         data_dumpper_arbiter.o_MAP(tcdm.i_DMA_INPUT())
         data_dumpper_arbiter.o_MAP(data_dumpper.i_INPUT(), base=data_dumpper_input_base, size=data_dumpper_input_size, rm_base=True)
-        idma.o_TCDM(data_dumpper_arbiter.i_INPUT())
+        if arch.multi_idma_enable:
+            for x in range(arch.nb_core):
+                idma_list[x].o_TCDM(data_dumpper_arbiter.i_INPUT())
+                idma_list[x].o_AXI(wide_axi_from_idma.i_INPUT())
+                pass
+        else:
+            idma.o_TCDM(data_dumpper_arbiter.i_INPUT())
+            idma.o_AXI(wide_axi_from_idma.i_INPUT())
+            pass
 
     def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'fetchen', signature='wire<bool>')

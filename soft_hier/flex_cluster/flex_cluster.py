@@ -129,7 +129,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         spatz_core_list     =   arch.spatz_attaced_core_list,
                                         spatz_num_vlsu      =   arch.spatz_num_vlsu_port,
                                         spatz_num_fu        =   arch.spatz_num_function_unit,
-                                        data_bandwidth      =   arch.noc_link_width/8)
+                                        data_bandwidth      =   arch.noc_link_width/8,
+                                        multi_idma_enable   =   1 if hasattr(arch, 'multi_idma_enable') else 0)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 
