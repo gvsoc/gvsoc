@@ -11,7 +11,8 @@ hbm_bw_regex = r'^DRAMSysRecordable(?P<channel_idx>\d+)\.controller\d+\s*AVG BW:
 hbm_time_regex = r'^DRAMSysRecordable\d+\.controller\d+\s*Total Time:\s*(?P<time>\d+) (?P<unit>ns|us)$'
 barrier_regex = r'^\d+: \d+: \[.*/chip/cluster_(?P<cluster_idx>\d+)/cluster_registers/trace.*' \
                 r'Cluster Sync: (?P<tstart>\d+) ns -> (?P<tend>\d+) ns \| .* \| Type = (?P<type>\d)$'
-
+phase_regex = r'^\d+: \d+: \[.*/chip/cluster_(?P<cluster_idx>\d+)/(?P<agent>.+)/trace.*' \
+              r'Finished : (?P<tstart>\d+) ns ---> (?P<tend>\d+) ns'
 
 def parse_trace(input, output):
     # Extract relevant phases from GVSoC log
@@ -33,6 +34,13 @@ def parse_trace(input, output):
             if m:
                 phase = m.groupdict()
                 phase['agent'] = 'idma'
+                phase['attrs'] = {'info': line}
+                phases.append(phase)
+                continue
+            # Match against phase regex
+            m = re.match(phase_regex, line)
+            if m:
+                phase = m.groupdict()
                 phase['attrs'] = {'info': line}
                 phases.append(phase)
                 continue
