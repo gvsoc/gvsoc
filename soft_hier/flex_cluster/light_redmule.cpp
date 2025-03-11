@@ -31,6 +31,9 @@
 #include <vector>
 #include <list>
 #include <queue>
+#include <stdint.h>
+#include <stdio.h>
+#include <math.h>
 
 /****************************************************
 *                   Type Definition                 *
@@ -45,6 +48,7 @@ typedef union {
     } parts;
 } FloatBits;
 
+typedef uint8_t  fp8e4m3;
 typedef uint16_t fp16;
 
 enum redmule_state {
@@ -72,6 +76,9 @@ enum iter_instruction {
 void matmul_uint16(uint16_t * z, uint16_t * y, uint16_t * x, uint16_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_int16(int16_t * z, int16_t * y, int16_t * x, int16_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
+void matmul_uint8(uint8_t * z, uint8_t * y, uint8_t * x, uint8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
+void matmul_int8(int8_t * z, int8_t * y, int8_t * x, int8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
+void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 
 /*****************************************************
 *                   Class Definition                 *
@@ -473,6 +480,39 @@ void LightRedmule::process_compute(){
                         (uint16_t)buffer_n,
                         (uint16_t)buffer_w);
     }
+    if (this->compute_able == 5)
+    {
+        //UINT8
+        matmul_uint8(   (uint8_t *)this->z_buffer_compute,
+                        (uint8_t *)this->z_buffer_compute,
+                        (uint8_t *)this->x_buffer,
+                        (uint8_t *)this->w_buffer,
+                        (uint16_t)buffer_h,
+                        (uint16_t)buffer_n,
+                        (uint16_t)buffer_w);
+    }
+    if (this->compute_able == 6)
+    {
+        //UINT8
+        matmul_int8(    (int8_t *)this->z_buffer_compute,
+                        (int8_t *)this->z_buffer_compute,
+                        (int8_t *)this->x_buffer,
+                        (int8_t *)this->w_buffer,
+                        (uint16_t)buffer_h,
+                        (uint16_t)buffer_n,
+                        (uint16_t)buffer_w);
+    }
+    if (this->compute_able == 7)
+    {
+        //UINT8
+        matmul_fp8e4m3(     (fp8e4m3 *)this->z_buffer_compute,
+                        (fp8e4m3 *)this->z_buffer_compute,
+                        (fp8e4m3 *)this->x_buffer,
+                        (fp8e4m3 *)this->w_buffer,
+                        (uint16_t)buffer_h,
+                        (uint16_t)buffer_n,
+                        (uint16_t)buffer_w);
+    }
 
 }
 
@@ -748,6 +788,7 @@ vp::IoReqStatus LightRedmule::core_acc_req(vp::Block *__this, vp::IoReq *req)
             _this->y_addr = xwy_list_array[2];
             _this->z_addr = _this->y_addr;
             _this->compute_able = xwy_list_array[3];
+            _this->elem_size = (_this->compute_able < 4)? 2:1;
             _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] Set XWY addr: %d, %d, %d)\n", _this->x_addr, _this->w_addr, _this->y_addr);
 
             /*************************
@@ -1240,6 +1281,115 @@ void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16
             for (int k = 0; k < n_size; ++k)
             {
                 z[i * k_size + j] = fp16_fma(x[i * n_size + k], w[k * k_size + j], z[i * k_size + j]);
+            }
+        }
+    }
+}
+
+
+void matmul_uint8(uint8_t * z, uint8_t * y, uint8_t * x, uint8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
+    for (int i = 0; i < m_size; ++i)
+    {
+        for (int j = 0; j < k_size; ++j)
+        {
+            z[i * k_size + j] = y[i * k_size + j];
+            for (int k = 0; k < n_size; ++k)
+            {
+                z[i * k_size + j] += x[i * n_size + k] * w[k * k_size + j];
+            }
+        }
+    }
+}
+
+void matmul_int8(int8_t * z, int8_t * y, int8_t * x, int8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
+    for (int i = 0; i < m_size; ++i)
+    {
+        for (int j = 0; j < k_size; ++j)
+        {
+            z[i * k_size + j] = y[i * k_size + j];
+            for (int k = 0; k < n_size; ++k)
+            {
+                z[i * k_size + j] += x[i * n_size + k] * w[k * k_size + j];
+            }
+        }
+    }
+}
+
+// Constants for FP8-E4M3 format
+#define FP8_EXP_MASK  0x78  // 0111 1000
+#define FP8_FRAC_MASK 0x07  // 0000 0111
+#define FP8_SIGN_MASK 0x80  // 1000 0000
+#define FP8_BIAS      7
+
+// Convert FP8 (E4M3) to float
+float fp8e4m3_to_float(fp8e4m3 value) {
+    uint8_t sign = (value & FP8_SIGN_MASK) >> 7;
+    uint8_t exponent = (value & FP8_EXP_MASK) >> 3;
+    uint8_t fraction = value & FP8_FRAC_MASK;
+
+    if (exponent == 0) {
+        // Subnormal number
+        if (fraction == 0) return sign ? -0.0f : 0.0f;
+        return (sign ? -1.0f : 1.0f) * (fraction / 8.0f) * powf(2, -6);
+    } else if (exponent == 15) {
+        // Infinity or NaN
+        return fraction ? NAN : (sign ? -INFINITY : INFINITY);
+    }
+
+    // Normalized number
+    float mantissa = 1.0f + (fraction / 8.0f);
+    float result = mantissa * powf(2, exponent - FP8_BIAS);
+    return sign ? -result : result;
+}
+
+// Convert float to FP8 (E4M3)
+fp8e4m3 float_to_fp8e4m3(float value) {
+    if (isnan(value)) return 0x7F;  // NaN representation
+    if (isinf(value)) return value < 0 ? 0xF8 : 0x78;  // +/-Inf representation
+
+    uint8_t sign = (value < 0) ? 0x80 : 0x00;
+    value = fabsf(value);
+
+    int exponent;
+    float mantissa = frexpf(value, &exponent);
+
+    if (value == 0.0f) return 0;  // Zero representation
+
+    exponent += FP8_BIAS - 1;
+
+    if (exponent < 1) {
+        // Subnormal handling
+        int frac = (int)roundf(value / powf(2, -6) * 8.0f);
+        return sign | (frac & FP8_FRAC_MASK);
+    } else if (exponent > 14) {
+        // Clamp to infinity
+        return sign | 0x78;
+    }
+
+    // Normal number
+    uint8_t frac = (uint8_t)roundf((mantissa - 0.5f) * 16.0f);
+    return sign | ((exponent << 3) & FP8_EXP_MASK) | (frac & FP8_FRAC_MASK);
+}
+
+// Fused Multiply-Add for FP8
+fp8e4m3 fp8e4m3_fma(fp8e4m3 a, fp8e4m3 b, fp8e4m3 c) {
+    float fa = fp8e4m3_to_float(a);
+    float fb = fp8e4m3_to_float(b);
+    float fc = fp8e4m3_to_float(c);
+
+    float result = fa * fb + fc;
+    return float_to_fp8e4m3(result);
+}
+
+void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
+    for (int i = 0; i < m_size; ++i)
+    {
+        for (int j = 0; j < k_size; ++j)
+        {
+            z[i * k_size + j] = y[i * k_size + j];
+            for (int k = 0; k < n_size; ++k)
+            {
+                z[i * k_size + j] = fp8e4m3_fma(x[i * n_size + k], w[k * k_size + j], z[i * k_size + j]);
             }
         }
     }
