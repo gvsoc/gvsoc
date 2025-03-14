@@ -5,22 +5,42 @@ TARGETS ?= rv32;rv64
 BUILDDIR ?= build
 INSTALLDIR ?= install
 
-export PATH:=$(CURDIR)/gapy/bin:$(PATH)
+export PATH:=$(CURDIR)/gapy-gap/bin:$(CURDIR)/gapy/bin:$(PATH)
 
 all: checkout build
 
 checkout:
 	git submodule update --recursive --init
 
+checkout.gap:
+	@if [ ! -d "gap/.git" ]; then \
+		git clone git@github.com:gvsoc/gvsoc-gap.git gap; \
+	fi
+	cd gap && git fetch && git checkout f07cf96a813b4939aace7fb17ce8bf0f90627c29
+
+	@if [ ! -d "gapy-gap/.git" ]; then \
+		git clone git@github.com:gvsoc/gapy.git gapy-gap; \
+	fi
+	cd gapy-gap && git fetch && git checkout e92ceffe2d011fc9aaa8b098fa71afbb5378d039
+
+
 .PHONY: build
 
 build:
-	# Change directory to curdir to avoid issue with symbolic links
-	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
-		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
-		-DGVSOC_TARGETS="${TARGETS}" \
-		-DCMAKE_SKIP_INSTALL_RPATH=false
+	@{ \
+		GVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)"; \
+		if [ -d "gap" ]; then \
+			GVSOC_MODULES="$$GVSOC_MODULES;$(CURDIR)/gap;"; \
+			OPTIONS="-DEMPTY_SFU=1"; \
+		fi; \
+		# Change directory to curdir to avoid issue with symbolic links \
+		cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+			-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
+			-DGVSOC_MODULES="$$GVSOC_MODULES" \
+			-DGVSOC_TARGETS="${TARGETS}" \
+			$${OPTIONS} \
+			-DCMAKE_SKIP_INSTALL_RPATH=false; \
+	}
 
 	cd $(CURDIR) && $(CMAKE) --build $(BUILDDIR) $(CMAKE_FLAGS)
 	cd $(CURDIR) && $(CMAKE) --install $(BUILDDIR)
