@@ -17,6 +17,20 @@ install(
 add_subdirectory(core)
 add_subdirectory(gapy)
 
+if(IS_DIRECTORY gap)
+add_subdirectory(gap)
+endif()
+
+if(IS_DIRECTORY gapy-gap)
+add_subdirectory(gapy-gap)
+endif()
+
 if(IS_DIRECTORY gui)
 add_subdirectory(gui)
+endif()
+
+if(IS_DIRECTORY gui3)
+add_subdirectory(gui3)
+add_subdirectory(gui-timeline)
+add_subdirectory(gui-database)
 endif()
