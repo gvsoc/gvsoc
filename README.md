@@ -1,4 +1,4 @@
-# SoftHier Simulation Model in GVSoC 🚀
+# QuantSparse-3D Simulation Model in GVSoC 🚀
 
 ## SoftHier Architecture Overview 🏗️
 
