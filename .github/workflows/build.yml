@@ -13,7 +13,7 @@ jobs:
       - name: Install system software requirements
         run: |
           sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev libxtensor-dev libxsimd-dev
       - name: Install python requirements
         run: |
           pwd
@@ -35,6 +35,7 @@ jobs:
           make all TARGETS=pulp.spatz.spatz
           make all TARGETS=snitch_spatz
           make all TARGETS=occamy
+          make all TARGETS=siracusa
           make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
           make TARGETS=snitch build
           make TARGETS=pulp.snitch.snitch_cluster_single build
@@ -51,6 +52,7 @@ jobs:
           ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
           ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
           ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/fp32_computation_vector.elf run
+          ./install/bin/gvsoc --target=siracusa --binary examples/neureka_test run
       - name: Run RISCV tests
         run: |
           set -x
