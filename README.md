@@ -1,6 +1,6 @@
 # GVSoC
 
-GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166). 
+GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166).
 
 
 ## GVSoC Tutorial
@@ -18,6 +18,13 @@ The following packages needed to be installed:
 sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
 ~~~~~
 
+These are the packages neded on a Fedora:
+
+~~~~~shell
+sudo dnf install -y make gcc cmake ninja-build.x86_64 g++ pip lz4-devel ccache glibc-devel.i686 zlib-ng-compat-devel.i686 SDL2 SDL2-devel SDL2_ttf-devel.x86_64 SDL2_image-devel.x86_64
+~~~~~
+
+Please also check any README.md in the submodules for target-specific requirements, like for example pulp/README.md.
 
 ## Python requirements
 
