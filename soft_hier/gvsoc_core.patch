@@ -733,6 +733,19 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
+diff --git a/models/cpu/iss/include/isa/xdma.hpp b/models/cpu/iss/include/isa/xdma.hpp
+index 84e01c06..cadf5f31 100644
+--- a/models/cpu/iss/include/isa/xdma.hpp
++++ b/models/cpu/iss/include/isa/xdma.hpp
+@@ -109,7 +109,7 @@ static inline iss_reg_t dmcpyi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
+-static inline iss_reg_t dmstat_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
++static inline iss_reg_t dmmask_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+ {
+     IssOffloadInsn<iss_reg_t> offload_insn = {
+         .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
 index 26cb748e..f5b410f1 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h

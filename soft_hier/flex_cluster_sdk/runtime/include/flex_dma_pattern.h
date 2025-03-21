@@ -16,7 +16,7 @@
 #define DMCPYI_FUNCT7 0b0000010
 #define DMCPYC_FUNCT7 0b0000011
 #define DMSTATI_FUNCT7 0b0000100
-#define DMSTAT_FUNCT7 0b0000101
+#define DMMASK_FUNCT7 0b0000101
 #define DMSTR_FUNCT7 0b0000110
 #define DMREP_FUNCT7 0b0000111
 
@@ -106,13 +106,25 @@ inline uint32_t bare_dma_start_2d(uint64_t dst, uint64_t src,
     return reg_txid;
 }
 
+inline void bare_dma_set_mask(uint16_t row_mask, uint16_t col_mask){
+    uint32_t mask = col_mask;
+    mask = (mask << 16) | row_mask;
+    register uint32_t reg_mask asm("a5") = mask;           // 15
+    //dmmask a5, a5
+    asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMMASK_FUNCT7, 15, 15,
+                                                  XDMA_FUNCT3, 15, OP_CUSTOM1)),
+                 "r"(reg_mask), "r"(reg_mask));
+}
+
 inline uint32_t bare_dma_start_1d_broadcast(uint64_t dst, uint64_t src,
-                                          size_t size) {
+                            size_t size, uint16_t row_mask, uint16_t col_mask) {
     register uint32_t reg_dst_low asm("a0") = dst >> 0;    // 10
     register uint32_t reg_dst_high asm("a1") = dst >> 32;  // 11
     register uint32_t reg_src_low asm("a2") = src >> 0;    // 12
     register uint32_t reg_src_high asm("a3") = src >> 32;  // 13
     register uint32_t reg_size asm("a4") = size;           // 14
+
+    bare_dma_set_mask(row_mask, col_mask);
 
     // dmsrc a2, a3
     asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSRC_FUNCT7, 13, 12,
@@ -136,12 +148,14 @@ inline uint32_t bare_dma_start_1d_broadcast(uint64_t dst, uint64_t src,
 }
 
 inline uint32_t bare_dma_start_1d_reduction(uint64_t dst, uint64_t src,
-                                          size_t size, collective_compute_format_t fmt) {
+        size_t size, collective_compute_format_t fmt, uint16_t row_mask, uint16_t col_mask) {
     register uint32_t reg_dst_low asm("a0") = dst >> 0;    // 10
     register uint32_t reg_dst_high asm("a1") = dst >> 32;  // 11
     register uint32_t reg_src_low asm("a2") = src >> 0;    // 12
     register uint32_t reg_src_high asm("a3") = src >> 32;  // 13
     register uint32_t reg_size asm("a4") = size;           // 14
+
+    bare_dma_set_mask(row_mask, col_mask);
 
     // dmsrc a2, a3
     asm volatile(".word %0\n" ::"i"(R_TYPE_ENCODE(DMSRC_FUNCT7, 13, 12,
@@ -219,12 +233,20 @@ void flex_dma_async_1d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_siz
 
 //Basic DMA 1d transfter with broadcast
 void flex_dma_async_1d_broadcast(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size){
-    bare_dma_start_1d_broadcast(dst_addr, src_addr, transfer_size); //Start iDMA
+    bare_dma_start_1d_broadcast(dst_addr, src_addr, transfer_size, 0, 0); //Start iDMA
+}
+
+void flex_dma_async_1d_broadcast_masked(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, uint16_t row_mask, uint16_t col_mask){
+    bare_dma_start_1d_broadcast(dst_addr, src_addr, transfer_size, row_mask, col_mask); //Start iDMA
 }
 
 //Basic DMA 1d transfter with reduction
 void flex_dma_async_1d_reduction(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, collective_compute_format_t fmt){
-    bare_dma_start_1d_reduction(dst_addr, src_addr, transfer_size, fmt); //Start iDMA
+    bare_dma_start_1d_reduction(dst_addr, src_addr, transfer_size, fmt, 0, 0); //Start iDMA
+}
+
+void flex_dma_async_1d_reduction_masked(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, collective_compute_format_t fmt, uint16_t row_mask, uint16_t col_mask){
+    bare_dma_start_1d_reduction(dst_addr, src_addr, transfer_size, fmt, row_mask, col_mask); //Start iDMA
 }
 
 //wait for idma
