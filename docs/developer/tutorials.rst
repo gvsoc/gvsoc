@@ -1305,7 +1305,7 @@ To simplify, we will just add our instruction to an existing ISA, the RV32I:
 
 .. code-block:: python
 
-    R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011'),
+    Instr('my_instr', Format_R, '0000010 ----- ----- 110 ----- 0110011'),
 
 This gives the label of our instruction, the format of the instruction, which has in this case
 1 output and 2 input registers, and the encoding of the instruction. The - in it specifies the bits
@@ -1434,7 +1434,7 @@ be created and inherited from *IsaSubset*:
 
         def __init__(self):
             super().__init__(name='my_isa', instrs=[
-                R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011')
+                Instr('my_instr', Format_R, '0000010 ----- ----- 110 ----- 0110011')
             ])
 
 It must also be given a name, and the list of instructions of this isa must be given.
@@ -1444,7 +1444,8 @@ generator that we did in a previous tutorial:
 
 .. code-block:: python
 
-    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa, extensions=[ MyIsa() ])
+    isa_instance = cpu.iss.isa_gen.isa_riscv_gen.RiscvIsa(isa, isa,
+                    extensions=[cpu.iss.isa_gen.isa_riscv_gen.MyIsa()])
 
 
 14 - How to add power traces to a component
