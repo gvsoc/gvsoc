@@ -1305,7 +1305,7 @@ To simplify, we will just add our instruction to an existing ISA, the RV32I:
 
 .. code-block:: python
 
-    R5('my_instr', 'R',  '0000010 ----- ----- 110 ----- 0110011'),
+    Instr('my_instr', Format_R,  '0000010 ----- ----- 110 ----- 0110011'),
 
 This gives the label of our instruction, the format of the instruction, which has in this case
 1 output and 2 input registers, and the encoding of the instruction. The - in it specifies the bits
