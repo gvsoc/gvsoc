@@ -32,6 +32,9 @@ class FlexClusterArch:
         self.cluster_tcdm_size       = 0x00100000
         self.cluster_tcdm_remote     = 0x30000000
 
+        self.cluster_heap_base       = 0x00000100
+        self.cluster_heap_end        = 0x00100000
+
         self.cluster_stack_base      = 0x10000000
         self.cluster_stack_size      = 0x00020000
 
