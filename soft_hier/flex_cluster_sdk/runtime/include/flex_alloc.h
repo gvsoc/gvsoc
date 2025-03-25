@@ -297,10 +297,11 @@ void flex_dump_heap(){
 
   printf("Memory allocator: Free-memory-block dump\n");
   while (curr) {
-  	printf("[block_id %d] addr: 0x%x, size (byte): %d\n", block_id, (uint32_t)curr, curr->size);
+  	printf("[block_id %d] addr: 0x%08x, size (byte): %x\n", block_id, (uint32_t)curr, curr->size);
     curr = curr->next;
     block_id += 1;
   }
+  printf("\n");
 }
 
 #endif

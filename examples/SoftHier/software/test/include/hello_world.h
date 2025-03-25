@@ -384,4 +384,53 @@ void test_FP16(){
     }
     flex_global_barrier_xy();//Global barrier
 }
+
+#define DATA_SIZE      1024
+void test_malloc_single_cluster(){
+    // l1 heap allocator init
+    flex_alloc_init();
+    flex_global_barrier_xy();//Global barrier
+    flex_intra_cluster_sync();//Cluster barrier
+
+    uint32_t CID = flex_get_cluster_id();//Get cluster ID
+    uint32_t addr_a, addr_b, addr_c, addr_d;
+
+    // test memory allocation with 1 cluster (CID==0)
+    if (flex_is_first_core() && (CID == 0))//Use the first core for memory allocation
+        {
+            printf("\n\n\n");
+            printf("Heap start addr: 0x%08x\n\n", ARCH_CLUSTER_HEAP_BASE);
+
+            addr_a = (uint32_t)flex_l1_malloc(DATA_SIZE);
+            printf("Allocating A with size 0x%x ------> addr_a: 0x%08x\n\n", DATA_SIZE, addr_a);
+            flex_dump_heap();
+
+            addr_b = (uint32_t)flex_l1_malloc(DATA_SIZE);
+            printf("Allocating B with size 0x%x ------> addr_b: 0x%08x\n\n", DATA_SIZE, addr_b);
+            flex_dump_heap();
+
+            addr_c = (uint32_t)flex_l1_malloc(DATA_SIZE);
+            printf("Allocating C with size 0x%x ------> addr_c: 0x%08x\n\n", DATA_SIZE, addr_c);
+            flex_dump_heap();
+
+            printf("\n\n\n");
+            printf("Deallocate B\n\n");
+            flex_l1_free((void *)addr_b);
+            flex_dump_heap();
+
+            // addr_d should be inseted between addr_a and addr_c
+            addr_d = (uint32_t)flex_l1_malloc(DATA_SIZE/2);
+            printf("Allocating D with size 0x%x ------> addr_d: 0x%08x\n\n", DATA_SIZE/2, addr_d);
+            flex_dump_heap();
+
+            // addr_e should be added after addr_c
+            addr_d = (uint32_t)flex_l1_malloc(DATA_SIZE*2);
+            printf("Allocating E with size 0x%x ------> addr_e: 0x%08x\n\n", DATA_SIZE*2, addr_d);
+            flex_dump_heap();
+        }
+
+    flex_intra_cluster_sync();//Cluster barrier
+    flex_global_barrier_xy();//Global barrier
+}
 #endif
+
