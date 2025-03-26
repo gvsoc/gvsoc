@@ -103,6 +103,12 @@ uint32_t flex_is_first_core(){
 *  Data Allocation  *
 ********************/
 
+// Back-adaptation for other config fills to pass CI
+#ifndef ARCH_CLUSTER_HEAP_BASE
+#define ARCH_CLUSTER_HEAP_BASE (0x00000000)
+#define ARCH_CLUSTER_HEAP_END  (0x00000000)
+#endif
+
 /*
  * Desc: cluster-private heap allocator initialization
  */
