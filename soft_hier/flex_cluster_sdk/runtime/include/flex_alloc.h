@@ -212,7 +212,7 @@ void *domain_malloc(alloc_t *alloc, const uint32_t size) {
 
 
 void *flex_l1_malloc(const uint32_t size) {
-  return domain_malloc(alloc_l1, size);
+  return domain_malloc((alloc_t *)alloc_l1, size);
 }
 
 
@@ -278,7 +278,7 @@ void domain_free(alloc_t *alloc, void *const ptr) {
   free_memory(alloc, block_ptr, canary_and_size.size);
 }
 
-void flex_l1_free(void *const ptr) { domain_free(alloc_l1, ptr); }
+void flex_l1_free(void *const ptr) { domain_free((alloc_t *)alloc_l1, ptr); }
 
 
 
@@ -286,7 +286,7 @@ void flex_l1_free(void *const ptr) { domain_free(alloc_l1, ptr); }
 *  Helper functions   *
 **********************/
 
-alloc_t *flex_get_allocator_l1() { return alloc_l1; }
+alloc_t *flex_get_allocator_l1() { return (alloc_t *)alloc_l1; }
 
 
 
