@@ -23,6 +23,11 @@ checkout.gap:
 	fi
 	cd gapy-gap && git fetch && git checkout e92ceffe2d011fc9aaa8b098fa71afbb5378d039
 
+checkout.test:
+	@if [ ! -d "tests/gvsoc-external-tests/.git" ]; then \
+		git clone git@github.com:gvsoc/gvsoc-external-tests.git tests/gvsoc-external-tests; \
+	fi
+	cd tests/gvsoc-external-tests && git fetch && git checkout 6c7c3b58d7275963eca5eae8661298db4bf65691
 
 .PHONY: build
 
