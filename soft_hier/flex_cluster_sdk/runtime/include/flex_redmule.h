@@ -9,7 +9,8 @@ typedef enum {
     REDMULE_FP_16,
     REDMULE_UINT_8,
     REDMULE_INT_8,
-    REDMULE_FP_8
+    REDMULE_FP_8,
+    REDMULE_FP_32
 } redmule_compute_format_t;
 
 
@@ -137,6 +138,18 @@ void flex_redmule_trigger(uint32_t x_addr, uint32_t w_addr, uint32_t y_addr, red
                         (0b0       << 13) | \
                         (0b000     << 10) | \
                         (0b111     <<  7) | \
+                        (0b0101010 <<  0)   \n");
+            break;
+        case REDMULE_FP_32:
+            asm volatile(
+                 ".word (0b00111   << 27) | \
+                        (0b00      << 25) | \
+                        (0b00110   << 20) | \
+                        (0b00101   << 15) | \
+                        (0b0       << 14) | \
+                        (0b0       << 13) | \
+                        (0b000     << 10) | \
+                        (0b100     <<  7) | \
                         (0b0101010 <<  0)   \n");
             break;
     }

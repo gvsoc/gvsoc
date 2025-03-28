@@ -48,6 +48,11 @@ Follow these steps to set up the SoftHier simulation environment:
    ```bash
    source sourceme.sh
    ```
+### Build and Run An Example of RedMule FP32 GEMM
+
+```bash
+cfg=examples/SoftHier/config/arch_test_redmule_fp32.py app=examples/SoftHier/software/test_redmule_fp32 make sw run
+```
 
 ### Build and Run the SoftHier Simulation Model 🧱
 

@@ -79,6 +79,7 @@ void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16
 void matmul_uint8(uint8_t * z, uint8_t * y, uint8_t * x, uint8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_int8(int8_t * z, int8_t * y, int8_t * x, int8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
+void matmul_fp32(float * z, float * y, float * x, float * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 
 /*****************************************************
 *                   Class Definition                 *
@@ -217,7 +218,7 @@ LightRedmule::LightRedmule(vp::ComponentConf &config)
     //Initialize configuration
     this->tcdm_bank_width   = get_js_config()->get("tcdm_bank_width")->get_int();
     this->tcdm_bank_number  = get_js_config()->get("tcdm_bank_number")->get_int();
-    this->elem_size         = get_js_config()->get("elem_size")->get_int();
+    this->elem_size         = 4;
     this->ce_height         = get_js_config()->get("ce_height")->get_int();
     this->ce_width          = get_js_config()->get("ce_width")->get_int();
     this->ce_pipe           = get_js_config()->get("ce_pipe")->get_int();
@@ -476,6 +477,17 @@ void LightRedmule::process_compute(){
                         (fp16 *)this->z_buffer_compute,
                         (fp16 *)this->x_buffer,
                         (fp16 *)this->w_buffer,
+                        (uint16_t)buffer_h,
+                        (uint16_t)buffer_n,
+                        (uint16_t)buffer_w);
+    }
+    if (this->compute_able == 4)
+    {
+        //FP16
+        matmul_fp32(    (float *)this->z_buffer_compute,
+                        (float *)this->z_buffer_compute,
+                        (float *)this->x_buffer,
+                        (float *)this->w_buffer,
                         (uint16_t)buffer_h,
                         (uint16_t)buffer_n,
                         (uint16_t)buffer_w);
@@ -788,7 +800,7 @@ vp::IoReqStatus LightRedmule::core_acc_req(vp::Block *__this, vp::IoReq *req)
             _this->y_addr = xwy_list_array[2];
             _this->z_addr = _this->y_addr;
             _this->compute_able = xwy_list_array[3];
-            _this->elem_size = (_this->compute_able < 4)? 2:1;
+            _this->elem_size = (_this->compute_able == 4)? 4: (_this->compute_able < 4)? 2:1;
             _this->trace.msg(vp::Trace::LEVEL_TRACE,"[LightRedmule] Set XWY addr: %d, %d, %d)\n", _this->x_addr, _this->w_addr, _this->y_addr);
 
             /*************************
@@ -1270,6 +1282,20 @@ fp16 fp16_fma(fp16 a, fp16 b, fp16 c) {
     float fc = fp16_to_float(c);
     float result = (fa * fb) + fc;
     return float_to_fp16(result);
+}
+
+void matmul_fp32(float * z, float * y, float * x, float * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
+    for (int i = 0; i < m_size; ++i)
+    {
+        for (int j = 0; j < k_size; ++j)
+        {
+            z[i * k_size + j] = y[i * k_size + j];
+            for (int k = 0; k < n_size; ++k)
+            {
+                z[i * k_size + j] += x[i * n_size + k] * w[k * k_size + j];
+            }
+        }
+    }
 }
 
 void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
