@@ -2,6 +2,7 @@
 #define _FLEX_RUNTIME_H_
 #include <stdint.h>
 #include "flex_cluster_arch.h"
+#include "flex_alloc.h"
 
 #define ARCH_NUM_CLUSTER            (ARCH_NUM_CLUSTER_X*ARCH_NUM_CLUSTER_Y)
 #define cluster_index(x,y)          ((y)*ARCH_NUM_CLUSTER_X+(x))
@@ -96,6 +97,29 @@ uint32_t flex_is_first_core(){
     uint32_t hartid;
     asm volatile("csrr %0, mhartid" : "=r"(hartid));
     return (hartid == 0);
+}
+
+/********************
+*  Data Allocation  *
+********************/
+
+// Back-adaptation for other config fills to pass CI
+#ifndef ARCH_CLUSTER_HEAP_BASE
+#define ARCH_CLUSTER_HEAP_BASE (0x00000000)
+#define ARCH_CLUSTER_HEAP_END  (0x00000000)
+#endif
+
+/*
+ * Desc: cluster-private heap allocator initialization
+ */
+
+void flex_alloc_init(){
+    volatile uint32_t * heap_start      = (volatile uint32_t *) ARCH_CLUSTER_HEAP_BASE;
+    volatile uint32_t * heap_end        = (volatile uint32_t *) ARCH_CLUSTER_HEAP_END;
+    volatile uint32_t   heap_size       = (uint32_t)heap_end - (uint32_t)heap_start;
+    if (flex_is_first_core()){
+        flex_cluster_alloc_init(flex_get_allocator_l1(), (void *)heap_start, heap_size);
+    }
 }
 
 /*******************
