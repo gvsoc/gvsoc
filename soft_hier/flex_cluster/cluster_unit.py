@@ -121,7 +121,7 @@ class ClusterArch:
             self.area = Area( base, tcdm_size)
             self.nb_tcdm_banks = nb_tcdm_banks
             self.bank_width = tcdm_bank_width
-            self.bank_size = self.area.size / self.nb_tcdm_banks
+            self.bank_size = (self.area.size / self.nb_tcdm_banks) + self.bank_width #prevent overflow due to RedMule access model
             self.nb_masters = nb_masters
             self.sync_size = sync_size
             self.sync_special_mem = sync_special_mem
