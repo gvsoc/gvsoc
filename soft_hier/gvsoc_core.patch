@@ -158,13 +158,18 @@ index 00000000..fde9d634
 +    return iss_insn_next(iss, insn, pc);
 +}
 diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
-index 188f2877..9be5a792 100644
+index 188f2877..09149ab7 100644
 --- a/models/cpu/iss/include/isa/rv32v.hpp
 +++ b/models/cpu/iss/include/isa/rv32v.hpp
-@@ -20,8 +20,19 @@
+@@ -20,8 +20,24 @@
  //#include "spatz.hpp"
  #include "cpu/iss/include/isa_lib/vint.h"
  
++static inline iss_reg_t vid_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_VIDV , REG_IN(0), 0, REG_OUT(0), 0);
++    return iss_insn_next(iss, insn, pc);
++}
++
 +static inline iss_reg_t vsll_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL4(lib_SLLVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
 +    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU);
@@ -181,7 +186,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -37,6 +48,9 @@ static inline iss_reg_t vadd_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -37,6 +53,9 @@ static inline iss_reg_t vadd_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vsub_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_SUBVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -191,7 +196,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -57,6 +71,9 @@ static inline iss_reg_t vrsub_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -57,6 +76,9 @@ static inline iss_reg_t vrsub_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vand_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_ANDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -201,7 +206,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -72,6 +89,9 @@ static inline iss_reg_t vand_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -72,6 +94,9 @@ static inline iss_reg_t vand_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vor_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_ORVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -211,7 +216,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -87,6 +107,9 @@ static inline iss_reg_t vor_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -87,6 +112,9 @@ static inline iss_reg_t vor_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vxor_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_XORVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -221,7 +226,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -102,6 +125,9 @@ static inline iss_reg_t vxor_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -102,6 +130,9 @@ static inline iss_reg_t vxor_vi_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmin_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MINVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -231,7 +236,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -112,6 +138,9 @@ static inline iss_reg_t vmin_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -112,6 +143,9 @@ static inline iss_reg_t vmin_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vminu_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MINUVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -241,7 +246,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -122,6 +151,9 @@ static inline iss_reg_t vminu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -122,6 +156,9 @@ static inline iss_reg_t vminu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmax_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MAXVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -251,7 +256,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -132,6 +164,9 @@ static inline iss_reg_t vmax_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -132,6 +169,9 @@ static inline iss_reg_t vmax_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmaxu_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MAXUVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -261,7 +266,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -142,6 +177,9 @@ static inline iss_reg_t vmaxu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -142,6 +182,9 @@ static inline iss_reg_t vmaxu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmul_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MULVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -271,7 +276,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  static inline iss_reg_t vmul_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
-@@ -151,6 +189,9 @@ static inline iss_reg_t vmul_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -151,6 +194,9 @@ static inline iss_reg_t vmul_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmulh_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MULHVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -281,7 +286,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  static inline iss_reg_t vmulh_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
-@@ -160,6 +201,9 @@ static inline iss_reg_t vmulh_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -160,6 +206,9 @@ static inline iss_reg_t vmulh_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmulhu_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MULHUVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -291,7 +296,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  static inline iss_reg_t vmulhu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
-@@ -169,6 +213,9 @@ static inline iss_reg_t vmulhu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+@@ -169,6 +218,9 @@ static inline iss_reg_t vmulhu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
  
  static inline iss_reg_t vmulhsu_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MULHSUVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -301,7 +306,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  static inline iss_reg_t vmulhsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
-@@ -233,6 +280,9 @@ static inline iss_reg_t vwmulsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc
+@@ -233,6 +285,9 @@ static inline iss_reg_t vwmulsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc
  
  static inline iss_reg_t vmacc_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MACCVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -311,7 +316,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -243,6 +293,9 @@ static inline iss_reg_t vmacc_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -243,6 +298,9 @@ static inline iss_reg_t vmacc_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vmadd_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_MADDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -321,7 +326,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -253,6 +306,9 @@ static inline iss_reg_t vmadd_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -253,6 +311,9 @@ static inline iss_reg_t vmadd_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vnmsac_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_NMSACVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -331,7 +336,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -263,6 +319,9 @@ static inline iss_reg_t vnmsac_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+@@ -263,6 +324,9 @@ static inline iss_reg_t vnmsac_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
  
  static inline iss_reg_t vnmsub_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_NMSUBVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -341,7 +346,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -308,41 +367,65 @@ static inline iss_reg_t vwmaccsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t p
+@@ -308,41 +372,65 @@ static inline iss_reg_t vwmaccsu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t p
  
  static inline iss_reg_t vredsum_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_REDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -407,7 +412,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -455,34 +538,58 @@ static inline iss_reg_t vremu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -455,34 +543,58 @@ static inline iss_reg_t vremu_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  // }
  static inline iss_reg_t vle8_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL3(lib_VLE8V , REG_GET(0), REG_OUT(0), UIM_GET(0));
@@ -466,7 +471,7 @@ index 188f2877..9be5a792 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -689,143 +796,266 @@ static inline iss_reg_t vsse64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -689,143 +801,266 @@ static inline iss_reg_t vsse64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vfadd_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_FADDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -747,7 +752,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..f5b410f1 100644
+index 26cb748e..f1e15009 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -771,20 +776,43 @@ index 26cb748e..f5b410f1 100644
  
  
  static inline void printBin(int size, bool *a,const char name[]){
-@@ -584,7 +591,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+@@ -323,7 +330,7 @@ static inline void myAbsU(Iss *iss,int size, int vs, int i, uint64_t* data){
+ static inline void writeToVReg(Iss *iss, int size, int vd, int i, bool *bin){
+     int iteration = size/8;
+     for(int j = 0; j < iteration; j++){
+-        iss->spatz.vregfile.vregs[vd][i*iteration+j] = bin8ToChar(bin,8*j,8*(j+1));        
++        iss->spatz.vregfile.vregs[vd][i*iteration+j] = bin8ToChar(bin,8*j,8*(j+1));     
+     }
+ }
+ 
+@@ -582,9 +589,44 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+ }
+ 
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- 
- 
++static inline void lib_VIDV    (Iss *iss, int vs2, int64_t rs1, int vd, bool vm){
++
++    for (int i = VSTART; i < VL; i++){
++
++        int32_t val = i;
++        bool resBin[64];
++
++        intToBin(SEW, abs(val), resBin);
++
++        writeToVReg(iss, SEW, vd, i, resBin);
++
++    }
++}
++
 +static inline void lib_SLLVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
 +    int64_t data1, data2, res;
 +    bool bin[8];
 +    bool resBin[64];
-+
+ 
 +    for (int i = VSTART; i < VL; i++){
 +        if(!(i%8)){
 +            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
 +        }
-+
+ 
 +        myAbs(iss, SEW, vs1, i, &data1);
 +        myAbs(iss, SEW, vs2, i, &data2);
 +        res = data2 << data1;
@@ -802,7 +830,7 @@ index 26cb748e..f5b410f1 100644
  
  
  static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
-@@ -3418,6 +3448,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3418,6 +3460,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -859,7 +887,7 @@ index 26cb748e..f5b410f1 100644
  static inline void lib_FSUBVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -3591,6 +3671,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3591,6 +3683,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -915,7 +943,7 @@ index 26cb748e..f5b410f1 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5584,8 +5713,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5584,8 +5725,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          uint32_t addr = this->io_pending_addr;        
          uint32_t addr_aligned = addr & ~(4 - 1);
          int size = addr_aligned + 4 - addr;
@@ -924,7 +952,7 @@ index 26cb748e..f5b410f1 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5600,9 +5727,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5600,9 +5739,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          this->io_pending_size -= size;
          this->io_pending_addr += size;
  
@@ -937,7 +965,7 @@ index 26cb748e..f5b410f1 100644
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5739,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5751,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -947,7 +975,7 @@ index 26cb748e..f5b410f1 100644
      }
      else{
          this->waiting_io_response = false;
-@@ -6943,6 +7074,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,6 +7086,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
@@ -1005,7 +1033,7 @@ index 8b348cd0..3a95941f 100644
  };
  
 diff --git a/models/cpu/iss/isa_gen/isa_rvv.py b/models/cpu/iss/isa_gen/isa_rvv.py
-index 3c39da9e..d6074537 100644
+index 3c39da9e..74cce2e2 100644
 --- a/models/cpu/iss/isa_gen/isa_rvv.py
 +++ b/models/cpu/iss/isa_gen/isa_rvv.py
 @@ -81,6 +81,8 @@ class Rv32v(IsaSubset):
@@ -1161,6 +1189,16 @@ index 3c39da9e..d6074537 100644
  
              Instr('vfcvt.xu.f.v'     ,   Format_OPV  ,    '010010 - ----- 00000 001 ----- 1010111', tags=['fp_op', 'nseq']),
  
+@@ -374,6 +382,9 @@ class Rv32v(IsaSubset):
+             Instr('vs2r.v'       ,   Format_OPV  ,    '001 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
+             Instr('vs4r.v'       ,   Format_OPV  ,    '011 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
+             Instr('vs8r.v'       ,   Format_OPV  ,    '111 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
++            
++            # bowwang   
++            Instr('vid.v'      ,   Format_OPIVI  ,    '010100 - ----- ----- 010 ----- 1010111'),
+ 
+             #                           V 1.0
+             Instr('vsetvli' ,   Format_OPVLI,    '- ----------- ----- 111 ----- 1010111'), # zimm = {3'b000,vma,vta,vsew[2:0],vlmul[2:0]}
 diff --git a/models/cpu/iss/src/snitch/decode.cpp b/models/cpu/iss/src/snitch/decode.cpp
 index 6bf10c9b..a6efa5a0 100644
 --- a/models/cpu/iss/src/snitch/decode.cpp
