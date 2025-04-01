@@ -27,21 +27,10 @@ index 668a863..7dee724 100644
  
              id++;
 diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
-index 644696a..ecd67ab 100644
+index 644696a..ff5a5d5 100644
 --- a/pulp/floonoc/floonoc.hpp
 +++ b/pulp/floonoc/floonoc.hpp
-@@ -95,7 +95,9 @@ public:
-     static constexpr int REQ_DEST_Y = 4;      // Y coordinate of the destination target
-     static constexpr int REQ_ROUTER = 5;      // When a request is stalled, this gives the router where to grant it
-     static constexpr int REQ_QUEUE = 6;       // When a request is stalled, this gives the queue where to grant it
--    static constexpr int REQ_NB_ARGS = 7;     // Number of request data required by this model
-+    static constexpr int REQ_SRC_X = 7;      // X coordinate of the source target
-+    static constexpr int REQ_SRC_Y = 8;      // Y coordinate of the source target
-+    static constexpr int REQ_NB_ARGS = 9;     // Number of request data required by this model
- 
-     // The following constants gives the index in the queue array of the queue associated to each direction
-     static constexpr int DIR_RIGHT = 0;
-@@ -108,6 +110,25 @@ public:
+@@ -108,6 +108,25 @@ public:
      // this width so that the bandwidth corresponds to the width.
      uint64_t width;
  
@@ -67,7 +56,7 @@ index 644696a..ecd67ab 100644
  private:
      // Callback called when a target request is asynchronously granted after a denied error was
      // reported
-@@ -121,10 +142,6 @@ private:
+@@ -121,10 +140,6 @@ private:
      // Set of memory-mapped entries, with one for each target. They give information about each
      // target (base address, size, position)
      std::vector<Entry> entries;
@@ -108,7 +97,7 @@ index 2aa365c..d19cea8 100644
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
 diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..5afefc2 100644
+index 4124c25..989877d 100644
 --- a/pulp/floonoc/floonoc_network_interface.cpp
 +++ b/pulp/floonoc/floonoc_network_interface.cpp
 @@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -160,12 +149,7 @@ index 4124c25..5afefc2 100644
                  base, size);
              burst->status = vp::IO_REQ_INVALID;
  
-@@ -171,11 +188,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             req->set_addr(base - entry->base);
-             *req->arg_get(FlooNoc::REQ_DEST_X) = (void *)(long)entry->x;
-             *req->arg_get(FlooNoc::REQ_DEST_Y) = (void *)(long)entry->y;
-+            *req->arg_get(FlooNoc::REQ_SRC_X) = (void *)(long)_this->x;
-+            *req->arg_get(FlooNoc::REQ_SRC_Y) = (void *)(long)_this->y;
+@@ -174,8 +191,8 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
              // And forward to the first router which is at the same position as the network
              // interface
@@ -176,7 +160,7 @@ index 4124c25..5afefc2 100644
  
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
-@@ -232,7 +251,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
+@@ -232,7 +249,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
      uint8_t *data = req->get_data();
      uint64_t size = req->get_size();
  
@@ -186,7 +170,7 @@ index 4124c25..5afefc2 100644
  
      // Just enqueue it and trigger the FSM which will check if it must be processed now
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..83e3b84 100644
+index 50cb4ac..5f3e567 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -212,61 +196,31 @@ index 50cb4ac..83e3b84 100644
  
              // In case the request goes to a queue which is stalled, skip it
              // we'll retry later
-@@ -140,6 +143,26 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -140,6 +143,11 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Now send to the next position
              if (to_x == _this->x && to_y == _this->y)
              {
 +                if (collective_type > 1 && req->get_is_write())
 +                {
-+                    int from_x = req->get_int(FlooNoc::REQ_SRC_X);
-+                    int from_y = req->get_int(FlooNoc::REQ_SRC_Y);
-+                    uint8_t from_x_id = from_x - 1;
-+                    uint8_t from_y_id = from_y - 1;
-+                    uint8_t curr_x_id = _this->x - 1;
-+                    uint8_t curr_y_id = _this->y - 1;
-+                    uint8_t collective_row_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[1];
-+                    uint8_t collective_col_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[2];
-+                    bool check_x = (from_x_id & collective_row_mask) == (curr_x_id & collective_row_mask);
-+                    bool check_y = (from_y_id & collective_col_mask) == (curr_y_id & collective_col_mask);
-+                    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective Filter] From: (%d, %d), Row Mask: 0x%x, Col Mask: 0x%x, Check: (%d, %d)\n",
-+                        from_x_id, from_y_id, collective_row_mask, collective_col_mask, check_x, check_y);
 +                    //For reduction we do it on final target
-+                    if (check_x & check_y)
-+                    {
-+                        _this->handle_collective(req, collective_type, _this->x, _this->y);
-+                    }
++                    _this->handle_collective(req, collective_type, _this->x, _this->y);
 +                }
                  // If next position is the same as the current one, it means it arrived to
                  // destination, we need to forward to the fina target
                  _this->send_to_target(req, _this->x, _this->y);
-@@ -149,6 +172,26 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -149,6 +157,11 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                  // Otherwise forward to next position
                  Router *router = _this->noc->get_router(next_x, next_y);
  
 +                if (collective_type !=0 && is_collective_original_node == 0 && req->get_is_write())
 +                {
-+                    int from_x = req->get_int(FlooNoc::REQ_SRC_X);
-+                    int from_y = req->get_int(FlooNoc::REQ_SRC_Y);
-+                    uint8_t from_x_id = from_x - 1;
-+                    uint8_t from_y_id = from_y - 1;
-+                    uint8_t curr_x_id = _this->x - 1;
-+                    uint8_t curr_y_id = _this->y - 1;
-+                    uint8_t collective_row_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[1];
-+                    uint8_t collective_col_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[2];
-+                    bool check_x = (from_x_id & collective_row_mask) == (curr_x_id & collective_row_mask);
-+                    bool check_y = (from_y_id & collective_col_mask) == (curr_y_id & collective_col_mask);
-+                    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective Filter] From: (%d, %d), Row Mask: 0x%x, Col Mask: 0x%x, Check: (%d, %d)\n",
-+                        from_x_id, from_y_id, collective_row_mask, collective_col_mask, check_x, check_y);
-+                    if (check_x & check_y)
-+                    {
-+                        _this->handle_collective(req, collective_type, _this->x, _this->y);
-+                    }
++                    _this->handle_collective(req, collective_type, _this->x, _this->y);
 +                }
 +
                  if (router == NULL)
                  {
                      // It is possible that we don't have any router at the destination if it is on
-@@ -173,7 +216,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -173,7 +186,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Since we removed a request, check in next cycle if there is another one to handle
              _this->fsm_event.enqueue();
  
@@ -275,7 +229,7 @@ index 50cb4ac..83e3b84 100644
          }
  
          // If we didn't any ready request, try with next queue
-@@ -204,7 +247,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+@@ -204,7 +217,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
          req->status = result;
          this->noc->handle_request_end(req);
      }
@@ -284,7 +238,7 @@ index 50cb4ac..83e3b84 100644
      {
          int queue = this->get_req_queue(pos_x, pos_y);
  
-@@ -226,6 +269,212 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+@@ -226,6 +239,212 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
  }
  
  
@@ -497,7 +451,7 @@ index 50cb4ac..83e3b84 100644
  
  void Router::grant(vp::IoReq *req)
  {
-@@ -241,23 +490,34 @@ void Router::grant(vp::IoReq *req)
+@@ -241,23 +460,34 @@ void Router::grant(vp::IoReq *req)
  
  void Router::get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y)
  {
@@ -513,7 +467,8 @@ index 50cb4ac..83e3b84 100644
 +    int eff_dest_x = dest_x;
 +
 +    if (dest_x == 0 && dest_y != this->y)
-+    {
+     {
+-        next_x = x_diff < 0 ? this->x - 1 : this->x + 1;
 +        eff_dest_x = 1;
 +    } else
 +    if (dest_x == (this->noc->dim_x + 1) && dest_y != this->y)
@@ -522,8 +477,7 @@ index 50cb4ac..83e3b84 100644
 +    }
 +
 +    if (eff_dest_x == this->x && dest_y == this->y)
-     {
--        next_x = x_diff < 0 ? this->x - 1 : this->x + 1;
++    {
 +        next_x = this->x;
          next_y = this->y;
      }
@@ -533,12 +487,12 @@ index 50cb4ac..83e3b84 100644
 -        next_y = y_diff < 0 ? this->y - 1 : this->y + 1;
          next_x = this->x;
 +        next_y = dest_y < this->y ? this->y - 1 : this->y + 1;
-     }
++    }
 +    else
 +    {
 +        next_x = eff_dest_x < this->x ? this->x - 1 : this->x + 1;
 +        next_y = this->y;
-+    }
+     }
 +
  }
  
@@ -557,7 +511,7 @@ index e455f21..6d11f1c 100644
      void get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y);
      // Get the index of the queue corresponding to a source or destination position
 diff --git a/pulp/idma/be/idma_be.cpp b/pulp/idma/be/idma_be.cpp
-index 4e3a273..28a5ef4 100644
+index 4e3a273..9cc0290 100644
 --- a/pulp/idma/be/idma_be.cpp
 +++ b/pulp/idma/be/idma_be.cpp
 @@ -59,7 +59,7 @@ IdmaBeConsumer *IDmaBe::get_be_consumer(uint64_t base, uint64_t size, bool is_re
@@ -569,7 +523,7 @@ index 4e3a273..28a5ef4 100644
          transfer, transfer->src, transfer->dst, transfer->size);
  
      // Push the transfer into the queue, we will need it later when the bursts are coming back
-@@ -85,6 +85,22 @@ bool IDmaBe::can_accept_transfer()
+@@ -85,6 +85,12 @@ bool IDmaBe::can_accept_transfer()
      return this->current_transfer_size == 0;
  }
  
@@ -578,25 +532,15 @@ index 4e3a273..28a5ef4 100644
 +{
 +    return this->current_transfer->parent->collective_type;
 +}
-+
-+uint16_t IDmaBe::get_collective_row_mask()
-+{
-+    return this->current_transfer->parent->collective_row_mask;
-+}
-+
-+uint16_t IDmaBe::get_collective_col_mask()
-+{
-+    return this->current_transfer->parent->collective_col_mask;
-+}
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
  
  void IDmaBe::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 diff --git a/pulp/idma/be/idma_be.hpp b/pulp/idma/be/idma_be.hpp
-index 4e2d730..7d30880 100644
+index 4e2d730..b98289b 100644
 --- a/pulp/idma/be/idma_be.hpp
 +++ b/pulp/idma/be/idma_be.hpp
-@@ -185,6 +185,15 @@ public:
+@@ -185,6 +185,13 @@ public:
       * by the source backend protocol.
       */
      virtual void ack_data(uint8_t *data, int size) = 0;
@@ -606,26 +550,22 @@ index 4e2d730..7d30880 100644
 +     * @brief Get collective operation of current transfer
 +     */
 +    virtual uint64_t get_collective_type() = 0;
-+    virtual uint16_t get_collective_row_mask() = 0;
-+    virtual uint16_t get_collective_col_mask() = 0;
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  };
  
  
-@@ -221,6 +230,11 @@ public:
+@@ -221,6 +228,9 @@ public:
      bool is_ready_to_accept_data() override;
      void write_data(uint8_t *data, uint64_t size) override;
      void ack_data(uint8_t *data, int size) override;
 +#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +    uint64_t get_collective_type() override;
-+    uint16_t get_collective_row_mask() override;
-+    uint16_t get_collective_col_mask() override;
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
  private:
      // FSM handler, called to check if any action should be taken after something was updated
 diff --git a/pulp/idma/be/idma_be_axi.cpp b/pulp/idma/be/idma_be_axi.cpp
-index 149cb7f..b3dbdf7 100644
+index 149cb7f..1637603 100644
 --- a/pulp/idma/be/idma_be_axi.cpp
 +++ b/pulp/idma/be/idma_be_axi.cpp
 @@ -93,6 +93,18 @@ void IDmaBeAxi::reset(bool active)
@@ -755,20 +695,18 @@ index 149cb7f..b3dbdf7 100644
  
      this->trace.msg(vp::Trace::LEVEL_TRACE, "Write data (req: %p, base: 0x%lx, size: 0x%lx)\n",
          req, base, size);
-@@ -273,6 +347,12 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+@@ -273,6 +347,10 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
      req->set_addr(base);
      req->set_size(size);
      req->set_data(data);
 +#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +    uint8_t * payload_ptr = req->get_payload();
 +    payload_ptr[0] = (uint8_t) this->be->get_collective_type();
-+    payload_ptr[1] = (uint8_t) this->be->get_collective_row_mask();
-+    payload_ptr[2] = (uint8_t) this->be->get_collective_col_mask();
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
      vp::IoReqStatus status = this->ico_itf.req(req);
      if (status == vp::IoReqStatus::IO_REQ_OK)
-@@ -312,10 +392,6 @@ void IDmaBeAxi::write_handle_req_end(vp::IoReq *req)
+@@ -312,10 +390,6 @@ void IDmaBeAxi::write_handle_req_end(vp::IoReq *req)
      if (burst->get_size() == 0)
      {
          this->pending_bursts.pop();
@@ -779,7 +717,7 @@ index 149cb7f..b3dbdf7 100644
          this->free_bursts.push(burst);
          // Notify the backend since it may schedule another burst
          this->be->update();
-@@ -357,29 +433,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -357,29 +431,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
      // In case we have pending read bursts waiting for pushing data, only do it if the backend
      // is ready to accept the data in case the destination is not ready
@@ -835,7 +773,7 @@ index 149cb7f..b3dbdf7 100644
          }
      }
  }
-@@ -396,4 +480,4 @@ void IDmaBeAxi::update()
+@@ -396,4 +478,4 @@ void IDmaBeAxi::update()
  bool IDmaBeAxi::is_empty()
  {
      return this->pending_bursts.empty();
@@ -880,7 +818,7 @@ index 211ea51..3e21a6f 100644
 +    std::list<vp::IoReq *> OoO_responses_waiting_list;
  };
 diff --git a/pulp/idma/fe/idma_fe_xdma.cpp b/pulp/idma/fe/idma_fe_xdma.cpp
-index 867c0e2..1c3611a 100644
+index 867c0e2..52894f6 100644
 --- a/pulp/idma/fe/idma_fe_xdma.cpp
 +++ b/pulp/idma/fe/idma_fe_xdma.cpp
 @@ -46,6 +46,12 @@ IDmaFeXdma::IDmaFeXdma(vp::Component *idma, IdmaTransferConsumer *me)
@@ -896,7 +834,7 @@ index 867c0e2..1c3611a 100644
  }
  
  
-@@ -87,19 +93,20 @@ void IDmaFeXdma::offload_sync(vp::Block *__this, IssOffloadInsn<uint32_t> *insn)
+@@ -87,19 +93,19 @@ void IDmaFeXdma::offload_sync(vp::Block *__this, IssOffloadInsn<uint32_t> *insn)
              _this->reps.set(insn->arg_a);
              break;
          case 0b0000011:
@@ -909,12 +847,9 @@ index 867c0e2..1c3611a 100644
              break;
          case 0b0000101:
 -            // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat operation (status: 0x%lx)\n",
--            //     insn->arg_b);
--            insn->result = _this->get_status(insn->arg_b);
-+            _this->collective_row_mask = (insn->arg_b) >> 0;
-+            _this->collective_col_mask = (insn->arg_b) >> 16;
-+            _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmmask operation (row mask: 0x%lx, col mask: 0x%lx)\n", _this->collective_row_mask, _this->collective_col_mask);
-+            insn->result = insn->arg_b;
++            // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat B operation (status: 0x%lx)\n",
+             //     insn->arg_b);
+             insn->result = _this->get_status(insn->arg_b);
              break;
          case 0b0000010:
              _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmcpy operation (config: 0x%lx, size: 0x%lx)\n",
@@ -924,7 +859,7 @@ index 867c0e2..1c3611a 100644
              break;
          case 0b0000100:
              // _this->trace.msg(vp::Trace::LEVEL_TRACE, "Received dmstat operation (status: 0x%lx)\n",
-@@ -126,13 +133,30 @@ uint32_t IDmaFeXdma::get_status(uint32_t status)
+@@ -126,13 +132,30 @@ uint32_t IDmaFeXdma::get_status(uint32_t status)
  
  
  
@@ -956,19 +891,17 @@ index 867c0e2..1c3611a 100644
  
      // Allocate a new transfer and fill it from registers
      IdmaTransfer *transfer = new IdmaTransfer();
-@@ -143,6 +167,11 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -143,6 +166,9 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
      transfer->dst_stride = this->dst_stride.get();
      transfer->reps = this->reps.get();
      transfer->config = config;
 +#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +    transfer->collective_type = collective_type;
-+    transfer->collective_row_mask = this->collective_row_mask;
-+    transfer->collective_col_mask = this->collective_col_mask;
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
      // Check if middle end can accept a new transfer
      if (this->me->can_accept_transfer())
-@@ -170,6 +199,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
+@@ -170,6 +196,13 @@ uint32_t IDmaFeXdma::enqueue_copy(uint32_t config, uint32_t size, bool &granted)
  void IDmaFeXdma::ack_transfer(IdmaTransfer *transfer)
  {
      this->completed_id.inc(1);
@@ -983,7 +916,7 @@ index 867c0e2..1c3611a 100644
  }
  
 diff --git a/pulp/idma/fe/idma_fe_xdma.hpp b/pulp/idma/fe/idma_fe_xdma.hpp
-index 300ef51..bc09050 100644
+index 300ef51..6843154 100644
 --- a/pulp/idma/fe/idma_fe_xdma.hpp
 +++ b/pulp/idma/fe/idma_fe_xdma.hpp
 @@ -20,6 +20,9 @@
@@ -1005,15 +938,10 @@ index 300ef51..bc09050 100644
      // Return status
      uint32_t get_status(uint32_t status);
  
-@@ -82,4 +85,15 @@ private:
+@@ -82,4 +85,10 @@ private:
      vp::Signal<bool> do_transfer_grant;
      // In case a transfer was blocked, gives the transfer which was blocked
      IdmaTransfer *stalled_transfer;
-+#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
-+    // Transfer collective
-+    uint16_t collective_row_mask;
-+    uint16_t collective_col_mask;
-+#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +
 +    //track iDMA transfer time
 +    int64_t transfer_start_time;
@@ -1022,7 +950,7 @@ index 300ef51..bc09050 100644
 +    std::string TxnList;
  };
 diff --git a/pulp/idma/idma.hpp b/pulp/idma/idma.hpp
-index 0a25bcb..cb2b021 100644
+index 0a25bcb..348aebe 100644
 --- a/pulp/idma/idma.hpp
 +++ b/pulp/idma/idma.hpp
 @@ -23,6 +23,8 @@
@@ -1034,15 +962,13 @@ index 0a25bcb..cb2b021 100644
  
  
  /**
-@@ -47,6 +49,12 @@ public:
+@@ -47,6 +49,10 @@ public:
      uint64_t reps;
      // Transfer config
      uint64_t config;
 +#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
 +    // Transfer collective type
 +    uint64_t collective_type;
-+    uint16_t collective_row_mask;
-+    uint16_t collective_col_mask;
 +#endif //ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
  
      // Free rom for additional information
@@ -1184,18 +1110,9 @@ index 0bda5e4..5bc2d97 100644
              binaries: list=[],
              fetch_enable: bool=False,
 diff --git a/pulp/snitch/snitch_isa.py b/pulp/snitch/snitch_isa.py
-index 0f1fea3..956ccb9 100644
+index 0f1fea3..3f5a975 100644
 --- a/pulp/snitch/snitch_isa.py
 +++ b/pulp/snitch/snitch_isa.py
-@@ -28,7 +28,7 @@ class Xdma(IsaSubset):
-             Instr('dmstr',     Format_R  ,   '0000110 ----- ----- 000 00000 0101011'),
-             Instr('dmrep',     Format_R  ,   '0000111 ----- ----- 000 00000 0101011'),
-             Instr('dmcpy',     Format_R  ,   '0000011 ----- ----- 000 ----- 0101011'),
--            Instr('dmstat',    Format_R  ,   '0000101 ----- ----- 000 ----- 0101011'),
-+            Instr('dmmask',    Format_R  ,   '0000101 ----- ----- 000 ----- 0101011'),
-             Instr('dmcpyi',    Format_I1U,   '0000010 ----- ----- 000 ----- 0101011'),
-             Instr('dmstati',   Format_I1U,   '0000100 ----- ----- 000 ----- 0101011'),
-         ])
 @@ -100,3 +100,19 @@ class Rv32ssr(IsaSubset):
              Instr('scfgr', Format_SCFGR, '0000000----- 00001 001 ---- -0101011', tags=["ssr", 'nseq', 'fp_op']),
              Instr('scfgw', Format_SCFGW, '0000000----- ----- 010 0000 00101011', tags=["ssr", 'nseq', 'fp_op']),

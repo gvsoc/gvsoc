@@ -5,7 +5,7 @@
 #include "flex_printf.h"
 #include "flex_libfp16.h"
 
-#define _AVL (64)
+#define _AVL (32)
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
 void test_spatz(){
@@ -13,7 +13,7 @@ void test_spatz(){
     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
     {
         uint32_t vl;
-        uint16_t * x = (uint16_t *)local(0x2000);
+        uint16_t * x = (uint16_t *)local(0x2002);
         uint16_t * y = (uint16_t *)local(0x8000);
 
         uint32_t avl = _AVL;
@@ -21,7 +21,7 @@ void test_spatz(){
         
         for (int i = 0; i < avl; ++i)
         {
-            if (i<avl/2) x[i] = 0x3800; //0.5  
+            if (i%2) x[i] = 0x3800; //0.5  
             else x[i] = 0x3400; //0.25
             y[i] = 0x0000; //0.0
         }
