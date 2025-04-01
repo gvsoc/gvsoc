@@ -55,6 +55,47 @@ void test_spatz(){
         {
             printf("  %f\n", fp16_to_float(y[i]));
         }
+
+        // bowwang: vid.v instr check
+        uint8_t * z    = (uint8_t *)local(0x2000);
+
+        for (int i = 0; i < 8; ++i) z[i] = 0;
+
+        printf("[vid.v SEW=8 check: Initialize Vector Z]\n");
+        for (int i = 0; i < 8; ++i) printf("  %d\n", z[i]);
+
+        asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(8));
+        asm volatile(
+            "vid.v v0\n"
+            "vse8.v v0, (%0)\n"
+            :
+            : "r"(z)
+            : "v0"
+        );
+
+        printf("[Updated Vector Z]\n");
+        for (int i = 0; i < 8; ++i) printf("  %d\n", z[i]);
+
+        // SEW=16
+        uint16_t * z_16    = (uint16_t *)local(0x2000);
+
+        for (int i = 0; i < 8; ++i) z_16[i] = 0;
+
+        printf("[vid.v SEW=16 check: Initialize Vector Z]\n");
+        for (int i = 0; i < 8; ++i) printf("  %d\n", z_16[i]);
+
+        asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl) : "r"(8));
+        asm volatile(
+            "vid.v v0\n"
+            "vse16.v v0, (%0)\n"
+            :
+            : "r"(z_16)
+            : "v0"
+        );
+
+        printf("[Updated Vector Z]\n");
+        for (int i = 0; i < 8; ++i) printf("  %d\n", z_16[i]);
+        
     }
     flex_global_barrier_xy();//Global barrier
 }
