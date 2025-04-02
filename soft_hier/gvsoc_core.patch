@@ -752,7 +752,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..f1e15009 100644
+index 26cb748e..7d2489ee 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -776,7 +776,46 @@ index 26cb748e..f1e15009 100644
  
  
  static inline void printBin(int size, bool *a,const char name[]){
-@@ -323,7 +330,7 @@ static inline void myAbsU(Iss *iss,int size, int vs, int i, uint64_t* data){
+@@ -116,7 +123,8 @@ static inline void printHex(int size, bool *a,const char name[]){
+ static inline int  bin8ToChar(bool *bin,int s, int e){
+     int c = 0;
+     for(int i = s; i < e;i++){
+-        c += bin[i]*pow(2,i-s);
++        int tmp = (bin[i])<<(i-s);
++        c += tmp;
+     }
+     return c;
+ }
+@@ -270,7 +278,8 @@ static inline void buildDataInt(Iss *iss, int vs, int i, int64_t* data){
+     }
+     *data = 0;
+     for(int j = 0;j < iteration;j++){
+-        *data += temp[j]*pow(2,8*j);
++        int64_t tmp = (temp[j])<<(8*j);
++        *data += tmp;
+     }
+ }
+ 
+@@ -300,7 +309,8 @@ static inline void myAbs(Iss *iss, int size, int vs, int i, int64_t* data){
+ 
+     *data = 0;
+     for(int j = 0;j < iteration;j++){
+-        *data += temp[j]*(int64_t)pow(2,8*j);
++        int64_t tmp = (temp[j])<<(8*j);
++        *data += tmp;
+     }
+     *data += cin;
+     *data = cin?(-*data):*data;
+@@ -316,21 +326,23 @@ static inline void myAbsU(Iss *iss,int size, int vs, int i, uint64_t* data){
+ 
+     *data = 0;
+     for(int j = 0;j < iteration;j++){
+-        *data += temp[j]*(uint64_t)pow(2,8*j);
++        uint64_t tmp = (temp[j])<<(8*j);
++        *data += tmp;
+     }
+ }
+ 
  static inline void writeToVReg(Iss *iss, int size, int vd, int i, bool *bin){
      int iteration = size/8;
      for(int j = 0; j < iteration; j++){
@@ -785,7 +824,16 @@ index 26cb748e..f1e15009 100644
      }
  }
  
-@@ -582,9 +589,44 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+ static inline void binToInt(int size, bool* dataIn, int64_t *res){
+     *res = 0;
+     for (int j = 0; j < size; j++) {
+-        *res += dataIn[j]*(int64_t)pow(2,j);
++        int64_t tmp = (dataIn[j])<<(j);
++        *res += tmp;
+     }
+ }
+ 
+@@ -582,9 +594,44 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
  }
  
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -830,7 +878,7 @@ index 26cb748e..f1e15009 100644
  
  
  static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
-@@ -3418,6 +3460,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3418,6 +3465,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -887,7 +935,7 @@ index 26cb748e..f1e15009 100644
  static inline void lib_FSUBVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -3591,6 +3683,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3591,6 +3688,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -943,7 +991,7 @@ index 26cb748e..f1e15009 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5584,8 +5725,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5584,8 +5730,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          uint32_t addr = this->io_pending_addr;        
          uint32_t addr_aligned = addr & ~(4 - 1);
          int size = addr_aligned + 4 - addr;
@@ -952,7 +1000,7 @@ index 26cb748e..f1e15009 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5600,9 +5739,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5600,9 +5744,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          this->io_pending_size -= size;
          this->io_pending_addr += size;
  
@@ -965,7 +1013,7 @@ index 26cb748e..f1e15009 100644
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5751,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5756,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -975,7 +1023,7 @@ index 26cb748e..f1e15009 100644
      }
      else{
          this->waiting_io_response = false;
-@@ -6943,6 +7086,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,6 +7091,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
