@@ -54,6 +54,12 @@ build:
 clean:
 	rm -rf $(BUILDDIR) $(INSTALLDIR)
 
+doc:
+	cd core/docs/user_manual && make html
+	cd core/docs/developer_manual && make html
+	@echo
+	@echo "User documentation: core/docs/user_manual/_build/html/index.html"
+	@echo "Developper documentation: core/docs/developer_manual/_build/html/index.html"
 
 
 ######################################################################
