@@ -734,7 +734,7 @@ index 188f2877..9be5a792 100644
  }
  
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..17eb77e1 100644
+index 26cb748e..c16edb78 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -19,6 +19,7 @@
@@ -758,15 +758,18 @@ index 26cb748e..17eb77e1 100644
  
  #pragma STDC FENV_ACCESS ON
  
-@@ -93,6 +100,7 @@
+@@ -93,6 +100,10 @@
  #define LMUL iss->spatz.LMUL_t
  #define VL iss->csr.vl.value
  #define VSTART iss->csr.vstart.value
 +#define NUM_FPU (CONFIG_GVSOC_ISS_SPATZ_FPU  * ((64 + SEW - 1) / (SEW)))
++// bowwang: high-level parameter defines VLSU-L1 bus width
++#define INTF_WIDTH (CONFIG_GVSOC_ISS_SPATZ_VLSU_BW/8)
++
  
  
  static inline void printBin(int size, bool *a,const char name[]){
-@@ -584,7 +592,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+@@ -584,7 +595,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
  
@@ -774,7 +777,7 @@ index 26cb748e..17eb77e1 100644
 +    int64_t data1, data2, res;
 +    bool bin[8];
 +    bool resBin[64];
- 
++
 +    for (int i = VSTART; i < VL; i++){
 +        if(!(i%8)){
 +            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
@@ -788,7 +791,7 @@ index 26cb748e..17eb77e1 100644
 +        if(res < 0){
 +            twosComplement(SEW, resBin);
 +        }
-+
+ 
 +        if(!mask(vm,bin)){
 +            writeToVReg(iss, SEW, vd, i, resBin);
 +        }
@@ -797,7 +800,7 @@ index 26cb748e..17eb77e1 100644
  
  
  static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
-@@ -3418,6 +3449,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3418,6 +3452,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -854,7 +857,7 @@ index 26cb748e..17eb77e1 100644
  static inline void lib_FSUBVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -3591,6 +3672,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3591,6 +3675,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -910,16 +913,15 @@ index 26cb748e..17eb77e1 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5560,6 +5690,8 @@ static inline iss_freg_t lib_FMVFS     (Iss *iss, int vs2, bool vm){
- //                                                            VECTOR LOAD STORE
+@@ -5561,6 +5694,7 @@ static inline iss_freg_t lib_FMVFS     (Iss *iss, int vs2, bool vm){
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
-+// bowwang: high-level parameter defines VLSU-L1 bus width
-+#define INTF_WIDTH (8)
  
++
  // ADD MASK TO LOAD AND STORE INSTRUCTIONS
  
-@@ -5582,10 +5714,8 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+ 
+@@ -5582,10 +5716,8 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          vp::IoReq *req = &this->io_req;
  
          uint32_t addr = this->io_pending_addr;        
@@ -932,7 +934,7 @@ index 26cb748e..17eb77e1 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5596,13 +5726,16 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5596,13 +5728,16 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          req->set_is_write(this->io_pending_is_write);
          req->set_data(this->io_pending_data);
  
@@ -951,7 +953,7 @@ index 26cb748e..17eb77e1 100644
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5744,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5746,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -961,7 +963,7 @@ index 26cb748e..17eb77e1 100644
      }
      else{
          this->waiting_io_response = false;
-@@ -5618,9 +5754,69 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5618,9 +5756,69 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
      }
  }
  
@@ -1032,7 +1034,7 @@ index 26cb748e..17eb77e1 100644
      // printf("VLE8\n");
      // printf("vd = %d\n",vd);
      // printf("VSTART = %ld\n",VSTART);
-@@ -5628,58 +5824,55 @@ static inline void lib_VLE8V (Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5628,58 +5826,55 @@ static inline void lib_VLE8V (Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("RS1 = %lx\n",rs1);
  
  
@@ -1100,7 +1102,7 @@ index 26cb748e..17eb77e1 100644
 +        }
 +        start_add += count;
 +    } else {
-+        align = 0;
++        align = INTF_WIDTH;
 +    }
  
  
@@ -1133,13 +1135,14 @@ index 26cb748e..17eb77e1 100644
      }
  }
  
-@@ -5693,67 +5886,44 @@ static inline void lib_VLE16V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5693,67 +5888,44 @@ static inline void lib_VLE16V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
 -    uint8_t data[4];
 -
--
++    uint8_t data[INTF_WIDTH];
+ 
 -
 -    int align = 0;
 -    if(start_add%4 == 1){
@@ -1154,8 +1157,7 @@ index 26cb748e..17eb77e1 100644
 -        iss->spatz.vlsu.Vlsu_io_access(iss, start_add,4,data,false);
 -        iss->spatz.vregfile.vregs[vd][VSTART+0] = data[0];
 -        iss->spatz.vregfile.vregs[vd][VSTART+1] = data[1];
-+    uint8_t data[INTF_WIDTH];
- 
+-
 -        start_add += 2;
 -        align = 2;        
 -    }else if(start_add%4 == 3){
@@ -1176,7 +1178,7 @@ index 26cb748e..17eb77e1 100644
 +        // printf("returned data: 0x%2x%2x, 0x%2x%2x, 0x%2x%2x, 0x%2x%2x\n", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 +        start_add += count;
 +    } else {
-+        align = 8;
++        align = INTF_WIDTH;
      }
  
  
@@ -1232,7 +1234,7 @@ index 26cb748e..17eb77e1 100644
  }
  
  static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
-@@ -5766,72 +5936,63 @@ static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5766,72 +5938,63 @@ static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
@@ -1288,6 +1290,7 @@ index 26cb748e..17eb77e1 100644
 -        start_add += 1;
 -        align = 1;
 -    }else{
+-        align = 0;
 +    int align = start_add % INTF_WIDTH;
 +    if (align != 0) {
 +        int count = INTF_WIDTH - align;
@@ -1297,7 +1300,7 @@ index 26cb748e..17eb77e1 100644
 +        }
 +        start_add += count;
 +    } else {
-         align = 0;
++        align = INTF_WIDTH;
      }
  
  
@@ -1351,7 +1354,7 @@ index 26cb748e..17eb77e1 100644
      }
  }
  
-@@ -5845,75 +6006,66 @@ static inline void lib_VLE64V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5845,75 +6008,66 @@ static inline void lib_VLE64V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
@@ -1407,6 +1410,7 @@ index 26cb748e..17eb77e1 100644
 -        start_add += 1;
 -        align = 1;
 -    }else{
+-        align = 0;
 +    int align = start_add % INTF_WIDTH;
 +    if (align != 0) {
 +        int count = INTF_WIDTH - align;
@@ -1416,7 +1420,7 @@ index 26cb748e..17eb77e1 100644
 +        }
 +        start_add += count;
 +    } else {
-         align = 0;
++        align = INTF_WIDTH;
      }
  
  
@@ -1438,17 +1442,17 @@ index 26cb748e..17eb77e1 100644
 -
 -        //iss->spatz.vregfile.vregs[vd][i+0] = (vm || !(iss->spatz.vregfile.vregs[0][i+0]%2)) ? (data[1]*pow(2,8) + data[0]) : iss->spatz.vregfile.vregs[vd][i+0];
 -        //iss->spatz.vregfile.vregs[vd][i+1] = (vm || !(iss->spatz.vregfile.vregs[0][i+1]%2)) ? (data[3]*pow(2,8) + data[2]) : iss->spatz.vregfile.vregs[vd][i+1];
-+    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
- 
+-
 -        // iss->spatz.vregfile.vregs[vd][i+0] = (data[1]*pow(2,8) + data[0]);
 -        // iss->spatz.vregfile.vregs[vd][i+1] = (data[3]*pow(2,8) + data[2]);
-+        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, false);
++    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
  
 -        iss->spatz.vregfile.vregs[vd][i+0] = data[0];
 -        iss->spatz.vregfile.vregs[vd][i+1] = data[1];
 -        iss->spatz.vregfile.vregs[vd][i+2] = data[2];
 -        iss->spatz.vregfile.vregs[vd][i+3] = data[3];
--
++        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, false);
+ 
 -        // printf("vd0 = %d\n",iss->spatz.vregfile.vregs[vd][i+0]);
 -        // printf("vd1 = %d\n",iss->spatz.vregfile.vregs[vd][i+1]);
 -        // printf("vd2 = %d\n",iss->spatz.vregfile.vregs[vd][i+2]);
@@ -1474,7 +1478,7 @@ index 26cb748e..17eb77e1 100644
      //printf("rs1  = %lu\n",rs1);
      // printf("vd  = %d\n",vs3);
  
-@@ -5921,37 +6073,49 @@ static inline void lib_VSE8V (Iss *iss, iss_reg_t rs1, int vs3, bool vm){
+@@ -5921,37 +6075,49 @@ static inline void lib_VSE8V (Iss *iss, iss_reg_t rs1, int vs3, bool vm){
  
  
  
@@ -1508,6 +1512,7 @@ index 26cb748e..17eb77e1 100644
 -        start_add += 1;
 -        align = 1;
 -    }else{
+-        align = 0;
 +    //     start_add += 3;
 +    //     align = 3;
 +    // }else if(start_add%4 == 2){
@@ -1536,7 +1541,7 @@ index 26cb748e..17eb77e1 100644
 +        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, true);
 +        start_add += count;
 +    } else {
-         align = 0;
++        align = INTF_WIDTH;
      }
  
  
@@ -1547,7 +1552,7 @@ index 26cb748e..17eb77e1 100644
  /*
          data[0] = (vm || !(iss->spatz.vregfile.vregs[0][i+0]%2)) ? iss->spatz.vregfile.vregs[vs3][i+0] : 0;
          data[1] = (vm || !(iss->spatz.vregfile.vregs[0][i+1]%2)) ? iss->spatz.vregfile.vregs[vs3][i+1] : 0;
-@@ -5963,269 +6127,210 @@ static inline void lib_VSE8V (Iss *iss, iss_reg_t rs1, int vs3, bool vm){
+@@ -5963,269 +6129,210 @@ static inline void lib_VSE8V (Iss *iss, iss_reg_t rs1, int vs3, bool vm){
          // data[1] = (vm || !(iss->spatz.vregfile.vregs[0][i+2]%2)) ? iss->spatz.vregfile.vregs[vs3][i+2] : 0;
          // data[0] = (vm || !(iss->spatz.vregfile.vregs[0][i+3]%2)) ? iss->spatz.vregfile.vregs[vs3][i+3] : 0;
  
@@ -1649,7 +1654,7 @@ index 26cb748e..17eb77e1 100644
 +        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, true);
 +        start_add += count;
 +    } else {
-+        align = 8;
++        align = INTF_WIDTH;
      }
  
 -    for (int i = VSTART+align; i < VL*2; i+=4){
@@ -1786,7 +1791,7 @@ index 26cb748e..17eb77e1 100644
 +        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, true);
 +        start_add += count;
 +    } else {
-+        align = 8;
++        align = INTF_WIDTH;
 +    }
  
 -        // if(!i){
@@ -1934,7 +1939,7 @@ index 26cb748e..17eb77e1 100644
 +        iss->spatz.vlsu.Vlsu_io_access(iss, start_add, INTF_WIDTH, data, true);
 +        start_add += count;
 +    } else {
-+        align = 8;
++        align = INTF_WIDTH;
 +    }
  
 -        data[0]  = iss->spatz.vregfile.vregs[vs3][i+0];
@@ -1972,7 +1977,7 @@ index 26cb748e..17eb77e1 100644
      }
  }
  
-@@ -6943,6 +7048,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,6 +7050,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }

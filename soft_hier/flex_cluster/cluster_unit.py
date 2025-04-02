@@ -78,7 +78,7 @@ class ClusterArch:
                         redmule_reg_base,   redmule_reg_size,
                         idma_outstand_txn,  idma_outstand_burst,
                         num_cluster_x,      num_cluster_y,
-                        spatz_core_list,    spatz_num_vlsu,     spatz_num_fu,
+                        spatz_core_list,    spatz_num_vlsu,     spatz_num_fu,  spatz_vlsu_bw,
                         data_bandwidth,     auto_fetch=False,   multi_idma_enable=0):
 
         self.nb_core                = nb_core_per_cluster
@@ -97,6 +97,7 @@ class ClusterArch:
         self.spatz_core_list        = spatz_core_list
         self.spatz_num_vlsu         = spatz_num_vlsu
         self.spatz_num_fu           = spatz_num_fu
+        self.spatz_vlsu_bw          = spatz_vlsu_bw
 
         #RedMule
         self.redmule_ce_height      = redmule_ce_height
@@ -223,11 +224,11 @@ class ClusterUnit(gvsoc.systree.Component):
         for core_id in range(0, arch.nb_core):
             cores.append(iss.Snitch(self, f'pe{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
-                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu, spatz_num_fpu=arch.spatz_num_fu))
+                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu, spatz_num_fpu=arch.spatz_num_fu, spatz_vlsu_bw=arch.spatz_vlsu_bw))
 
             fp_cores.append(iss.Snitch_fp_ss(self, f'fp_ss{core_id}', isa='rv32imfdva',
                 fetch_enable=arch.auto_fetch, boot_addr=boot_addr,
-                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu, spatz_num_fpu=arch.spatz_num_fu))
+                core_id=core_id, htif=False, inc_spatz=(len(arch.spatz_core_list) > 0), spatz_num_vlsu=arch.spatz_num_vlsu, spatz_num_fpu=arch.spatz_num_fu, spatz_vlsu_bw=arch.spatz_vlsu_bw))
             if xfrep:
                 fpu_sequencers.append(Sequencer(self, f'fpu_sequencer{core_id}', latency=0))
 
