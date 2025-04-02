@@ -3,22 +3,28 @@ on: [push, pull_request]
 
 jobs:
   build_ubuntu:
-    name: Try build on ubuntu latest
-    runs-on: ubuntu-latest
+    name: Try build on ubuntu 22.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Install system software requirements
+      - name: Install system software requirements + CMake 3.28.3
         run: |
           sudo apt update
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev gcc-11 g++-11
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev gcc-11 g++-11
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
           gcc --version
+           # Install CMake 3.28.3
+          wget https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.tar.gz
+          tar -xzf cmake-3.28.3-linux-x86_64.tar.gz
+          sudo mv cmake-3.28.3-linux-x86_64 /opt/cmake-3.28.3
+          sudo ln -sf /opt/cmake-3.28.3/bin/cmake /usr/local/bin/cmake
+          cmake --version
       - name: Install python requirements
         run: |
           pwd
