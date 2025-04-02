@@ -17,6 +17,8 @@ build:
   jobs:
     pre_build:
       - git submodule update --init --recursive
+      - pip install -r core/requirements.txt
+      - pip install -r gapy/requirements.txt
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
