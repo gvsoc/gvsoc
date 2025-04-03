@@ -1074,10 +1074,10 @@ index 673529f..080f26f 100644
  #include <vp/vp.hpp>
  #include <vp/itf/io.hpp>
 diff --git a/pulp/snitch/snitch_core.py b/pulp/snitch/snitch_core.py
-index 0bda5e4..5bc2d97 100644
+index 0bda5e4..896bb54 100644
 --- a/pulp/snitch/snitch_core.py
 +++ b/pulp/snitch/snitch_core.py
-@@ -86,20 +86,27 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+@@ -86,20 +86,28 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,
@@ -1090,6 +1090,7 @@ index 0bda5e4..5bc2d97 100644
              inc_spatz: bool=False,
 +            spatz_num_vlsu: int=4,
 +            spatz_num_fpu: int=4,
++            spatz_vlsu_bw: int=32,
              core_id: int=0,
              htif: bool=False):
  
@@ -1108,13 +1109,14 @@ index 0bda5e4..5bc2d97 100644
              add_latencies(isa_instance)
              isa_instances[isa] = isa_instance
  
-@@ -146,17 +153,23 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+@@ -146,17 +154,24 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
              self.add_sources([
                  "cpu/iss/src/spatz.cpp",
              ])
 +            self.add_c_flags(['-DCONFIG_GVSOC_ISS_INC_SPATZ=1'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU={spatz_num_vlsu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_FPU={spatz_num_fpu}'])
++            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU_BW={spatz_vlsu_bw}'])
  
      def o_BARRIER_REQ(self, itf: gvsoc.systree.SlaveItf):
          self.itf_bind('barrier_req', itf, signature='wire<bool>')
@@ -1133,7 +1135,7 @@ index 0bda5e4..5bc2d97 100644
              misa: int=None,
              binaries: list=[],
              fetch_enable: bool=False,
-@@ -197,19 +210,26 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+@@ -197,19 +212,27 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,
@@ -1146,6 +1148,7 @@ index 0bda5e4..5bc2d97 100644
              inc_spatz: bool=False,
 +            spatz_num_vlsu: int=4,
 +            spatz_num_fpu: int=4,
++            spatz_vlsu_bw: int=32,
              core_id: int=0,
              timed: bool=False,
              htif: bool=False):
@@ -1164,17 +1167,18 @@ index 0bda5e4..5bc2d97 100644
  
          add_latencies(isa_instance)
  
-@@ -254,6 +274,9 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+@@ -254,6 +277,10 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
              self.add_sources([
                  "cpu/iss/src/spatz.cpp",
              ])
 +            self.add_c_flags(['-DCONFIG_GVSOC_ISS_INC_SPATZ=1'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU={spatz_num_vlsu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_FPU={spatz_num_fpu}'])
++            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU_BW={spatz_vlsu_bw}'])
  
      def o_BARRIER_REQ(self, itf: gvsoc.systree.SlaveItf):
          self.itf_bind('barrier_req', itf, signature='wire<bool>')
-@@ -266,7 +289,7 @@ class Spatz(cpu.iss.riscv.RiscvCommon):
+@@ -266,7 +293,7 @@ class Spatz(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,

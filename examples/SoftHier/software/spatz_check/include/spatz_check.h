@@ -5,6 +5,8 @@
 #include "flex_printf.h"
 #include "flex_libfp16.h"
 
+#define _AVL (32)
+#pragma GCC optimize("no-tree-loop-distribute-patterns")
 
 void test_spatz(){
     flex_global_barrier_xy();//Global barrier
@@ -95,6 +97,43 @@ void test_spatz(){
 
         printf("[Updated Vector Z]\n");
         for (int i = 0; i < 8; ++i) printf("  %d\n", z_16[i]);
+
+        // bowwang: configurable VLSU buswidth check
+        uint32_t avl = _AVL;
+        uint8_t * x_8 = (uint8_t *)local(0x2002);
+        uint8_t * y_8 = (uint8_t *)local(0x8004);
+
+        for (int i = 0; i < avl; ++i)
+        {
+            if      (i%3==0) x_8[i] = 1; 
+            else if (i%3==1) x_8[i] = 2; 
+            else             x_8[i] = 3;
+            y_8[i] = 0;
+        }
+
+        printf("[Initialize Vector X]\n");
+        for (int i = 0; i < avl; i+=8) {
+            printf("%d - %d >  ", i, i+7);
+            for (int j=0; j<8; j++) printf("%d_", x_8[i+j]);
+            printf("\n");
+        }
+
+        do{
+            asm volatile("vsetvli %0, %1, e8, m1, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle8.v v0,  (%0)" ::"r"(x_8));
+            asm volatile("vadd.vv v8, v0, v0");
+            asm volatile("vse8.v v8,  (%0)" ::"r"(y_8));
+            avl -= vl;
+        } while (avl>0);
+
+        // restore avl
+        avl = _AVL;
+        printf("[Vector Operation: Y = X + X]\n");
+        for (int i = 0; i < avl; i+=8) {
+            printf("%d - %d >  ", i, i+7);
+            for (int j=0; j<8; j++) printf("%d_", y_8[i+j]);
+            printf("\n");
+        }
         
     }
     flex_global_barrier_xy();//Global barrier
