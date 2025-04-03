@@ -3,9 +3,15 @@
 GVSoC is the PULP chips simulator that is natively included in the Pulp SDK and is described and evaluated fully in Bruschi et al. [\[arXiv:2201.08166v1\]](https://arxiv.org/abs/2201.08166).
 
 
+## GVSoC documentations
+
+The user documentation, focusing on how to use GVSOC, is available [here](https://gvsoc.readthedocs.io/en/latest/).
+
+The developer documentation, focusing on how to develop models or extend GVSOC is available [here] (https://gvsoc-developer.readthedocs.io/en/latest/).
+
 ## GVSoC Tutorial
 
-If you want to learn more about GVSoC, get started through the tutorial available [here](https://gvsoc.readthedocs.io/en/latest/). This tutorial provides hands-on practice on building systems on GVSoC and extracting the performance results.
+If you want to learn more about GVSoC, get started through the tutorial available [here](https://gvsoc-developer.readthedocs.io/en/latest/tutorials.html). This tutorial provides hands-on practice on building systems on GVSoC and extracting the performance results.
 
 
 ## OS Requirements installation
