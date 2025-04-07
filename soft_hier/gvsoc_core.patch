@@ -158,7 +158,7 @@ index 00000000..fde9d634
 +    return iss_insn_next(iss, insn, pc);
 +}
 diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
-index 188f2877..09149ab7 100644
+index 188f2877..acde5fc9 100644
 --- a/models/cpu/iss/include/isa/rv32v.hpp
 +++ b/models/cpu/iss/include/isa/rv32v.hpp
 @@ -20,8 +20,24 @@
@@ -471,7 +471,7 @@ index 188f2877..09149ab7 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -689,143 +801,266 @@ static inline iss_reg_t vsse64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+@@ -689,143 +801,282 @@ static inline iss_reg_t vsse64_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
  
  static inline iss_reg_t vfadd_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
      LIB_CALL4(lib_FADDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
@@ -711,6 +711,14 @@ index 188f2877..09149ab7 100644
 +    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    return iss_insn_next(iss, insn, pc);
++}
++
++static inline iss_reg_t vfredmax_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FREDMAXVX , REG_GET(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
      return iss_insn_next(iss, insn, pc);
  }
  
@@ -726,6 +734,14 @@ index 188f2877..09149ab7 100644
      LIB_CALL4(lib_FREDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
 +    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
++    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
++    return iss_insn_next(iss, insn, pc);
++}
++
++static inline iss_reg_t vfredsum_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FREDSUMVX , REG_GET(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
++    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
      return iss_insn_next(iss, insn, pc);
  }
@@ -752,7 +768,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..7d2489ee 100644
+index 26cb748e..dcbd34ce 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -843,14 +859,14 @@ index 26cb748e..7d2489ee 100644
 +
 +        int32_t val = i;
 +        bool resBin[64];
-+
+ 
 +        intToBin(SEW, abs(val), resBin);
 +
 +        writeToVReg(iss, SEW, vd, i, resBin);
 +
 +    }
 +}
-+
+ 
 +static inline void lib_SLLVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
 +    int64_t data1, data2, res;
 +    bool bin[8];
@@ -860,7 +876,7 @@ index 26cb748e..7d2489ee 100644
 +        if(!(i%8)){
 +            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
 +        }
- 
++
 +        myAbs(iss, SEW, vs1, i, &data1);
 +        myAbs(iss, SEW, vs2, i, &data2);
 +        res = data2 << data1;
@@ -869,7 +885,7 @@ index 26cb748e..7d2489ee 100644
 +        if(res < 0){
 +            twosComplement(SEW, resBin);
 +        }
- 
++
 +        if(!mask(vm,bin)){
 +            writeToVReg(iss, SEW, vd, i, resBin);
 +        }
@@ -991,7 +1007,71 @@ index 26cb748e..7d2489ee 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5584,8 +5730,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -4170,6 +4316,30 @@ static inline void lib_FREDMAXVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
+     writeToVReg(iss, SEW, vd, 0, resBin);
+ }
+ 
++static inline void lib_FREDMAXVX(Iss *iss, int64_t rs1, int vs2, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++    myAbsU(iss, SEW, vd, rs1, &data1);
++    res = data1;
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++
++        if(!mask(vm,bin)){
++        int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++        FLOAT_EXEC_2(ff_max, data2, res, e, m, res);
++        restoreFFRoundingMode(old);
++        }
++    }
++    intToBinU(SEW, res, resBin);
++    writeToVReg(iss, SEW, vd, rs1, resBin);
++}
++
+ static inline void lib_FREDMINVS(Iss *iss, int vs1,     int vs2, int vd, bool vm){
+     bool bin[8];
+     unsigned long int res, data1, data2;
+@@ -4221,6 +4391,32 @@ static inline void lib_FREDSUMVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
+     writeToVReg(iss, SEW, vd, 0, resBin);
+ }
+ 
++static inline void lib_FREDSUMVX(Iss *iss, int64_t rs1, int vs2, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++    myAbsU(iss, SEW, vd, rs1, &data1);
++    res = data1;
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++
++        if(!mask(vm,bin)){
++        int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++        FLOAT_EXEC_2(ff_add, data2, res, e, m, res);
++        // printf("res = %f\n",ff_res.value);
++        restoreFFRoundingMode(old);
++        }
++    }
++    intToBinU(SEW, res, resBin);
++
++    writeToVReg(iss, SEW, vd, rs1, resBin);
++}
++
+ static inline void lib_FWADDVV  (Iss *iss, int vs1,     int vs2, int vd, bool vm){
+     bool bin[8];
+     unsigned long int res, data1, data2;
+@@ -5584,8 +5780,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          uint32_t addr = this->io_pending_addr;        
          uint32_t addr_aligned = addr & ~(4 - 1);
          int size = addr_aligned + 4 - addr;
@@ -1000,7 +1080,7 @@ index 26cb748e..7d2489ee 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5600,9 +5744,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5600,9 +5794,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          this->io_pending_size -= size;
          this->io_pending_addr += size;
  
@@ -1013,7 +1093,7 @@ index 26cb748e..7d2489ee 100644
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5756,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5806,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -1023,7 +1103,7 @@ index 26cb748e..7d2489ee 100644
      }
      else{
          this->waiting_io_response = false;
-@@ -6943,6 +7091,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,6 +7141,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
@@ -1081,7 +1161,7 @@ index 8b348cd0..3a95941f 100644
  };
  
 diff --git a/models/cpu/iss/isa_gen/isa_rvv.py b/models/cpu/iss/isa_gen/isa_rvv.py
-index 3c39da9e..74cce2e2 100644
+index 3c39da9e..d213aa35 100644
 --- a/models/cpu/iss/isa_gen/isa_rvv.py
 +++ b/models/cpu/iss/isa_gen/isa_rvv.py
 @@ -81,6 +81,8 @@ class Rv32v(IsaSubset):
@@ -1093,7 +1173,7 @@ index 3c39da9e..74cce2e2 100644
              Instr('vadd.vv'       ,   Format_OPV  ,    '000000 - ----- ----- 000 ----- 1010111'),#inst[25] = VM , VM = 0 mask enable
              Instr('vadd.vi'       ,   Format_OPIVI,    '000000 - ----- ----- 011 ----- 1010111'),
              Instr('vadd.vx'       ,   Format_OPV  ,    '000000 - ----- ----- 100 ----- 1010111'),
-@@ -201,84 +203,90 @@ class Rv32v(IsaSubset):
+@@ -201,84 +203,92 @@ class Rv32v(IsaSubset):
  
  
  
@@ -1173,6 +1253,7 @@ index 3c39da9e..74cce2e2 100644
  
 -            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 +            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111'),
++            Instr('vfredmax.vx'      ,   Format_OPV  ,    '000111 - ----- ----- 011 ----- 1010111'),
  
 -            Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 +            Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111'),
@@ -1180,6 +1261,7 @@ index 3c39da9e..74cce2e2 100644
 -            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 -            Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
 +            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111'),
++            Instr('vfredsum.vx'      ,   Format_OPV  ,    '000001 - ----- ----- 011 ----- 1010111'),
 +            Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111'),
  
 -            Instr('vfwadd.vv'        ,   Format_OPV  ,    '110000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
@@ -1237,7 +1319,7 @@ index 3c39da9e..74cce2e2 100644
  
              Instr('vfcvt.xu.f.v'     ,   Format_OPV  ,    '010010 - ----- 00000 001 ----- 1010111', tags=['fp_op', 'nseq']),
  
-@@ -374,6 +382,9 @@ class Rv32v(IsaSubset):
+@@ -374,6 +384,9 @@ class Rv32v(IsaSubset):
              Instr('vs2r.v'       ,   Format_OPV  ,    '001 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
              Instr('vs4r.v'       ,   Format_OPV  ,    '011 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
              Instr('vs8r.v'       ,   Format_OPV  ,    '111 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
