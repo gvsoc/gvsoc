@@ -3,15 +3,15 @@
         "PagePolicy": "Open",
         "Scheduler": "FrFcfs",
         "SchedulerBuffer": "Bankwise",
-        "RequestBufferSize": 8,
+        "RequestBufferSize": 512,
         "CmdMux": "Oldest",
         "RespQueue": "Fifo",
         "RefreshPolicy": "AllBank",
-        "RefreshMaxPostponed": 0,
-        "RefreshMaxPulledin": 0,
+        "RefreshMaxPostponed": 128,
+        "RefreshMaxPulledin": 128,
         "PowerDownPolicy": "NoPowerDown",
         "Arbiter": "Simple",
-        "MaxActiveTransactions": 128,
+        "MaxActiveTransactions": 512,
         "RefreshManagement": false
     }
 }
