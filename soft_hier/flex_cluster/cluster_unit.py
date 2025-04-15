@@ -285,6 +285,7 @@ class ClusterUnit(gvsoc.systree.Component):
         loader.o_START(self.i_FETCHEN())
 
         #Instruction router
+        instr_router.o_MAP(narrow_axi.i_INPUT())
         instr_router.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
 
         # Narrow router for cores data accesses

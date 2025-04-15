@@ -18,3 +18,8 @@
 		- [ ] intra cluster sync
 		- [ ] group cluster sync
 	- [ ] Advanced DMA APIs
+- [] Bug fixing and feature improvement
+	- [ ] Update the collective primitive API
+		- [ ] Update all SW using collective primitives
+	- [ ] Segmental fault issue with some cases of sucessive async_DMA
+	- [ ] Issue with >32bit address HBM preloading
