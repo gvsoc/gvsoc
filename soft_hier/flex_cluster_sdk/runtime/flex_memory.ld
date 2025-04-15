@@ -7,15 +7,17 @@ ENTRY(_start)
 
 PHDRS
 {
-  l3 PT_LOAD;
+  l3   PT_LOAD;
+  hbm  PT_LOAD;
 }
 
 /* Memory section should be provided in a separate, platform-specific */
 /* file. It should define at least the L1 and L3 memory blocks. */
 MEMORY
 {
-    L1 (rwxa) : ORIGIN = 0x00000100, LENGTH = 0x00100000
-    L3 (rwxa) : ORIGIN = 0x80000000, LENGTH = 0x80000000
+    L1  (rwxa) : ORIGIN = 0x00000100, LENGTH = 0x00100000
+    L3  (rwxa) : ORIGIN = 0x80000000, LENGTH = 0x80000000
+    HBM (rwxa) : ORIGIN = 0xc0000000, LENGTH = 0x20000000
 }
 
 SECTIONS
@@ -106,7 +108,7 @@ SECTIONS
     __DATA_BEGIN__ = .;
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
-  } >L3 :l3
+  } >HBM :hbm
   _edata = .; PROVIDE (edata = .);
 
   /* small bss section */
@@ -144,5 +146,11 @@ SECTIONS
     *(.dram)
     _edram = .;
   } >L3 :l3
+
+  .hbm :
+  {
+    *(.hbm)
+    *(.hbm*)
+  } >HBM :hbm
 
 }
