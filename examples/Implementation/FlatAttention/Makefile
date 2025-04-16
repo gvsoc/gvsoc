@@ -20,7 +20,8 @@ CHECK_VAR := $(shell \
 )
 
 init:
-	mkdir -p build
+	mkdir -p build/preload
+	mkdir -p build/sw
 	cd build; git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_release soft_hier_release
 	cd build/soft_hier_release; git reset --hard 615ae387c85957bc8b3d30fce3bd0ed7c6e2c33d;
 
