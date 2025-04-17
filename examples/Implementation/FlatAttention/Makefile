@@ -22,7 +22,7 @@ CHECK_VAR := $(shell \
 init:
 	mkdir -p build
 	cd build; git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_release soft_hier_release
-	cd build/soft_hier_release; git reset --hard 615ae387c85957bc8b3d30fce3bd0ed7c6e2c33d;
+	cd build/soft_hier_release; git reset --hard 2768cacac8efe7d3dfa5fd6f23085a88a4ff9689;
 
 clean:
 	rm -rf build
@@ -53,10 +53,10 @@ run: hs
 	@if [ "$(CHECK_VAR)" != "0" ] && [ "$(CHECK_VAR)" != "" ]; then \
 		echo "I want to enable flatten_numerical_check"; \
 		make gen_pld; \
-		pld=$(realpath build/preload/preload.elf) make -C build/soft_hier_release runv; \
+		pld=$(realpath build/preload/preload.elf) make -C build/soft_hier_release runv_simple; \
 		make check_results; \
 	else \
-		make -C build/soft_hier_release runv; \
+		make -C build/soft_hier_release runv_simple; \
 	fi
 
 pfto: build/soft_hier_release/sw_build/analyze_trace.txt
