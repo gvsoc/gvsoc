@@ -23,3 +23,5 @@
 		- [ ] Update all SW using collective primitives
 	- [ ] Segmental fault issue with some cases of sucessive async_DMA
 	- [ ] Issue with >32bit address HBM preloading
+	- [ ] Add more option in the HW synchrounization schemes
+	- [ ] fine-tune cluster interco model
