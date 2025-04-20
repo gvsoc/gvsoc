@@ -1,5 +1,5 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..7dee724 100644
+index 668a863..7599501 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
 @@ -36,6 +36,14 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
@@ -26,268 +26,40 @@ index 668a863..7dee724 100644
                  mapping.first.c_str(), this->entries[id].base, this->entries[id].size, this->entries[id].x, this->entries[id].y);
  
              id++;
-diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
-index 644696a..ecd67ab 100644
---- a/pulp/floonoc/floonoc.hpp
-+++ b/pulp/floonoc/floonoc.hpp
-@@ -95,7 +95,9 @@ public:
-     static constexpr int REQ_DEST_Y = 4;      // Y coordinate of the destination target
-     static constexpr int REQ_ROUTER = 5;      // When a request is stalled, this gives the router where to grant it
-     static constexpr int REQ_QUEUE = 6;       // When a request is stalled, this gives the queue where to grant it
--    static constexpr int REQ_NB_ARGS = 7;     // Number of request data required by this model
-+    static constexpr int REQ_SRC_X = 7;      // X coordinate of the source target
-+    static constexpr int REQ_SRC_Y = 8;      // Y coordinate of the source target
-+    static constexpr int REQ_NB_ARGS = 9;     // Number of request data required by this model
- 
-     // The following constants gives the index in the queue array of the queue associated to each direction
-     static constexpr int DIR_RIGHT = 0;
-@@ -108,6 +110,25 @@ public:
-     // this width so that the bandwidth corresponds to the width.
-     uint64_t width;
- 
-+    // Whether Support Atomics
-+    bool atomics;
-+
-+    // Whether Support Collective
-+    bool collective;
-+
-+    // Whether Support Interleaving
-+    uint64_t interleave_enable;
-+    uint64_t interleave_region_base;
-+    uint64_t interleave_region_size;
-+    uint64_t interleave_granularity;
-+    uint64_t interleave_bit_start;
-+    uint64_t interleave_bit_width;
-+
-+    // X dimension of the network. This includes both routers but also targets on the edges
-+    int dim_x;
-+    // Y dimension of the network. This includes both routers but also targets on the edges
-+    int dim_y;
-+
- private:
-     // Callback called when a target request is asynchronously granted after a denied error was
-     // reported
-@@ -121,10 +142,6 @@ private:
-     // Set of memory-mapped entries, with one for each target. They give information about each
-     // target (base address, size, position)
-     std::vector<Entry> entries;
--    // X dimension of the network. This includes both routers but also targets on the edges
--    int dim_x;
--    // Y dimension of the network. This includes both routers but also targets on the edges
--    int dim_y;
-     // SIze of the routers input queues. Pushing more requests than this size will block the
-     // output queue of the sender.
-     int router_input_queue_size;
-diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
-index 2aa365c..d19cea8 100644
---- a/pulp/floonoc/floonoc.py
-+++ b/pulp/floonoc/floonoc.py
-@@ -47,7 +47,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
-         before the source output queue is stalled.
-     """
-     def __init__(self, parent: gvsoc.systree.Component, name, width: int,
--            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
-+            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
-+            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
-         super(FlooNoc2dMesh, self).__init__(parent, name)
- 
-         self.add_sources([
-@@ -64,6 +65,14 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
-         self.add_property('dim_x', dim_x)
-         self.add_property('dim_y', dim_y)
-         self.add_property('router_input_queue_size', router_input_queue_size)
-+        self.add_property('atomics', atomics)
-+        self.add_property('collective', collective)
-+        self.add_property('interleave_enable', interleave_enable)
-+        self.add_property('interleave_region_base', interleave_region_base)
-+        self.add_property('interleave_region_size', interleave_region_size)
-+        self.add_property('interleave_granularity', interleave_granularity)
-+        self.add_property('interleave_bit_start', interleave_bit_start)
-+        self.add_property('interleave_bit_width', interleave_bit_width)
- 
-     def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
-         self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
-diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..5afefc2 100644
---- a/pulp/floonoc/floonoc_network_interface.cpp
-+++ b/pulp/floonoc/floonoc_network_interface.cpp
-@@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-         // In case the burst is being handled for the first time, initialize the current burst
-         if (_this->pending_burst_size == 0)
-         {
--            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%x, size: 0x%x, is_write: %d)\n",
-+            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%llx, size: 0x%x, is_write: %d)\n",
-                 burst, burst->get_addr(), burst->get_size(), burst->get_is_write());
- 
-             // By default, we consider the whole burst as valid. In one of the burst request is\
-@@ -111,6 +111,18 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-         // Get base from current burst
-         uint64_t base = _this->pending_burst_base;
- 
-+        //If support interleaving
-+        if (_this->noc->interleave_enable && base >= _this->noc->interleave_region_base && base < _this->noc->interleave_region_base + _this->noc->interleave_region_size)
+@@ -117,10 +125,25 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+ // - When a router gets a synchronous response
+ // - When an interface receives a call to the response callback
+ // In both cases, the requests is accounted on the initiator burst, in the network interface
++void process_collective_operations(vp::IoReq *parent, vp::IoReq *req);
+ void FlooNoc::handle_request_end(vp::IoReq *req)
+ {
+-    NetworkInterface *ni = *(NetworkInterface **)req->arg_get(FlooNoc::REQ_DEST_NI);
+-    ni->handle_response(req);
++    if (*req->arg_get(FlooNoc::REQ_PARENT) != NULL)
++    {
++        vp::IoReq * parent = *(vp::IoReq **)req->arg_get(FlooNoc::REQ_PARENT);
++        process_collective_operations(parent, req);
++        delete req->get_data();
++        delete req;
++        parent->set_int(FlooNoc::REQ_PEND_KIDS, parent->get_int(FlooNoc::REQ_PEND_KIDS) - 1);
++        if (parent->get_int(FlooNoc::REQ_PEND_KIDS) <= 0)
 +        {
-+            uint32_t mask = ((1 << _this->noc->interleave_bit_width) - 1);
-+            uint32_t range1 = (base >> _this->noc->interleave_granularity) & mask;
-+            uint32_t range2 = (base >> _this->noc->interleave_bit_start) & mask;
-+            base &= ~(mask << _this->noc->interleave_granularity);
-+            base &= ~(mask << _this->noc->interleave_bit_start);
-+            base |= (range1 << _this->noc->interleave_bit_start);
-+            base |= (range2 << _this->noc->interleave_granularity);
++            this->handle_request_end(parent);
 +        }
-+
-         // Size must be at max the noc width to respect the bandwidth
-         uint64_t size = std::min(_this->noc->width, _this->pending_burst_size);
-         // And must not cross a page to fall into one target
-@@ -130,6 +142,11 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-         req->set_size(size);
-         req->set_data(_this->pending_burst_data);
-         req->set_is_write(burst->get_is_write());
-+        if (_this->noc->atomics)
-+        {
-+            req->set_opcode(burst->get_opcode());
-+            req->set_second_data(burst->get_second_data());
-+        }
- 
-         // Get the target entry corresponding to the current base
-         Entry *entry = _this->noc->get_entry(base, size);
-@@ -137,7 +154,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-         {
-             // If any request of the burst is invalid because no target was found, make the whole
-             // burst invalid.
--            _this->trace.force_warning("No entry found for burst (base: 0x%x, size: 0x%x)",
-+            _this->trace.force_warning("No entry found for burst (base: 0x%llx, size: 0x%x)",
-                 base, size);
-             burst->status = vp::IO_REQ_INVALID;
- 
-@@ -171,11 +188,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             req->set_addr(base - entry->base);
-             *req->arg_get(FlooNoc::REQ_DEST_X) = (void *)(long)entry->x;
-             *req->arg_get(FlooNoc::REQ_DEST_Y) = (void *)(long)entry->y;
-+            *req->arg_get(FlooNoc::REQ_SRC_X) = (void *)(long)_this->x;
-+            *req->arg_get(FlooNoc::REQ_SRC_Y) = (void *)(long)_this->y;
- 
-             // And forward to the first router which is at the same position as the network
-             // interface
--            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, destination: (%d, %d))\n",
--                req, base, size, entry->x, entry->y);
-+            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%llx, size: 0x%x, op_code: %0d, destination: (%d, %d))\n",
-+                req, base, size, req->get_opcode(), entry->x, entry->y);
- 
-             // Noe that the router may not grant tje request if its input queue is full.
-             // In this case we must stall the network interface
-@@ -232,7 +251,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
-     uint8_t *data = req->get_data();
-     uint64_t size = req->get_size();
- 
--    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%x, size: 0x%x, is_write: %d, op: %d)\n",
-+    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%llx, size: 0x%x, is_write: %d, op: %d)\n",
-         req, offset, size, req->get_is_write(), req->get_opcode());
- 
-     // Just enqueue it and trigger the FSM which will check if it must be processed now
-diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..83e3b84 100644
---- a/pulp/floonoc/floonoc_router.cpp
-+++ b/pulp/floonoc/floonoc_router.cpp
-@@ -87,7 +87,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-     for (int i=0; i<5; i++)
-     {
-         vp::Queue *queue = _this->input_queues[queue_index];
--        if (!queue->empty())
-+        // if (!queue->empty())
-+        if (queue->size())
-         {
-             vp::IoReq *req = (vp::IoReq *)queue->head();
- 
-@@ -100,8 +101,10 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             // to go to the destination
-             int next_x, next_y;
-             _this->get_next_router_pos(to_x, to_y, next_x, next_y);
--            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d))\n",
--                req, next_x, next_y);
-+            uint8_t collective_type = _this->noc->collective? ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[0] : 0;
-+            bool is_collective_original_node = _this->noc->collective? (queue_index == _this->get_req_queue(_this->x, _this->y)) : 0;
-+            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d), coll: %d, coll_org: %d, dest_addr: 0x%lx)\n",
-+                req, next_x, next_y, collective_type, is_collective_original_node, req->get_addr());
- 
-             // In case the request goes to a queue which is stalled, skip it
-             // we'll retry later
-@@ -140,6 +143,26 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             // Now send to the next position
-             if (to_x == _this->x && to_y == _this->y)
-             {
-+                if (collective_type > 1 && req->get_is_write())
-+                {
-+                    int from_x = req->get_int(FlooNoc::REQ_SRC_X);
-+                    int from_y = req->get_int(FlooNoc::REQ_SRC_Y);
-+                    uint8_t from_x_id = from_x - 1;
-+                    uint8_t from_y_id = from_y - 1;
-+                    uint8_t curr_x_id = _this->x - 1;
-+                    uint8_t curr_y_id = _this->y - 1;
-+                    uint8_t collective_row_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[1];
-+                    uint8_t collective_col_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[2];
-+                    bool check_x = (from_x_id & collective_row_mask) == (curr_x_id & collective_row_mask);
-+                    bool check_y = (from_y_id & collective_col_mask) == (curr_y_id & collective_col_mask);
-+                    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective Filter] From: (%d, %d), Row Mask: 0x%x, Col Mask: 0x%x, Check: (%d, %d)\n",
-+                        from_x_id, from_y_id, collective_row_mask, collective_col_mask, check_x, check_y);
-+                    //For reduction we do it on final target
-+                    if (check_x & check_y)
-+                    {
-+                        _this->handle_collective(req, collective_type, _this->x, _this->y);
-+                    }
-+                }
-                 // If next position is the same as the current one, it means it arrived to
-                 // destination, we need to forward to the fina target
-                 _this->send_to_target(req, _this->x, _this->y);
-@@ -149,6 +172,26 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-                 // Otherwise forward to next position
-                 Router *router = _this->noc->get_router(next_x, next_y);
- 
-+                if (collective_type !=0 && is_collective_original_node == 0 && req->get_is_write())
-+                {
-+                    int from_x = req->get_int(FlooNoc::REQ_SRC_X);
-+                    int from_y = req->get_int(FlooNoc::REQ_SRC_Y);
-+                    uint8_t from_x_id = from_x - 1;
-+                    uint8_t from_y_id = from_y - 1;
-+                    uint8_t curr_x_id = _this->x - 1;
-+                    uint8_t curr_y_id = _this->y - 1;
-+                    uint8_t collective_row_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[1];
-+                    uint8_t collective_col_mask = ((vp::IoReq *)(*req->arg_get(FlooNoc::REQ_DEST_BURST)))->get_payload()[2];
-+                    bool check_x = (from_x_id & collective_row_mask) == (curr_x_id & collective_row_mask);
-+                    bool check_y = (from_y_id & collective_col_mask) == (curr_y_id & collective_col_mask);
-+                    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective Filter] From: (%d, %d), Row Mask: 0x%x, Col Mask: 0x%x, Check: (%d, %d)\n",
-+                        from_x_id, from_y_id, collective_row_mask, collective_col_mask, check_x, check_y);
-+                    if (check_x & check_y)
-+                    {
-+                        _this->handle_collective(req, collective_type, _this->x, _this->y);
-+                    }
-+                }
-+
-                 if (router == NULL)
-                 {
-                     // It is possible that we don't have any router at the destination if it is on
-@@ -173,7 +216,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             // Since we removed a request, check in next cycle if there is another one to handle
-             _this->fsm_event.enqueue();
- 
--            break;
-+            // break;
-         }
- 
-         // If we didn't any ready request, try with next queue
-@@ -204,7 +247,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
-         req->status = result;
-         this->noc->handle_request_end(req);
-     }
--    else if (vp::IO_REQ_DENIED)
-+    else if (result == vp::IO_REQ_DENIED)
-     {
-         int queue = this->get_req_queue(pos_x, pos_y);
- 
-@@ -226,6 +269,212 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
++    } else
++    {
++        NetworkInterface *ni = *(NetworkInterface **)req->arg_get(FlooNoc::REQ_DEST_NI);
++        ni->handle_response(req);
++    }
  }
  
  
+@@ -196,3 +219,115 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+ {
+     return new FlooNoc(config);
+ }
++
++
 +/****************************************************
 +*                   FP16 Utilities                  *
 +****************************************************/
@@ -332,172 +104,585 @@ index 50cb4ac..83e3b84 100644
 +    return floatBits.f;
 +}
 +
-+void Router::handle_collective(vp::IoReq *req, uint8_t collective_type, int pos_x, int pos_y)
++void process_collective_operations(vp::IoReq *parent, vp::IoReq *req)
 +{
-+    vp::IoMaster *target = this->noc->get_target(pos_x, pos_y);
++    int collective_type = parent->get_int(FlooNoc::REQ_COLL_TYPE);
 +
 +    if (collective_type == 1)
 +    {
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[BroadCast] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[BroadCast]\n");
 +
-+        //Generate a broadcst write request
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), req->get_data(), req->get_size(), 1);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
-+        //delete the broadcst write request
-+        delete collective_req;
 +    } else if (collective_type == 2){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD UINT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD UINT16]\n");
 +        //Execute reduction
-+        uint16_t * dst = (uint16_t *) req->get_data();
-+        uint16_t * src = (uint16_t *) collective_req->get_data();
++        uint16_t * dst = (uint16_t *) parent->get_data();
++        uint16_t * src = (uint16_t *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
 +        {
 +            dst[i] = dst[i] + src[i];
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else if (collective_type == 3){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD INT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD INT16]\n");
 +        //Execute reduction
-+        int16_t * dst = (int16_t *) req->get_data();
-+        int16_t * src = (int16_t *) collective_req->get_data();
++        int16_t * dst = (int16_t *) parent->get_data();
++        int16_t * src = (int16_t *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
 +        {
 +            dst[i] = dst[i] + src[i];
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else if (collective_type == 4){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP16]\n");
 +        //Execute reduction
-+        fp16 * dst = (fp16 *) req->get_data();
-+        fp16 * src = (fp16 *) collective_req->get_data();
++        fp16 * dst = (fp16 *) parent->get_data();
++        fp16 * src = (fp16 *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(fp16)); ++i)
 +        {
 +            dst[i] = float_to_fp16(fp16_to_float(dst[i]) + fp16_to_float(src[i]));
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else if (collective_type == 5){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX UINT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX UINT16]\n");
 +        //Execute reduction
-+        uint16_t * dst = (uint16_t *) req->get_data();
-+        uint16_t * src = (uint16_t *) collective_req->get_data();
++        uint16_t * dst = (uint16_t *) parent->get_data();
++        uint16_t * src = (uint16_t *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
 +        {
 +            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else if (collective_type == 6){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX INT16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX INT16]\n");
 +        //Execute reduction
-+        int16_t * dst = (int16_t *) req->get_data();
-+        int16_t * src = (int16_t *) collective_req->get_data();
++        int16_t * dst = (int16_t *) parent->get_data();
++        int16_t * src = (int16_t *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
 +        {
 +            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else if (collective_type == 7){
-+        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP16] handle collective operation to target (target addr: 0x%lx, target size: 0x%lx, position: (%d, %d))\n",
-+        req->get_addr(), req->get_size(), pos_x, pos_y);
-+
-+        //Generate a broadcst write request
-+        uint8_t* tmp_array = new uint8_t[req->get_size()];
-+        vp::IoReq *collective_req = new vp::IoReq(req->get_addr(), tmp_array, req->get_size(), 0);
-+        //Send to target
-+        vp::IoReqStatus result = target->req(collective_req);
-+        if (result != vp::IO_REQ_OK)
-+        {
-+            this->trace.fatal("Invalid collective operation response from TCDM: %d\n", result);
-+        }
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP16]\n");
 +        //Execute reduction
-+        fp16 * dst = (fp16 *) req->get_data();
-+        fp16 * src = (fp16 *) collective_req->get_data();
++        fp16 * dst = (fp16 *) parent->get_data();
++        fp16 * src = (fp16 *) req->get_data();
 +        for (int i = 0; i < (req->get_size()/sizeof(fp16)); ++i)
 +        {
 +            dst[i] = float_to_fp16(fp16_to_float(dst[i]) > fp16_to_float(src[i]) ? fp16_to_float(dst[i]) : fp16_to_float(src[i]));
 +        }
-+        //delete the broadcst write request
-+        delete collective_req;
-+        delete[] tmp_array;
 +    } else {
-+        this->trace.fatal("Invalid collective operation: %d\n", collective_type);
++        // this->trace.fatal("Invalid collective operation: %d\n", collective_type);
++    }
++}
+diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
+index 644696a..595cb1b 100644
+--- a/pulp/floonoc/floonoc.hpp
++++ b/pulp/floonoc/floonoc.hpp
+@@ -95,7 +95,15 @@ public:
+     static constexpr int REQ_DEST_Y = 4;      // Y coordinate of the destination target
+     static constexpr int REQ_ROUTER = 5;      // When a request is stalled, this gives the router where to grant it
+     static constexpr int REQ_QUEUE = 6;       // When a request is stalled, this gives the queue where to grant it
+-    static constexpr int REQ_NB_ARGS = 7;     // Number of request data required by this model
++    static constexpr int REQ_SRC_X = 7;       // X coordinate of the source target
++    static constexpr int REQ_SRC_Y = 8;       // Y coordinate of the source target
++    static constexpr int REQ_PARENT = 9;      // [Collective Only] If it is a request from a router internally
++    static constexpr int REQ_COLL_TYPE = 10;      // [Collective Only] If it is a request from a router internally
++    static constexpr int REQ_ROW_MASK = 11;   // [Collective Only] The row mask for collecitive primitives
++    static constexpr int REQ_COL_MASK = 12;   // [Collective Only] The col mask for collecitive primitives
++    static constexpr int REQ_PEND_KIDS = 13;   // [Collective Only] How many kids to be waited for response
++    static constexpr int REQ_MOMENTUM = 14;      // [Collective Only] Tree direction
++    static constexpr int REQ_NB_ARGS = 15;    // Number of request data required by this model
+ 
+     // The following constants gives the index in the queue array of the queue associated to each direction
+     static constexpr int DIR_RIGHT = 0;
+@@ -104,10 +112,36 @@ public:
+     static constexpr int DIR_DOWN = 3;
+     static constexpr int DIR_LOCAL = 4;
+ 
++    // [Collective Only]
++    static constexpr int MOMENTUM_RIGHT = 0;
++    static constexpr int MOMENTUM_LEFT  = 1;
++    static constexpr int MOMENTUM_UP    = 2;
++    static constexpr int MOMENTUM_DOWN  = 3;
++    static constexpr int MOMENTUM_ZERO  = 4;
++
+     // Width in bytes of the noc. This is used to split incoming bursts into internal requests of
+     // this width so that the bandwidth corresponds to the width.
+     uint64_t width;
+ 
++    // Whether Support Atomics
++    bool atomics;
++
++    // Whether Support Collective
++    bool collective;
++
++    // Whether Support Interleaving
++    uint64_t interleave_enable;
++    uint64_t interleave_region_base;
++    uint64_t interleave_region_size;
++    uint64_t interleave_granularity;
++    uint64_t interleave_bit_start;
++    uint64_t interleave_bit_width;
++
++    // X dimension of the network. This includes both routers but also targets on the edges
++    int dim_x;
++    // Y dimension of the network. This includes both routers but also targets on the edges
++    int dim_y;
++
+ private:
+     // Callback called when a target request is asynchronously granted after a denied error was
+     // reported
+@@ -121,10 +155,6 @@ private:
+     // Set of memory-mapped entries, with one for each target. They give information about each
+     // target (base address, size, position)
+     std::vector<Entry> entries;
+-    // X dimension of the network. This includes both routers but also targets on the edges
+-    int dim_x;
+-    // Y dimension of the network. This includes both routers but also targets on the edges
+-    int dim_y;
+     // SIze of the routers input queues. Pushing more requests than this size will block the
+     // output queue of the sender.
+     int router_input_queue_size;
+diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
+index 2aa365c..d19cea8 100644
+--- a/pulp/floonoc/floonoc.py
++++ b/pulp/floonoc/floonoc.py
+@@ -47,7 +47,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+         before the source output queue is stalled.
+     """
+     def __init__(self, parent: gvsoc.systree.Component, name, width: int,
+-            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
++            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
++            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
+         super(FlooNoc2dMesh, self).__init__(parent, name)
+ 
+         self.add_sources([
+@@ -64,6 +65,14 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+         self.add_property('dim_x', dim_x)
+         self.add_property('dim_y', dim_y)
+         self.add_property('router_input_queue_size', router_input_queue_size)
++        self.add_property('atomics', atomics)
++        self.add_property('collective', collective)
++        self.add_property('interleave_enable', interleave_enable)
++        self.add_property('interleave_region_base', interleave_region_base)
++        self.add_property('interleave_region_size', interleave_region_size)
++        self.add_property('interleave_granularity', interleave_granularity)
++        self.add_property('interleave_bit_start', interleave_bit_start)
++        self.add_property('interleave_bit_width', interleave_bit_width)
+ 
+     def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
+         self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
+diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
+index 4124c25..bcb853c 100644
+--- a/pulp/floonoc/floonoc_network_interface.cpp
++++ b/pulp/floonoc/floonoc_network_interface.cpp
+@@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         // In case the burst is being handled for the first time, initialize the current burst
+         if (_this->pending_burst_size == 0)
+         {
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%x, size: 0x%x, is_write: %d)\n",
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Start handling burst (burst: %p, base: 0x%llx, size: 0x%x, is_write: %d)\n",
+                 burst, burst->get_addr(), burst->get_size(), burst->get_is_write());
+ 
+             // By default, we consider the whole burst as valid. In one of the burst request is\
+@@ -111,6 +111,18 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         // Get base from current burst
+         uint64_t base = _this->pending_burst_base;
+ 
++        //If support interleaving
++        if (_this->noc->interleave_enable && base >= _this->noc->interleave_region_base && base < _this->noc->interleave_region_base + _this->noc->interleave_region_size)
++        {
++            uint32_t mask = ((1 << _this->noc->interleave_bit_width) - 1);
++            uint32_t range1 = (base >> _this->noc->interleave_granularity) & mask;
++            uint32_t range2 = (base >> _this->noc->interleave_bit_start) & mask;
++            base &= ~(mask << _this->noc->interleave_granularity);
++            base &= ~(mask << _this->noc->interleave_bit_start);
++            base |= (range1 << _this->noc->interleave_bit_start);
++            base |= (range2 << _this->noc->interleave_granularity);
++        }
++
+         // Size must be at max the noc width to respect the bandwidth
+         uint64_t size = std::min(_this->noc->width, _this->pending_burst_size);
+         // And must not cross a page to fall into one target
+@@ -130,6 +142,31 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         req->set_size(size);
+         req->set_data(_this->pending_burst_data);
+         req->set_is_write(burst->get_is_write());
++        if (_this->noc->atomics)
++        {
++            req->set_opcode(burst->get_opcode());
++            req->set_second_data(burst->get_second_data());
++        }
++
++        //Deal with collective primitives
++        *req->arg_get(FlooNoc::REQ_PARENT) = (void *)0;
++        *req->arg_get(FlooNoc::REQ_COLL_TYPE) = (void *)0;
++        *req->arg_get(FlooNoc::REQ_ROW_MASK) = (void *)0;
++        *req->arg_get(FlooNoc::REQ_COL_MASK) = (void *)0;
++        *req->arg_get(FlooNoc::REQ_PEND_KIDS) = (void *)0;
++        *req->arg_get(FlooNoc::REQ_MOMENTUM) = (void *)FlooNoc::MOMENTUM_ZERO;
++        if (_this->noc->collective)
++        {
++            uint8_t collective_type = burst->get_payload()[0];
++            if (collective_type)
++            {
++                uint8_t row_mask = burst->get_payload()[1];
++                uint8_t col_mask = burst->get_payload()[2];
++                req->set_int(FlooNoc::REQ_COLL_TYPE, collective_type);
++                req->set_int(FlooNoc::REQ_ROW_MASK, row_mask);
++                req->set_int(FlooNoc::REQ_COL_MASK, col_mask);
++            }
++        }
+ 
+         // Get the target entry corresponding to the current base
+         Entry *entry = _this->noc->get_entry(base, size);
+@@ -137,7 +174,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+         {
+             // If any request of the burst is invalid because no target was found, make the whole
+             // burst invalid.
+-            _this->trace.force_warning("No entry found for burst (base: 0x%x, size: 0x%x)",
++            _this->trace.force_warning("No entry found for burst (base: 0x%llx, size: 0x%x)",
+                 base, size);
+             burst->status = vp::IO_REQ_INVALID;
+ 
+@@ -171,11 +208,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             req->set_addr(base - entry->base);
+             *req->arg_get(FlooNoc::REQ_DEST_X) = (void *)(long)entry->x;
+             *req->arg_get(FlooNoc::REQ_DEST_Y) = (void *)(long)entry->y;
++            *req->arg_get(FlooNoc::REQ_SRC_X) = (void *)(long)_this->x;
++            *req->arg_get(FlooNoc::REQ_SRC_Y) = (void *)(long)_this->y;
+ 
+             // And forward to the first router which is at the same position as the network
+             // interface
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%x, size: 0x%x, destination: (%d, %d))\n",
+-                req, base, size, entry->x, entry->y);
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Injecting request to noc (req: %p, base: 0x%llx, size: 0x%x, op_code: %0d, destination: (%d, %d))\n",
++                req, base, size, req->get_opcode(), entry->x, entry->y);
+ 
+             // Noe that the router may not grant tje request if its input queue is full.
+             // In this case we must stall the network interface
+@@ -232,7 +271,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
+     uint8_t *data = req->get_data();
+     uint64_t size = req->get_size();
+ 
+-    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%x, size: 0x%x, is_write: %d, op: %d)\n",
++    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Received burst (burst: %p, offset: 0x%llx, size: 0x%x, is_write: %d, op: %d)\n",
+         req, offset, size, req->get_is_write(), req->get_opcode());
+ 
+     // Just enqueue it and trigger the FSM which will check if it must be processed now
+diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
+index 50cb4ac..7db3911 100644
+--- a/pulp/floonoc/floonoc_router.cpp
++++ b/pulp/floonoc/floonoc_router.cpp
+@@ -21,6 +21,7 @@
+ 
+ #include <vp/vp.hpp>
+ #include <vp/itf/io.hpp>
++#include <cstring>
+ #include "floonoc.hpp"
+ #include "floonoc_router.hpp"
+ #include "floonoc_network_interface.hpp"
+@@ -42,6 +43,7 @@ Router::Router(FlooNoc *noc, int x, int y, int queue_size)
+     {
+         this->input_queues[i] = new vp::Queue(this, "input_queue_" + std::to_string(i),
+             &this->fsm_event);
++        this->collective_generated_queues[i] = new std::queue<vp::IoReq*>();
+     }
+ }
+ 
+@@ -87,7 +89,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+     for (int i=0; i<5; i++)
+     {
+         vp::Queue *queue = _this->input_queues[queue_index];
+-        if (!queue->empty())
++        // if (!queue->empty())
++        if (queue->size())
+         {
+             vp::IoReq *req = (vp::IoReq *)queue->head();
+ 
+@@ -100,8 +103,44 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             // to go to the destination
+             int next_x, next_y;
+             _this->get_next_router_pos(to_x, to_y, next_x, next_y);
+-            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Resolved next position (req: %p, next_position: (%d, %d))\n",
+-                req, next_x, next_y);
++
++            /**************************************/
++            /*   Deal With Collective Primitives  */
++            /**************************************/
++            if (req->get_int(FlooNoc::REQ_COLL_TYPE))
++            {
++                std::queue<int> analyze_result;
++                //1. analyze
++                _this->collective_analyze(req, &analyze_result, _this->x, _this->y);
++                _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective] analyze_result has %d elements\n",analyze_result.size());
++
++                //2. process
++                if (analyze_result.size() == 0)
++                {
++                    //2.1 No action needed, directly response
++                    _this->noc->handle_request_end(req);
++                    queue->pop();
++                    continue;
++                } else
++                if (analyze_result.size() == 1)
++                {
++                    //2.2 Only one request is needed, modfiy the req accordingly
++                    req->set_int(FlooNoc::REQ_MOMENTUM, analyze_result.front());
++                    to_x = _this->x; to_y = _this->y; next_x = _this->x; next_y = _this->y;
++                    if (analyze_result.front() == FlooNoc::MOMENTUM_RIGHT) {to_x += 1; next_x += 1;}
++                    if (analyze_result.front() == FlooNoc::MOMENTUM_LEFT)  {to_x -= 1; next_x -= 1;}
++                    if (analyze_result.front() == FlooNoc::MOMENTUM_UP)    {to_y += 1; next_y += 1;}
++                    if (analyze_result.front() == FlooNoc::MOMENTUM_DOWN)  {to_y -= 1; next_y -= 1;}
++                    if (analyze_result.front() == FlooNoc::MOMENTUM_ZERO)  {/*Do Nothing*/}
++                    req->set_int(FlooNoc::REQ_DEST_X, to_x);
++                    req->set_int(FlooNoc::REQ_DEST_Y, to_y);
++                } else {
++                    // Generate Kid Requests Accordingly
++                    _this->collective_generate(req, &analyze_result, _this->x, _this->y);
++                    queue->pop();
++                    continue;
++                }
++            }
+ 
+             // In case the request goes to a queue which is stalled, skip it
+             // we'll retry later
+@@ -173,7 +212,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             // Since we removed a request, check in next cycle if there is another one to handle
+             _this->fsm_event.enqueue();
+ 
+-            break;
++            // break;
+         }
+ 
+         // If we didn't any ready request, try with next queue
+@@ -183,6 +222,45 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             queue_index = 0;
+         }
+     }
++
++    // Deal with collective primitives generated pending requests
++    for (int i = 0; i < 5; ++i)
++    {
++        std::queue<vp::IoReq *> * queue = _this->collective_generated_queues[i];
++        if (queue->size())
++        {
++            vp::IoReq *req = (vp::IoReq *)queue->front();
++            int to_x = req->get_int(FlooNoc::REQ_DEST_X);
++            int to_y = req->get_int(FlooNoc::REQ_DEST_Y);
++            int next_x, next_y;
++            _this->get_next_router_pos(to_x, to_y, next_x, next_y);
++            int queue_id = _this->get_req_queue(next_x, next_y);
++            if (_this->stalled_queues[queue_id]) continue;
++            queue->pop();
++            if (to_x == _this->x && to_y == _this->y)
++            {
++                _this->send_to_target(req, _this->x, _this->y);
++            }
++            else
++            {
++                Router *router = _this->noc->get_router(next_x, next_y);
++                if (router == NULL)
++                {
++                    _this->send_to_target(req, next_x, next_y);
++                }
++                else
++                {
++                    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective] Forwarding request to next router (req: %p, next_position: (%d, %d))\n",
++                        req, next_x, next_y);
++                    if (router->handle_request(req, _this->x, _this->y))
++                    {
++                        _this->stalled_queues[queue_id] = true;
++                    }
++                }
++            }
++            _this->fsm_event.enqueue();
++        }
++    }
+ }
+ 
+ 
+@@ -204,7 +282,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+         req->status = result;
+         this->noc->handle_request_end(req);
+     }
+-    else if (vp::IO_REQ_DENIED)
++    else if (result == vp::IO_REQ_DENIED)
+     {
+         int queue = this->get_req_queue(pos_x, pos_y);
+ 
+@@ -225,7 +303,174 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
+     }
+ }
+ 
++bool check_target(int cur_x, int cur_y, int src_x, int src_y, int row_mask, int col_mask){
++    bool check_x = (src_x & row_mask) == (cur_x & row_mask);
++    bool check_y = (src_y & col_mask) == (cur_y & col_mask);
++    return check_x & check_y;
++}
++
++bool check_momentum(int momentum, int cur_x, int cur_y, int src_x, int src_y, int dim_x, int dim_y, int row_mask, int col_mask){
++    if (momentum == FlooNoc::MOMENTUM_RIGHT)
++    {
++        for (int i = cur_x + 1; i < dim_x; ++i)
++        {
++            if (check_target(i, cur_y, src_x, src_y, row_mask, col_mask))
++            {
++                return true;
++            }
++        }
++        return false;
++    }
++
++    if (momentum == FlooNoc::MOMENTUM_LEFT)
++    {
++        for (int i = cur_x - 1; i >= 0; --i)
++        {
++            if (check_target(i, cur_y, src_x, src_y, row_mask, col_mask))
++            {
++                return true;
++            }
++        }
++        return false;
++    }
++
++    if (momentum == FlooNoc::MOMENTUM_UP)
++    {
++        for (int i = cur_y + 1; i < dim_y; ++i)
++        {
++            if (check_target(cur_x, i, src_x, src_y, row_mask, col_mask))
++            {
++                return true;
++            }
++        }
++        return false;
++    }
++
++    if (momentum == FlooNoc::MOMENTUM_DOWN)
++    {
++        for (int i = cur_y - 1; i >= 0; --i)
++        {
++            if (check_target(cur_x, i, src_x, src_y, row_mask, col_mask))
++            {
++                return true;
++            }
++        }
++        return false;
 +    }
 +}
 +
++const char * get_momentum_name(int momentum){
++    if (momentum == FlooNoc::MOMENTUM_RIGHT) return "Right";
++    if (momentum == FlooNoc::MOMENTUM_LEFT) return "Left";
++    if (momentum == FlooNoc::MOMENTUM_UP) return "Up";
++    if (momentum == FlooNoc::MOMENTUM_DOWN) return "Down";
++    if (momentum == FlooNoc::MOMENTUM_ZERO) return "Zero";
++    return "Unknow";
++}
+ 
++void Router::collective_analyze(vp::IoReq * req, std::queue<int> * queue, int router_x, int router_y)
++{
++    int src_x = req->get_int(FlooNoc::REQ_SRC_X) - 1;
++    int src_y = req->get_int(FlooNoc::REQ_SRC_Y) - 1;
++    int cur_x = router_x - 1;
++    int cur_y = router_y - 1;
++    int dim_x = this->noc->dim_x - 2;
++    int dim_y = this->noc->dim_y - 2;
++    int row_m = req->get_int(FlooNoc::REQ_ROW_MASK);
++    int col_m = req->get_int(FlooNoc::REQ_COL_MASK);
++    this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective] cur_x: %d, cur_y: %d, dim_x: %d, dim_y: %d\n",cur_x, cur_y, dim_x, dim_y);
++    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_ZERO)
++    {
++        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
++        if (check_momentum(FlooNoc::MOMENTUM_RIGHT,cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_RIGHT);
++        if (check_momentum(FlooNoc::MOMENTUM_LEFT, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_LEFT);
++        if (check_momentum(FlooNoc::MOMENTUM_UP,   cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_UP);
++        if (check_momentum(FlooNoc::MOMENTUM_DOWN, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_DOWN);
++    }
++
++    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_RIGHT)
++    {
++        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
++        if (check_momentum(FlooNoc::MOMENTUM_RIGHT,cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_RIGHT);
++        if (check_momentum(FlooNoc::MOMENTUM_UP,   cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_UP);
++        if (check_momentum(FlooNoc::MOMENTUM_DOWN, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_DOWN);
++    }
++
++    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_LEFT)
++    {
++        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
++        if (check_momentum(FlooNoc::MOMENTUM_LEFT, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_LEFT);
++        if (check_momentum(FlooNoc::MOMENTUM_UP,   cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_UP);
++        if (check_momentum(FlooNoc::MOMENTUM_DOWN, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_DOWN);
++    }
++
++    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_UP)
++    {
++        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
++        if (check_momentum(FlooNoc::MOMENTUM_UP,   cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_UP);
++    }
++
++    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_DOWN)
++    {
++        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
++        if (check_momentum(FlooNoc::MOMENTUM_DOWN, cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_DOWN);
++    }
++}
++
++void Router::collective_generate(vp::IoReq * req, std::queue<int> * queue, int router_x, int router_y)
++{
++    int num_req = queue->size();
++    for (int i = 0; i < num_req; ++i)
++    {
++        int momentum = queue->front();
++        this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective] Generate New Req in Momentum of %s\n",get_momentum_name(momentum));
++
++        //New request
++        vp::IoReq *kid = new vp::IoReq();
++        kid->init();
++        kid->arg_alloc(FlooNoc::REQ_NB_ARGS);
++        *kid->arg_get(FlooNoc::REQ_DEST_NI) = *req->arg_get(FlooNoc::REQ_DEST_NI);
++        *kid->arg_get(FlooNoc::REQ_DEST_BURST) = *req->arg_get(FlooNoc::REQ_DEST_BURST);
++        *kid->arg_get(FlooNoc::REQ_DEST_BASE) = *req->arg_get(FlooNoc::REQ_DEST_BASE);
++        kid->set_size(req->get_size());
++        uint8_t * data_ptr = new uint8_t[req->get_size()];
++        std::memcpy(data_ptr, req->get_data(), req->get_size());
++        kid->set_data(data_ptr);
++        kid->set_is_write(req->get_is_write());
++        if (this->noc->atomics)
++        {
++            kid->set_opcode(req->get_opcode());
++            kid->set_second_data(req->get_second_data());
++        }
++        *kid->arg_get(FlooNoc::REQ_PARENT) = (void *)req;
++        *kid->arg_get(FlooNoc::REQ_COLL_TYPE) = *req->arg_get(FlooNoc::REQ_COLL_TYPE);
++        *kid->arg_get(FlooNoc::REQ_ROW_MASK) = *req->arg_get(FlooNoc::REQ_ROW_MASK);
++        *kid->arg_get(FlooNoc::REQ_COL_MASK) = *req->arg_get(FlooNoc::REQ_COL_MASK);
++        *kid->arg_get(FlooNoc::REQ_PEND_KIDS) = (void *)0;
++        kid->set_int(FlooNoc::REQ_MOMENTUM, momentum);
++        kid->set_addr(req->get_addr());
++        *kid->arg_get(FlooNoc::REQ_SRC_X) = *req->arg_get(FlooNoc::REQ_SRC_X);
++        *kid->arg_get(FlooNoc::REQ_SRC_Y) = *req->arg_get(FlooNoc::REQ_SRC_Y);
++        int to_x = router_x;
++        int to_y = router_y;
++        if (queue->front() == FlooNoc::MOMENTUM_RIGHT) {to_x += 1;}
++        if (queue->front() == FlooNoc::MOMENTUM_LEFT)  {to_x -= 1;}
++        if (queue->front() == FlooNoc::MOMENTUM_UP)    {to_y += 1;}
++        if (queue->front() == FlooNoc::MOMENTUM_DOWN)  {to_y -= 1;}
++        if (queue->front() == FlooNoc::MOMENTUM_ZERO)  {/*Do Nothing*/}
++        kid->set_int(FlooNoc::REQ_DEST_X, to_x);
++        kid->set_int(FlooNoc::REQ_DEST_Y, to_y);
++
++        //Modify parent
++        req->set_int(FlooNoc::REQ_PEND_KIDS, req->get_int(FlooNoc::REQ_PEND_KIDS) + 1);
++
++        //Push to collective pending queue
++        this->collective_generated_queues[momentum]->push(kid);
++
++        //The next
++        queue->pop();
++    }
++}
  
  void Router::grant(vp::IoReq *req)
  {
-@@ -241,23 +490,34 @@ void Router::grant(vp::IoReq *req)
+@@ -241,23 +486,34 @@ void Router::grant(vp::IoReq *req)
  
  void Router::get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y)
  {
@@ -513,7 +698,8 @@ index 50cb4ac..83e3b84 100644
 +    int eff_dest_x = dest_x;
 +
 +    if (dest_x == 0 && dest_y != this->y)
-+    {
+     {
+-        next_x = x_diff < 0 ? this->x - 1 : this->x + 1;
 +        eff_dest_x = 1;
 +    } else
 +    if (dest_x == (this->noc->dim_x + 1) && dest_y != this->y)
@@ -522,8 +708,7 @@ index 50cb4ac..83e3b84 100644
 +    }
 +
 +    if (eff_dest_x == this->x && dest_y == this->y)
-     {
--        next_x = x_diff < 0 ? this->x - 1 : this->x + 1;
++    {
 +        next_x = this->x;
          next_y = this->y;
      }
@@ -533,18 +718,18 @@ index 50cb4ac..83e3b84 100644
 -        next_y = y_diff < 0 ? this->y - 1 : this->y + 1;
          next_x = this->x;
 +        next_y = dest_y < this->y ? this->y - 1 : this->y + 1;
-     }
++    }
 +    else
 +    {
 +        next_x = eff_dest_x < this->x ? this->x - 1 : this->x + 1;
 +        next_y = this->y;
-+    }
+     }
 +
  }
  
  
 diff --git a/pulp/floonoc/floonoc_router.hpp b/pulp/floonoc/floonoc_router.hpp
-index e455f21..6d11f1c 100644
+index e455f21..b369dd2 100644
 --- a/pulp/floonoc/floonoc_router.hpp
 +++ b/pulp/floonoc/floonoc_router.hpp
 @@ -49,6 +49,8 @@ private:
@@ -556,6 +741,15 @@ index e455f21..6d11f1c 100644
      // Get the position of the next router which should handle a request.
      void get_next_router_pos(int dest_x, int dest_y, int &next_x, int &next_y);
      // Get the index of the queue corresponding to a source or destination position
+@@ -80,4 +82,8 @@ private:
+     // State of the output queues, true if it is stalled and nothing can be sent to it anymore
+     // until it is unstalled.
+     bool stalled_queues[5];
++    // The pending queue for collective generated requests
++    std::queue<vp::IoReq *> *collective_generated_queues[5];
++    void collective_analyze(vp::IoReq * req, std::queue<int> * queue, int router_x, int router_y);
++    void collective_generate(vp::IoReq * req, std::queue<int> * queue, int router_x, int router_y);
+ };
 diff --git a/pulp/idma/be/idma_be.cpp b/pulp/idma/be/idma_be.cpp
 index 4e3a273..28a5ef4 100644
 --- a/pulp/idma/be/idma_be.cpp
@@ -625,7 +819,7 @@ index 4e2d730..7d30880 100644
  private:
      // FSM handler, called to check if any action should be taken after something was updated
 diff --git a/pulp/idma/be/idma_be_axi.cpp b/pulp/idma/be/idma_be_axi.cpp
-index 149cb7f..b3dbdf7 100644
+index 149cb7f..1f5fa9c 100644
 --- a/pulp/idma/be/idma_be_axi.cpp
 +++ b/pulp/idma/be/idma_be_axi.cpp
 @@ -93,6 +93,18 @@ void IDmaBeAxi::reset(bool active)
@@ -668,7 +862,16 @@ index 149cb7f..b3dbdf7 100644
      }
  
      // And trigger the FSM in case it needs to be processed now
-@@ -181,6 +198,7 @@ void IDmaBeAxi::send_read_burst_to_axi()
+@@ -178,9 +195,16 @@ void IDmaBeAxi::send_read_burst_to_axi()
+ 
+     // Reinit timings
+     req->prepare();
++#ifdef ENABLE_DMA_SIMPLE_COLLECTIVE_IMPLEMENTATION
++    uint8_t * payload_ptr = req->get_payload();
++    payload_ptr[0] = (uint8_t) this->be->get_collective_type();
++    payload_ptr[1] = (uint8_t) this->be->get_collective_row_mask();
++    payload_ptr[2] = (uint8_t) this->be->get_collective_col_mask();
++#endif
  
      // Send to AXI interface
      vp::IoReqStatus status = this->ico_itf.req(req);
@@ -676,7 +879,7 @@ index 149cb7f..b3dbdf7 100644
  
      if (status == vp::IoReqStatus::IO_REQ_OK)
      {
-@@ -206,10 +224,55 @@ void IDmaBeAxi::read_handle_req_end(vp::IoReq *req)
+@@ -206,10 +230,55 @@ void IDmaBeAxi::read_handle_req_end(vp::IoReq *req)
  {
      // Remember at which timestamp the burst must be notified
      this->read_timestamps[req->id] = this->clock.get_cycles() + req->get_latency();
@@ -736,7 +939,7 @@ index 149cb7f..b3dbdf7 100644
  }
  
  
-@@ -263,7 +326,18 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+@@ -263,7 +332,18 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
      vp::IoReq *req = new vp::IoReq();
  
      uint64_t base = this->current_burst_base;
@@ -755,7 +958,7 @@ index 149cb7f..b3dbdf7 100644
  
      this->trace.msg(vp::Trace::LEVEL_TRACE, "Write data (req: %p, base: 0x%lx, size: 0x%lx)\n",
          req, base, size);
-@@ -273,6 +347,12 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
+@@ -273,6 +353,12 @@ void IDmaBeAxi::write_data(uint8_t *data, uint64_t size)
      req->set_addr(base);
      req->set_size(size);
      req->set_data(data);
@@ -768,7 +971,7 @@ index 149cb7f..b3dbdf7 100644
  
      vp::IoReqStatus status = this->ico_itf.req(req);
      if (status == vp::IoReqStatus::IO_REQ_OK)
-@@ -312,10 +392,6 @@ void IDmaBeAxi::write_handle_req_end(vp::IoReq *req)
+@@ -312,10 +398,6 @@ void IDmaBeAxi::write_handle_req_end(vp::IoReq *req)
      if (burst->get_size() == 0)
      {
          this->pending_bursts.pop();
@@ -779,7 +982,7 @@ index 149cb7f..b3dbdf7 100644
          this->free_bursts.push(burst);
          // Notify the backend since it may schedule another burst
          this->be->update();
-@@ -357,29 +433,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -357,29 +439,37 @@ void IDmaBeAxi::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
  
      // In case we have pending read bursts waiting for pushing data, only do it if the backend
      // is ready to accept the data in case the destination is not ready
@@ -835,7 +1038,7 @@ index 149cb7f..b3dbdf7 100644
          }
      }
  }
-@@ -396,4 +480,4 @@ void IDmaBeAxi::update()
+@@ -396,4 +486,4 @@ void IDmaBeAxi::update()
  bool IDmaBeAxi::is_empty()
  {
      return this->pending_bursts.empty();

@@ -258,7 +258,7 @@ void test_dma_2d(){
     flex_global_barrier_xy();//Global barrier
 }
 
-void test_dma_broadcat_rowwise(){
+void test_dma_collectives(){
     flex_global_barrier_xy();//Global barrier
     FlexPosition pos = get_pos(flex_get_cluster_id());
     if (flex_is_dm_core() && flex_get_cluster_id() == 0)
@@ -293,8 +293,7 @@ void test_dma_broadcat_rowwise(){
     //do broadcast
     if (flex_is_dm_core() && flex_get_cluster_id() == 0)
     {
-        flex_dma_async_1d_broadcast(remote_pos(left_pos(pos),0), local(0), 64);
-        // flex_dma_async_1d(remote_pos(left_pos(pos),0), local(0), 4096);
+        flex_dma_async_broadcast(0, 64, 0b00, 0b11);
         flex_dma_async_wait_all();
 
     }
@@ -320,8 +319,7 @@ void test_dma_broadcat_rowwise(){
     //do redcution
     if (flex_is_dm_core() && flex_get_cluster_id() == 0)
     {
-        flex_dma_async_1d_reduction(remote_pos(left_pos(pos),0), local(0), 64, COLLECTIVE_REDADD_INT_16);
-        // flex_dma_async_1d(remote_pos(left_pos(pos),0), local(0), 4096);
+        flex_dma_async_reduction(0, 64, COLLECTIVE_REDADD_INT_16, 0b00, 0b11);
         flex_dma_async_wait_all();
     }
     flex_global_barrier_xy();//Global barrier
