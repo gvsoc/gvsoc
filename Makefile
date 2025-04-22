@@ -2,11 +2,13 @@ CMAKE_FLAGS ?= -j 6
 CMAKE ?= cmake
 
 TARGETS ?= rv32;rv64
+INSTALLDIR ?= install
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 export PATH:=$(CURDIR)/third_party:$(PATH)
 
 all: checkout build
+all-deeploy: checkout build-deeploy
 
 checkout:
 	git submodule update --recursive --init
@@ -17,6 +19,18 @@ build:
 	# Change directory to curdir to avoid issue with symbolic links
 	cd $(CURDIR) && $(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_INSTALL_PREFIX=install \
+		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
+		-DGVSOC_TARGETS="${TARGETS}" \
+		-DCMAKE_SKIP_INSTALL_RPATH=false
+
+	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
+	cd $(CURDIR) && $(CMAKE) --install build
+
+# bowwang: Deeploy-defined install dir
+build-deeploy:
+	# Change directory to curdir to avoid issue with symbolic links
+	cd $(CURDIR) && $(CMAKE) -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_INSTALL_PREFIX=${INSTALLDIR} \
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
@@ -134,6 +148,10 @@ hw:
 	make config
 	make TARGETS=pulp.chips.flex_cluster.flex_cluster all
 
+# bowwang: Deeploy-related
+hw-deeploy:
+	make config
+	make TARGETS=pulp.chips.flex_cluster.flex_cluster all-deeploy
 
 ######################################################################
 ## 				Make Targets for SoftHier Software	 				##
