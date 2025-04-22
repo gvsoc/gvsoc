@@ -76,10 +76,6 @@ void compare_hw_sync_and_polling_sync()
 }
 
 void test_group_barrier(){
-    if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
-    {
-        reset_sync_group();
-    }
     flex_global_barrier_xy();//Global barrier
     GridSyncGroupInfo info = grid_sync_group_init(2,2);
     flex_global_barrier_xy();//Global barrier
@@ -92,7 +88,6 @@ void test_group_barrier(){
         } else {
             printf("[FAILED] Set a invalid synchronization group\n");
         }
-        display_cluster_to_group_mapping();
         printf("Then we analysis GridSyncGroupInfo of each cluster\n");
     }
     flex_global_barrier_xy();//Global barrier
@@ -116,6 +111,8 @@ void test_group_barrier(){
             printf("-- this_grid_cluster_num = %0d \n", info.this_grid_cluster_num);
             printf("-- this_grid_cluster_num_x = %0d \n", info.this_grid_cluster_num_x);
             printf("-- this_grid_cluster_num_y = %0d \n", info.this_grid_cluster_num_y);
+            printf("-- wakeup_row_mask = 0x%0x \n", info.wakeup_row_mask);
+            printf("-- wakeup_col_mask = 0x%0x \n", info.wakeup_col_mask);
             printf("-- sync_x_cluster = %0d \n", info.sync_x_cluster);
             printf("-- sync_y_cluster = %0d \n", info.sync_y_cluster);
             printf("-- sync_x_point = 0x%0x \n", (uint32_t)info.sync_x_point);
@@ -130,7 +127,13 @@ void test_group_barrier(){
     grid_sync_group_barrier_xy(&info); //Group barrier
     for (int i = 0; i < 10; ++i)
     {
-        grid_sync_group_barrier_xy_polling(&info); //Group barrier
+        if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
+        {
+            flex_redmule_config(16, 16, 16);
+            flex_redmule_trigger(0, 0, 0, REDMULE_UINT_16);
+            flex_redmule_wait();
+        }
+        grid_sync_group_barrier_xy(&info); //Group barrier
     }
 }
 

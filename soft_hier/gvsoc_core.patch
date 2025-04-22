@@ -768,7 +768,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..dcbd34ce 100644
+index 26cb748e..17843015 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -1089,7 +1089,7 @@ index 26cb748e..dcbd34ce 100644
          if (err == vp::IO_REQ_OK){
 -            // this->event->enqueue(this->io_req.get_latency() + 1);
 +            // printf("[Spatz IO] port = %d, latency = %d\n", this->next_io, this->io_req.get_latency());
-+            iss->spatz.max_vlsu_latency = (iss->spatz.max_vlsu_latency > this->io_req.get_latency())? iss->spatz.max_vlsu_latency : this->io_req.get_latency();
++            iss->spatz.max_vlsu_latency = (iss->spatz.max_vlsu_latency > (this->io_req.get_latency() + 1))? iss->spatz.max_vlsu_latency : (this->io_req.get_latency() + 1);
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;

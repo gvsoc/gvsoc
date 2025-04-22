@@ -109,7 +109,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         reg_base            =   arch.cluster_reg_base,
                                         reg_size            =   arch.cluster_reg_size,
                                         sync_base           =   arch.sync_base,
-                                        sync_size           =   arch.num_cluster_x*arch.num_cluster_y*arch.sync_interleave,
+                                        sync_itlv           =   arch.sync_interleave,
                                         sync_special_mem    =   arch.sync_special_mem,
                                         insn_base           =   arch.instruction_mem_base,
                                         insn_size           =   arch.instruction_mem_size,
@@ -134,8 +134,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 
-        #Narrow AXI router
-        narrow_interco = router.Router(self, 'narrow_interco', bandwidth=8)
+        #Virtual router, just for debugging and non-performance-critical jobs (eg, Printf, EoC, Check HBM stored value)
+        virtual_interco = router.Router(self, 'virtual_interco', bandwidth=8)
 
         #Control register
         csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, has_preload_binary=has_preload_binary)
@@ -143,7 +143,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Synchronization bus
         sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
-                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, atomics=1)
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, atomics=1, collective=1)
 
         #HBM channels
         hbm_chan_list_west = []
@@ -208,14 +208,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
         ############
 
         #Debug memory
-        narrow_interco.o_MAP(debug_mem.i_INPUT())
-        narrow_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_addr_space * 2 * (arch.num_cluster_x + arch.num_cluster_y), rm_base=False)
+        virtual_interco.o_MAP(debug_mem.i_INPUT())
+        virtual_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_addr_space * 2 * (arch.num_cluster_x + arch.num_cluster_y), rm_base=False)
 
         #Control register
-        narrow_interco.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
-        for cluster_id in range(num_clusters):
-            csr.o_BARRIER_ACK(cluster_list[cluster_id].i_SYNC_IRQ(),cluster_id)
-            pass
+        virtual_interco.o_MAP(csr.i_INPUT(), base=arch.soc_register_base, size=arch.soc_register_size, rm_base=True)
 
         #HBM Preloader
         hbm_preloader.o_OUT(data_noc.i_CLUSTER_INPUT(0, 0))
@@ -223,7 +220,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #Clusters
         for cluster_id in range(num_clusters):
-            cluster_list[cluster_id].o_NARROW_SOC(narrow_interco.i_INPUT())
+            cluster_list[cluster_id].o_NARROW_SOC(virtual_interco.i_INPUT())
             pass
 
         #Data NoC + Sync NoC
@@ -233,7 +230,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
             cluster_list[node_id].o_WIDE_SOC(data_noc.i_CLUSTER_INPUT(x_id, y_id))
             cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_CLUSTER_INPUT(x_id, y_id))
             data_noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote  + node_id*arch.cluster_tcdm_size,   size=arch.cluster_tcdm_size,    x=x_id+1, y=y_id+1)
-            sync_bus.o_MAP(cluster_list[node_id].i_SYNC_INPUT(), base=arch.sync_base            + node_id*arch.sync_interleave,     size=arch.sync_interleave,      x=x_id+1, y=y_id+1)
+            sync_bus.o_MAP(cluster_list[node_id].i_SYNC_INPUT(), base=arch.sync_base            + node_id*(arch.sync_interleave + arch.sync_special_mem),     size=(arch.sync_interleave + arch.sync_special_mem),      x=x_id+1, y=y_id+1)
             pass
 
         #HBM controllers and channels connections

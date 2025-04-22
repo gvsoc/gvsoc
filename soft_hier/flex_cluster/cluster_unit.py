@@ -70,7 +70,7 @@ class ClusterArch:
                         stack_base,         stack_size,
                         zomem_base,         zomem_size,
                         reg_base,           reg_size,
-                        sync_base,          sync_size,          sync_special_mem,
+                        sync_base,          sync_itlv,          sync_special_mem,
                         insn_base,          insn_size,
                         nb_tcdm_banks,      tcdm_bank_width,
                         redmule_ce_height,  redmule_ce_width,   redmule_ce_pipe,
@@ -86,10 +86,10 @@ class ClusterArch:
         self.cluster_id             = cluster_id
         self.auto_fetch             = auto_fetch
         self.barrier_irq            = 19
-        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core + len(spatz_core_list)*spatz_num_vlsu, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem)
+        self.tcdm                   = ClusterArch.Tcdm(base, self.nb_core + len(spatz_core_list)*spatz_num_vlsu, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_itlv, sync_special_mem)
         self.stack_area             = Area(stack_base, stack_size)
         self.zomem_area             = Area(zomem_base, zomem_size)
-        self.sync_area              = Area(sync_base, sync_size)
+        self.sync_area              = Area(sync_base, sync_itlv + sync_special_mem)
         self.reg_area               = Area(reg_base, reg_size)
         self.insn_area              = Area(insn_base, insn_size)
 
@@ -117,13 +117,13 @@ class ClusterArch:
         self.num_cluster_y          = num_cluster_y
 
     class Tcdm:
-        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_size, sync_special_mem):
+        def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_itlv, sync_special_mem):
             self.area = Area( base, tcdm_size)
             self.nb_tcdm_banks = nb_tcdm_banks
             self.bank_width = tcdm_bank_width
             self.bank_size = (self.area.size / self.nb_tcdm_banks) + self.bank_width #prevent overflow due to RedMule access model
             self.nb_masters = nb_masters
-            self.sync_size = sync_size
+            self.sync_itlv = sync_itlv
             self.sync_special_mem = sync_special_mem
 
 
@@ -149,7 +149,7 @@ class ClusterTcdm(gvsoc.systree.Component):
         hwpe_interleaver = HWPEInterleaver(self, 'hwpe_interleaver', arch.nb_masters,
             nb_banks, arch.bank_width)
 
-        tcdm_sync_mem = memory.Memory(self, 'sync_mem', size=arch.sync_size, atomics=True, width_log2=int(math.log2(arch.bank_width)))
+        tcdm_sync_mem = memory.Memory(self, 'sync_mem', size=arch.sync_itlv, atomics=True, width_log2=int(math.log2(arch.bank_width)))
 
         for i in range(0, nb_banks):
             self.bind(interleaver, 'out_%d' % i, banks[i], 'input')
@@ -246,7 +246,7 @@ class ClusterUnit(gvsoc.systree.Component):
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers',
             num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, nb_cores=arch.nb_core,
-            boot_addr=boot_addr, cluster_id=arch.cluster_id)
+            boot_addr=boot_addr, cluster_id=arch.cluster_id, global_barrier_addr=arch.sync_area.base+arch.tcdm.sync_itlv)
 
         #data dumpper
         data_dumpper = UtilDumpper(self, 'data_dumpper', arch.cluster_id)
@@ -274,7 +274,8 @@ class ClusterUnit(gvsoc.systree.Component):
         zero_mem = ZeroMem(self, 'zero_mem', size=arch.zomem_area.size)
 
         #synchronization router
-        sync_router = router.Router(self, 'sync_router', bandwidth=4)
+        sync_router_master = router.Router(self, 'sync_router_master', bandwidth=4)
+        sync_router_slave = router.Router(self, 'sync_router_slave', bandwidth=4)
 
         #
         # Bindings
@@ -311,8 +312,8 @@ class ClusterUnit(gvsoc.systree.Component):
         narrow_axi.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
 
         #binding to synchronization bus
-        narrow_axi.o_MAP(sync_router.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size, rm_base=False)
-        sync_router.o_MAP(self.i_SYNC_OUTPUT())
+        narrow_axi.o_MAP(sync_router_master.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size*arch.num_cluster_x*arch.num_cluster_y, rm_base=False)
+        sync_router_master.o_MAP(self.i_SYNC_OUTPUT())
 
 
         #RedMule to TCDM
@@ -386,8 +387,10 @@ class ClusterUnit(gvsoc.systree.Component):
             cluster_registers.o_EXTERNAL_IRQ(core_id, cores[core_id].i_IRQ(arch.barrier_irq))
 
         #Global Synchronization
-        self.o_SYNC_INPUT(tcdm.i_SYNC_INPUT())
-        self.bind(self, 'sync_irq', cluster_registers, 'global_barrier_req')
+        self.o_SYNC_INPUT(sync_router_slave.i_INPUT())
+        sync_router_slave.o_MAP(tcdm.i_SYNC_INPUT())
+        sync_router_slave.o_MAP(cluster_registers.i_GLOBAL_BARRIER_SLAVE(), base=arch.tcdm.sync_itlv, size=arch.tcdm.sync_special_mem, rm_base=True)
+        cluster_registers.o_GLOBAL_BARRIER_MASTER(sync_router_master.i_INPUT())
 
         # Cluster DMA
         data_dumpper_arbiter = router.Router(self, 'data_dumpper_arbiter')
@@ -444,9 +447,3 @@ class ClusterUnit(gvsoc.systree.Component):
 
     def o_SYNC_INPUT(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('sync_input', itf, signature='io', composite_bind=True)
-
-    def i_SYNC_IRQ(self) -> gvsoc.systree.SlaveItf:
-        return gvsoc.systree.SlaveItf(self, 'sync_irq', signature='wire<bool>')
-
-    def o_SYNC_IRQ(self, itf: gvsoc.systree.SlaveItf):
-        self.itf_bind('sync_irq', itf, signature='wire<bool>')

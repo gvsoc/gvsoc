@@ -21,7 +21,7 @@ import regmap.regmap_c_header
 
 class ClusterRegisters(gvsoc.systree.Component):
 
-    def __init__(self, parent, name, num_cluster_x, num_cluster_y, boot_addr=0, nb_cores=1, cluster_id=0, binary=None):
+    def __init__(self, parent, name, num_cluster_x, num_cluster_y, boot_addr=0, nb_cores=1, cluster_id=0, global_barrier_addr=0, binary=None):
         super(ClusterRegisters, self).__init__(parent, name)
 
         self.add_sources(['pulp/chips/flex_cluster/cluster_registers.cpp'])
@@ -32,6 +32,7 @@ class ClusterRegisters(gvsoc.systree.Component):
             'boot_addr': boot_addr,
             'nb_cores': nb_cores,
             'cluster_id': cluster_id,
+            'global_barrier_addr': global_barrier_addr,
         })
 
     def gen(self, builddir, installdir):
@@ -54,5 +55,8 @@ class ClusterRegisters(gvsoc.systree.Component):
     def gen_gui(self, parent_signal):
         return gvsoc.gui.Signal(self, parent_signal, name=self.name, is_group=True, groups=["regmap"])
 
-    def i_GLOBAL_REQ(self) -> gvsoc.systree.SlaveItf:
-        return gvsoc.systree.SlaveItf(self, 'global_barrier_req', signature='wire<bool>')
+    def i_GLOBAL_BARRIER_SLAVE(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'global_barrier_slave', signature='io')
+
+    def o_GLOBAL_BARRIER_MASTER(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('global_barrier_master', itf, signature='io')

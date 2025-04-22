@@ -39,7 +39,9 @@ public:
 
 private:
     static void barrier_sync(vp::Block *__this, bool value, int id);
-    static void global_barrier_sync(vp::Block *__this, bool value);
+    static vp::IoReqStatus global_barrier_sync(vp::Block *__this, vp::IoReq *req);
+    static void grant(vp::Block *__this, vp::IoReq *req);
+    static void response(vp::Block *__this, vp::IoReq *req);
     void cl_clint_set_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
     void cl_clint_clear_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
 
@@ -59,7 +61,11 @@ private:
     std::vector<vp::WireSlave<bool>> barrier_req_itf;
     vp::WireMaster<bool> barrier_ack_itf;
 
-    vp::WireSlave<bool> global_barrier_req_itf;
+    vp::IoSlave  global_barrier_slave_itf;
+    vp::IoMaster global_barrier_master_itf;
+    vp::IoReq*   global_barrier_master_req;
+    uint32_t     global_barrier_addr;
+    uint8_t *    global_barrier_buffer;
 
     std::vector<vp::WireMaster<bool>> external_irq_itf;
 
@@ -84,8 +90,14 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
     this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
     this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
 
-    this->global_barrier_req_itf.set_sync_meth(&ClusterRegisters::global_barrier_sync);
-    this->new_slave_port("global_barrier_req", &this->global_barrier_req_itf);
+    this->global_barrier_slave_itf.set_req_meth(&ClusterRegisters::global_barrier_sync);
+    this->new_slave_port("global_barrier_slave", &this->global_barrier_slave_itf);
+    this->new_master_port("global_barrier_master", &this->global_barrier_master_itf);
+    this->global_barrier_master_req = this->global_barrier_master_itf.req_new(0, 0, 0, 0);
+    this->global_barrier_addr = this->get_js_config()->get("global_barrier_addr")->get_int();
+    this->global_barrier_buffer = new uint8_t[4];
+    this->global_barrier_master_itf.set_resp_meth(&ClusterRegisters::response);
+    this->global_barrier_master_itf.set_grant_meth(&ClusterRegisters::grant);
 
     this->global_barrier_query = NULL;
     this->global_barrier_mutex = 0;
@@ -128,11 +140,11 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         if (_this->global_barrier_mutex == 1)
         {
             _this->global_barrier_mutex = 0;
-            // _this->trace.msg("Core Access <After> Globale Barrier\n");
+            // _this->trace.msg("[Global Sync] Core Access <After> Globale Barrier\n");
             return vp::IO_REQ_OK;
         }else{
             _this->global_barrier_query = req;
-            // _this->trace.msg("Core Access <Before> Globale Barrier\n");
+            // _this->trace.msg("[Global Sync] Core Access <Before> Globale Barrier\n");
             return vp::IO_REQ_PENDING;
         }
     }
@@ -178,16 +190,42 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         data[0] = 0;
     }
 
+    if(is_write && offset == 28){
+        uint32_t value = *(uint32_t *)data;
+        uint8_t row_mask = value & 0xFFFF; // Lower 16 bits
+        uint8_t col_mask = value >> 16; // Upper 16 bits
+
+        // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Global Sync] start wakeup with row_mask: %d and col_mask: %d\n", row_mask, col_mask);
+
+        _this->global_barrier_master_req->prepare();
+        _this->global_barrier_master_req->set_is_write(true);
+        _this->global_barrier_master_req->set_addr(_this->global_barrier_addr);
+        _this->global_barrier_master_req->set_size(4);
+        _this->global_barrier_master_req->set_data(_this->global_barrier_buffer);
+
+        uint8_t * payload_ptr = _this->global_barrier_master_req->get_payload();
+        payload_ptr[0] = 1; //broadcast
+        payload_ptr[1] = row_mask;
+        payload_ptr[2] = col_mask;
+
+        vp::IoReqStatus status = _this->global_barrier_master_itf.req(_this->global_barrier_master_req);
+
+        if (status == vp::IO_REQ_INVALID)
+        {
+            _this->trace.fatal("[Global Sync] There was an error while broadcating wakeup signal\n");
+        }
+    }
+
     // _this->regmap.access(offset, size, data, is_write);
 
     return vp::IO_REQ_OK;
 }
 
-void ClusterRegisters::global_barrier_sync(vp::Block *__this, bool value)
+vp::IoReqStatus ClusterRegisters::global_barrier_sync(vp::Block *__this, vp::IoReq *req)
 {
     ClusterRegisters *_this = (ClusterRegisters *)__this;
 
-    // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Globale Barrier Triggered\n");
+    // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Global Sync] Globale Barrier Triggered\n");
 
     if (_this->global_barrier_query == NULL)
     {
@@ -197,6 +235,8 @@ void ClusterRegisters::global_barrier_sync(vp::Block *__this, bool value)
         _this->global_barrier_query->get_resp_port()->resp(_this->global_barrier_query);
         _this->global_barrier_query = NULL;
     }
+
+    return vp::IO_REQ_OK;
 
 }
 
@@ -246,6 +286,18 @@ void ClusterRegisters::cl_clint_clear_req(uint64_t reg_offset, int size, uint8_t
             this->external_irq_itf[i].sync(false);
         }
     }
+}
+
+
+void ClusterRegisters::response(vp::Block *__this, vp::IoReq *req)
+{
+
+}
+
+
+void ClusterRegisters::grant(vp::Block *__this, vp::IoReq *req)
+{
+
 }
 
 

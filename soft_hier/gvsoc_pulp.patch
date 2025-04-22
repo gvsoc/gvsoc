@@ -269,7 +269,7 @@ index 2aa365c..d19cea8 100644
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
 diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..bcb853c 100644
+index 4124c25..fe66071 100644
 --- a/pulp/floonoc/floonoc_network_interface.cpp
 +++ b/pulp/floonoc/floonoc_network_interface.cpp
 @@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -300,7 +300,7 @@ index 4124c25..bcb853c 100644
          // Size must be at max the noc width to respect the bandwidth
          uint64_t size = std::min(_this->noc->width, _this->pending_burst_size);
          // And must not cross a page to fall into one target
-@@ -130,6 +142,31 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -130,6 +142,32 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          req->set_size(size);
          req->set_data(_this->pending_burst_data);
          req->set_is_write(burst->get_is_write());
@@ -320,7 +320,8 @@ index 4124c25..bcb853c 100644
 +        if (_this->noc->collective)
 +        {
 +            uint8_t collective_type = burst->get_payload()[0];
-+            if (collective_type)
++            _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Collective] preload[0] of burst %d\n",collective_type);
++            if (collective_type>0 && collective_type<8)
 +            {
 +                uint8_t row_mask = burst->get_payload()[1];
 +                uint8_t col_mask = burst->get_payload()[2];
@@ -332,7 +333,7 @@ index 4124c25..bcb853c 100644
  
          // Get the target entry corresponding to the current base
          Entry *entry = _this->noc->get_entry(base, size);
-@@ -137,7 +174,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -137,7 +175,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          {
              // If any request of the burst is invalid because no target was found, make the whole
              // burst invalid.
@@ -341,7 +342,7 @@ index 4124c25..bcb853c 100644
                  base, size);
              burst->status = vp::IO_REQ_INVALID;
  
-@@ -171,11 +208,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -171,11 +209,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              req->set_addr(base - entry->base);
              *req->arg_get(FlooNoc::REQ_DEST_X) = (void *)(long)entry->x;
              *req->arg_get(FlooNoc::REQ_DEST_Y) = (void *)(long)entry->y;
@@ -357,7 +358,7 @@ index 4124c25..bcb853c 100644
  
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
-@@ -232,7 +271,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
+@@ -232,7 +272,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
      uint8_t *data = req->get_data();
      uint64_t size = req->get_size();
  
