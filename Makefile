@@ -150,7 +150,7 @@ hw:
 
 # bowwang: Deeploy-related
 hw-deeploy:
-	make config
+	config_file=examples/SoftHier/config/arch_deeploy.py make config
 	make TARGETS=pulp.chips.flex_cluster.flex_cluster all-deeploy
 
 ######################################################################
