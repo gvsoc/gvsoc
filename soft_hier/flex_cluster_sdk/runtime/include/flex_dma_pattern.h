@@ -232,14 +232,14 @@ void flex_dma_async_1d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_siz
 }
 
 //Basic collective primitives
-void flex_dma_async_broadcast(uint64_t local_offset, size_t transfer_size, uint16_t row_mask, uint16_t col_mask){
+void flex_dma_async_broadcast(uint64_t dst_offset, uint64_t src_offset, size_t transfer_size, uint16_t row_mask, uint16_t col_mask){
     FlexPosition pos = get_pos(flex_get_cluster_id());
-    bare_dma_start_1d_broadcast(remote_pos(pos,local_offset), local(local_offset), transfer_size, row_mask, col_mask); //Start iDMA
+    bare_dma_start_1d_broadcast(remote_pos(pos,dst_offset), local(src_offset), transfer_size, row_mask, col_mask); //Start iDMA
 }
 
-void flex_dma_async_reduction(uint64_t local_offset, size_t transfer_size, collective_compute_format_t fmt, uint16_t row_mask, uint16_t col_mask){
+void flex_dma_async_reduction(uint64_t dst_offset, uint64_t src_offset, size_t transfer_size, collective_compute_format_t fmt, uint16_t row_mask, uint16_t col_mask){
     FlexPosition pos = get_pos(flex_get_cluster_id());
-    bare_dma_start_1d_reduction(local(local_offset), remote_pos(pos,local_offset), transfer_size, fmt, row_mask, col_mask); //Start iDMA
+    bare_dma_start_1d_reduction(local(dst_offset), remote_pos(pos,src_offset), transfer_size, fmt, row_mask, col_mask); //Start iDMA
 }
 
 //wait for idma

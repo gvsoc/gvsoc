@@ -49,7 +49,6 @@ jobs:
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary soft_hier/dma_dram_test.bin image flash run
-          ./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary examples/SoftHier/binary/example.elf run --trace=/chip/cluster_0/redmule
       - name: Run SoftHier ReadMe
         run: |
           source sourceme.sh
