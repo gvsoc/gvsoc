@@ -1,4 +1,4 @@
-source check_and_set_env.sh
+#source check_and_set_env.sh
 ##############################################################################
 ##              Envirment Parameters for GVSoC                              ##
 ##############################################################################
@@ -49,19 +49,22 @@ else
 fi
 
 # Check if "pyenv_softhier" folder exists; if not, create the virtual environment
-if [ ! -d "pyenv_softhier" ]; then
-    $PYTHON_CMD -m venv pyenv_softhier
-    source pyenv_softhier/bin/activate
-    pip install --upgrade pip
-    pip3 install -r requirements.txt
-else
-    echo "Skipping virtual environment creation as 'pyenv_softhier' folder already exists."
-fi
+pip install --upgrade pip
+pip3 install -r requirements.txt
 
-if [[ "$VIRTUAL_ENV" != *"pyenv_softhier"* ]]; then
-    echo "Activating virtual environment 'pyenv_softhier'..."
-    source pyenv_softhier/bin/activate
-else
-    echo "'pyenv_softhier' environment is already active. Skipping activation."
-fi
+# if [ ! -d "pyenv_softhier" ]; then
+#     $PYTHON_CMD -m venv pyenv_softhier
+#     source pyenv_softhier/bin/activate
+#     pip install --upgrade pip
+#     pip3 install -r requirements.txt
+# else
+#     echo "Skipping virtual environment creation as 'pyenv_softhier' folder already exists."
+# fi
+
+# if [[ "$VIRTUAL_ENV" != *"pyenv_softhier"* ]]; then
+#     echo "Activating virtual environment 'pyenv_softhier'..."
+#     source pyenv_softhier/bin/activate
+# else
+#     echo "'pyenv_softhier' environment is already active. Skipping activation."
+# fi
 
