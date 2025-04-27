@@ -13,13 +13,14 @@ jobs:
       - name: Install system software requirements
         run: |
           sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev libxtensor-dev libxsimd-dev
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev libxtensor-dev libxsimd-dev ccache
       - name: Install python requirements
         run: |
           pwd
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
+          sudo pip3 install -r plptest/requirements.txt
 
       - name: Clone additional repository
         run: |
@@ -31,32 +32,22 @@ jobs:
           #source sourceme_systemc.sh
           #make dramsys_preparation
           #make all TARGETS=pulp-open-ddr
-          make all TARGETS=rv64
-          make all TARGETS=pulp-open
-          make all TARGETS=pulp.spatz.spatz
-          make all TARGETS=snitch_spatz
-          make all TARGETS=occamy
-          make all TARGETS=siracusa
-          make TARGETS=snitch build
-          make TARGETS=pulp.snitch.snitch_cluster_single build
+          make all CMAKE_FLAGS="-j 16"
       - name: Run examples
         run: |
           set -x
           source sourceme_systemc.sh
-          ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
-          ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
-          #./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
-          #./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
-          #./install/bin/gvsoc --target=snitch_spatz --binary examples/rv64uv-p-vfadd run
-          ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
-          ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
-          ./install/bin/gvsoc --target=pulp.snitch.snitch_cluster_single --binary examples/fp32_computation_vector.elf run
-          ./install/bin/gvsoc --target=siracusa --binary examples/neureka_test run
+          make test
       - name: Run RISCV tests
         run: |
           set -x
-          source sourceme_systemc.sh
+          source sourceme.sh
           cd riscv-tests/isa && make GVSOC=1 run
+      - name: Run tests with custom build
+        run: |
+          set -x
+          source sourceme.sh
+          make test.withbuild
 
   # Removed due to no space left on eth machine
   # build_eth:

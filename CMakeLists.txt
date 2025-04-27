@@ -20,6 +20,7 @@ install(
 
 add_subdirectory(core)
 add_subdirectory(gapy)
+add_subdirectory(plptest)
 
 if(IS_DIRECTORY gap)
 add_subdirectory(gap)
