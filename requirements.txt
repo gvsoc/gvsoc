@@ -6,3 +6,4 @@ lz4
 pycryptodome
 ppk2_api
 rich
+psutil

@@ -1,7 +1,19 @@
 CMAKE_FLAGS ?= -j 6
 CMAKE ?= cmake
 
-TARGETS ?= rv32;rv64
+TARGETS ?= rv64 \
+    rv64_untimed \
+    pulp-open \
+    pulp.spatz.spatz \
+    snitch_spatz \
+    occamy \
+    siracusa \
+    snitch \
+    ara \
+    spatz \
+    snitch:core_type=fast \
+    pulp.snitch.snitch_cluster_single
+
 BUILDDIR ?= build
 INSTALLDIR ?= install
 
@@ -53,6 +65,16 @@ build:
 
 clean:
 	rm -rf $(BUILDDIR) $(INSTALLDIR)
+
+test:
+	plptest
+
+riscv:
+	wget https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2025.01.17/riscv64-elf-ubuntu-22.04-gcc-nightly-2025.01.17-nightly.tar.xz
+	tar xvf riscv64-elf-ubuntu-22.04-gcc-nightly-2025.01.17-nightly.tar.xz
+
+test.withbuild: riscv
+	PATH=$(CURDIR)/riscv/bin:$(PATH) && plptest --testset testset_withbuild.cfg  --thread 1 run table junit
 
 doc:
 	cd core/docs/user_manual && make html
