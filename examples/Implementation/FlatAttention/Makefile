@@ -22,7 +22,10 @@ CHECK_VAR := $(shell \
 init:
 	mkdir -p build
 	cd build; git clone https://github.com/gvsoc/gvsoc.git -b soft_hier_release soft_hier_release
-	cd build/soft_hier_release; git reset --hard 2768cacac8efe7d3dfa5fd6f23085a88a4ff9689;
+	cd build/soft_hier_release; git reset --hard 2768cacac8efe7d3dfa5fd6f23085a88a4ff9689
+	if cd build/soft_hier_release && git apply --check ../../init.patch; then \
+		git apply ../../init.patch;\
+	fi
 
 clean:
 	rm -rf build

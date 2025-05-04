@@ -1,0 +1,139 @@
+diff --git a/soft_hier/gvsoc_core.patch b/soft_hier/gvsoc_core.patch
+index 01f93a6..9994653 100644
+--- a/soft_hier/gvsoc_core.patch
++++ b/soft_hier/gvsoc_core.patch
+@@ -158,7 +158,7 @@ index 00000000..fde9d634
+ +    return iss_insn_next(iss, insn, pc);
+ +}
+ diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
+-index 188f2877..acde5fc9 100644
++index 188f2877..1cce71bc 100644
+ --- a/models/cpu/iss/include/isa/rv32v.hpp
+ +++ b/models/cpu/iss/include/isa/rv32v.hpp
+ @@ -20,8 +20,24 @@
+@@ -350,7 +350,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredsum_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -358,7 +358,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredand_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDANDVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -366,7 +366,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredor_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDORVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -374,7 +374,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredxor_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDXORVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -382,7 +382,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredmin_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDMINVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -390,7 +390,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredminu_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDMINUVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -398,7 +398,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredmax_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDMAXVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -406,7 +406,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vredmaxu_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_REDMAXUVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -708,7 +708,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vfredmax_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_FREDMAXVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+ +    return iss_insn_next(iss, insn, pc);
+@@ -716,7 +716,7 @@ index 188f2877..acde5fc9 100644
+ +
+ +static inline iss_reg_t vfredmax_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+ +    LIB_CALL4(lib_FREDMAXVX , REG_GET(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -724,7 +724,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vfredmin_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_FREDMINVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -732,7 +732,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vfredsum_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_FREDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+ +    return iss_insn_next(iss, insn, pc);
+@@ -740,7 +740,7 @@ index 188f2877..acde5fc9 100644
+ +
+ +static inline iss_reg_t vfredsum_vx_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+ +    LIB_CALL4(lib_FREDSUMVX , REG_GET(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), -1, REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
+@@ -748,7 +748,7 @@ index 188f2877..acde5fc9 100644
+  
+  static inline iss_reg_t vfredosum_vs_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+      LIB_CALL4(lib_FREDSUMVS , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU) - 1;
+++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) - 1 + clog2(NUM_FPU);
+ +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(0), REG_IN(1), latency, iss->top.clock.get_cycles());
+ +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
+      return iss_insn_next(iss, insn, pc);
