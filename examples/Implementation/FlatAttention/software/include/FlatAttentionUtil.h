@@ -22,6 +22,9 @@
 
 typedef struct FlatAttentionInfo
 {
+    //Validation
+    uint32_t                flat_attention_valid;
+
     //Attention General information
     uint32_t                sequence_length;
     uint32_t                head_dimemsion;
@@ -118,6 +121,9 @@ FlatAttentionInfo flat_attention_analyze(
 
     FlatAttentionInfo info;
 
+    //Validation
+    info.flat_attention_valid   = 1;
+
     //Convert to full parameter scheme
     uint32_t flatten_scale_x    = flatten_scale;
     uint32_t flatten_scale_y    = flatten_scale;
@@ -209,6 +215,10 @@ FlatAttentionInfo flat_attention_analyze(
     info.HBM_V                  = TILED_HBM_V(pos,  info.Tc, info.L1_V_size,  info.work_group_head_num, info.group.this_grid_id_x, info.group.this_grid_id_y, info.group.grid_x_num, info.group.grid_y_num);
     info.HBM_O                  = TILED_HBM_O(pos,  info.Tr, info.L1_O_size,  info.work_group_head_num, info.group.this_grid_id_x, info.group.this_grid_id_y, info.group.grid_x_num, info.group.grid_y_num);
 
+    if (info.group.valid_grid == 0)
+    {
+        info.flat_attention_valid   = 0;
+    }
     return info;
 }
 

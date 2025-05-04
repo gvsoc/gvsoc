@@ -53,6 +53,16 @@ run: hs
 	@if [ "$(CHECK_VAR)" != "0" ] && [ "$(CHECK_VAR)" != "" ]; then \
 		echo "I want to enable flatten_numerical_check"; \
 		make gen_pld; \
+		pld=$(realpath build/preload/preload.elf) make -C build/soft_hier_release runv; \
+		make check_results; \
+	else \
+		make -C build/soft_hier_release runv; \
+	fi
+
+run_simple_trace: hs
+	@if [ "$(CHECK_VAR)" != "0" ] && [ "$(CHECK_VAR)" != "" ]; then \
+		echo "I want to enable flatten_numerical_check"; \
+		make gen_pld; \
 		pld=$(realpath build/preload/preload.elf) make -C build/soft_hier_release runv_simple; \
 		make check_results; \
 	else \

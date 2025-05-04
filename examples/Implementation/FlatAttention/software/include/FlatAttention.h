@@ -38,6 +38,14 @@ int flat_attention(
                                     elem_size,
                                     flatten_scale,
                                     flatten_shape);
+    if (info.flat_attention_valid == 0)
+    {
+        if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0)
+        {
+            printf("\033[1;31m[Configuration Error] please double check your arch and attn configuration\033[0m\n");
+        }
+        return 1;
+    }
     flex_global_barrier_xy();
 
     //execute flatten attention

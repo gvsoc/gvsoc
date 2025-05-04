@@ -94,6 +94,11 @@ class FlatAttention:
      3. Compare the dumped simulation results with the golden results for verification.
    - If `self.flatten_numerical_check = 0`, the simulation runs faster, focusing only on performance without numerical checks.
 
+   ***NOTE:*** the spatz will generate the whole RVV instruction trace, which is a big burden for visulization when simulating FlatAttetnion on scalable SoftHier configuration. For such a case, here we highly recommand to use
+   ```bash
+   make run_simple_trace
+   ```
+
 4. **Generate and View the Perfetto Trace**  
    After the simulation completes, you can generate a Perfetto trace by running:
    ```bash
