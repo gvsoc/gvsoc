@@ -27,7 +27,7 @@ checkout.test:
 	@if [ ! -d "tests/gvsoc-external-tests/.git" ]; then \
 		git clone git@github.com:gvsoc/gvsoc-external-tests.git tests/gvsoc-external-tests; \
 	fi
-	cd tests/gvsoc-external-tests && git fetch && git checkout 6c7c3b58d7275963eca5eae8661298db4bf65691
+	cd tests/gvsoc-external-tests && git fetch && git checkout eedfc035d55bead9827b15e558a28640068e0fc3
 
 .PHONY: build
 
