@@ -107,13 +107,20 @@ core/models/memory/dramsys_configs:
 
 build-toolchain: third_party/toolchain
 
+# third_party/toolchain:
+# 	mkdir -p third_party/toolchain
+# 	cd third_party/toolchain && \
+# 	wget https://github.com/pulp-platform/pulp-riscv-gnu-toolchain/releases/download/v1.0.16/v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
+# 	tar -xvjf v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
+# 	wget https://github.com/husterZC/gun_toolchain/releases/download/v2.0.0/toolchain.tar.xz &&\
+# 	tar -xvf toolchain.tar.xz
+
 third_party/toolchain:
 	mkdir -p third_party/toolchain
 	cd third_party/toolchain && \
-	wget https://github.com/pulp-platform/pulp-riscv-gnu-toolchain/releases/download/v1.0.16/v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
-	tar -xvjf v1.0.16-pulp-riscv-gcc-centos-7.tar.bz2 &&\
 	wget https://github.com/husterZC/gun_toolchain/releases/download/v2.0.0/toolchain.tar.xz &&\
-	tar -xvf toolchain.tar.xz
+	tar -xvf toolchain.tar.xz &&\
+	rm -rf toolchain.tar.xz
 
 third_party/gnu_toolchain:
 	mkdir -p third_party/gnu_toolchain
