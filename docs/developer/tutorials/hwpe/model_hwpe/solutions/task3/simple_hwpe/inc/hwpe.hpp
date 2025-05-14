@@ -43,6 +43,7 @@ public:
 private:
   vp::IoSlave cfg_port_;
   vp::WireMaster<bool> irq;
+  Regconfig reg_config_;
   void clear();
   static vp::IoReqStatus hwpe_slave(vp::Block *__this, vp::IoReq *req);
 

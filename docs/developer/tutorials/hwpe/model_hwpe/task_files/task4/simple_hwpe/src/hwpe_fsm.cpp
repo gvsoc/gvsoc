@@ -56,6 +56,8 @@ void Hwpe::FsmHandler(vp::Block *__this, vp::ClockEvent *event) {
 void Hwpe::FsmEndHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(IDLE);
+  _this->regconfig_manager_instance.set_job_running(0);
+  _this->irq.sync(true);
 }
 
 void Hwpe::fsm_loop() {
@@ -82,7 +84,7 @@ int Hwpe::fsm() {
 
       break;
     case LOAD_INPUT:
-      //////////////////////////////// TASK - 3 ///////////////////////////
+      //////////////////////////////// TASK - 2 ///////////////////////////
       // Call input_load() function with return value stored to latency  
       if(this->input.iteration == this->input.count)
         state_next = WEIGHT_OFFSET; 

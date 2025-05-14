@@ -25,7 +25,7 @@ from pulp.mchan.mchan_v7 import Mchan
 from pulp.timer.timer_v2 import Timer
 from pulp.cluster.cluster_control_v2 import Cluster_control
 
-#### TASK-2 -- Import the wrapper for hwpe
+#### TASK-2.1 -- Import the wrapper for hwpe
 
 from pulp.ne16.ne16 import Ne16
 from pulp.icache_ctrl.icache_ctrl_v2 import Icache_ctrl
@@ -127,7 +127,7 @@ class Cluster(st.Component):
             # NE16
             ne16 = Ne16(self, 'ne16')
 
-#### TASK-3 -- Instantiate hwpe here 
+#### TASK-2.2 -- Instantiate hwpe here 
 
         # Icache controller
         icache_ctrl = Icache_ctrl(self, 'icache_ctrl')
@@ -206,9 +206,9 @@ class Cluster(st.Component):
         periph_ico.add_mapping('dma', **self._reloc_mapping(self.get_property('peripherals/dma/mapping')))
         self.bind(periph_ico, 'dma', mchan, 'in_%d' % nb_pe)
 
-#### TASK-4 -- Create an entry for the peripheral interconnect
+#### TASK-3.1 -- Create an entry for the peripheral interconnect
         
-#### TASK-5 -- Bind the peripheral interconnect's port to the config port of Hwpe
+#### TASK-3.2 -- Bind the peripheral interconnect's port to the config port of Hwpe
         
         if has_ne16:
             periph_ico.add_mapping('ne16', **self._reloc_mapping(self.get_property('peripherals/ne16/mapping')))
@@ -246,9 +246,9 @@ class Cluster(st.Component):
 
             self.bind(ne16, 'out', l1, 'ne16_in')
             
-#### TASK-8 --  Connect hwpe's tcdm port to l1's hwpe port just created in the L1_subsystem
+#### TASK-4.3 --  Connect hwpe's tcdm port to l1's hwpe port just created in the L1_subsystem
 
-#### TASK-9 -- Connect hwpe's interrupt request(irq) to all the cores
+#### TASK-4.4 -- Connect hwpe's interrupt request(irq) to all the cores
 
             
         # Icache controller

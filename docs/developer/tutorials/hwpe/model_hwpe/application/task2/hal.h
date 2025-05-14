@@ -28,20 +28,27 @@
 
 // global address map + event IDs
 #define HWPE_ADDR_BASE      0x00201c00
+#define CLUS_CTRL_ADDR_BASE 0x00204000
 #define HWPE_EVT0           13
-
+#define HWPE_EVT1           14
 
 // commands
 #define HWPE_COMMIT_AND_TRIGGER 0x00
+#define HWPE_ACQUIRE            0x04
+#define HWPE_FINISHED           0x08
 #define HWPE_STATUS             0x0c
+#define HWPE_RUNNING_JOB        0x10
 #define HWPE_SOFT_CLEAR         0x14
 
 // job configuration
 #define HWPE_REGISTER_OFFS       0x20
+#define HWPE_REGISTER_CXT0_OFFS  0x90
+#define HWPE_REGISTER_CXT1_OFFS  0x120
 #define HWPE_REG_INPUT_PTR       0x00
 #define HWPE_REG_WEIGHT_PTR      0x04
 #define HWPE_REG_OUTPUT_PTR      0x08
 #define HWPE_REG_WEIGHT_OFFS     0x0c
+
 
 // others
 #define HWPE_COMMIT_CMD  1
@@ -78,5 +85,32 @@
 #define HWPE_BUSYWAIT()              do {                                         } while((*(int volatile *)(HWPE_ADDR_BASE + HWPE_STATUS)) != 0)
 #define HWPE_BARRIER_ACQUIRE(job_id) job_id = HWPE_READ_CMD(job_id, HWPE_ACQUIRE); \
                                      while(job_id < 0) { eu_evt_maskWaitAndClr (1 << HWPE_EVT0); HWPE_READ_CMD(job_id, HWPE_ACQUIRE); };
+
+/* UTILITY FUNCTIONS */
+int hwpe_compare_int(uint32_t *actual_y, uint32_t *golden_y, int len) {
+  uint32_t actual_word = 0;
+  uint32_t golden_word = 0;
+  uint32_t actual = 0;
+  uint32_t golden = 0;
+
+  int errors = 0;
+  int non_zero_values = 0;
+
+  for (int i=0; i<len; i++) {
+    actual_word = *(actual_y+i);
+    golden_word = *(golden_y+i);
+
+    int error = (int) (actual_word != golden_word);
+    errors += (int) (actual_word != golden_word);
+    // printf("  0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_y+i), i*4);
+#ifndef NVERBOSE
+    if(error) {
+      if(errors==1) printf("  golden     <- actual     @ address    @ index\n");
+      printf(" Error 0x%08x <- 0x%08x @ 0x%08x @ 0x%08x\n", golden_word, actual_word, (actual_y+i), i*4);
+    }
+#endif /* NVERBOSE */
+  }
+  return errors;
+}
 
 #endif /* __HAL_HWPE_H__ */

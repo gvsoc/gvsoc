@@ -54,7 +54,10 @@ void Hwpe::FsmHandler(vp::Block *__this, vp::ClockEvent *event) {
 void Hwpe::FsmEndHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->state.set(IDLE);
+  _this->regconfig_manager_instance.set_job_running(0);
+  _this->irq.sync(true);
 }
+
 
 void Hwpe::fsm_loop() {
   auto latency = 0;

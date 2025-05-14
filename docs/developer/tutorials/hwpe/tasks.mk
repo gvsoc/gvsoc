@@ -27,17 +27,17 @@ integrate_hwpe_task11:
 
 model_hwpe_task1:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task1/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
+# model_hwpe_task2:
+# 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task2/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
+# model_hwpe_task3:
+# 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task3/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
 model_hwpe_task2:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task2/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task3:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task3/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task4:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task4/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task5:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task5/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task6:
+# model_hwpe_task3:
+# 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task5/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
+model_hwpe_task3:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task6/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task7:
+model_hwpe_task4:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task7/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_task8:
-	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task8/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
+# model_hwpe_task8:
+# 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/task_files/task8/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder

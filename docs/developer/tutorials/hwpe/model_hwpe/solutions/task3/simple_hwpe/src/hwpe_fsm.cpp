@@ -26,6 +26,9 @@
 void Hwpe::FsmStartHandler(vp::Block *__this, vp::ClockEvent *event) {// makes sense to move it to task manager
   Hwpe *_this = (Hwpe *)__this;
   _this->trace.msg("Call back to FsmStartHandler\n");
+  // register values are assigned in the start of the FSM. 
+  // _this->reg_config_=_this->regconfig_manager_instance.get_reg_config();
+  _this->regconfig_manager_instance.print_reg();
 }
 void Hwpe::FsmHandler(vp::Block *__this, vp::ClockEvent *event) {
   Hwpe *_this = (Hwpe *)__this;

@@ -43,7 +43,7 @@ model_hwpe_sol1:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/solutions/task1/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
 model_hwpe_sol2:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/solutions/task2/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
-model_hwpe_sol3:
+model_hwpe_task3_pre:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/solutions/task3/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder
 model_hwpe_sol4:
 	$(MAKE) SRC_DIR=$(SUBTASKS_MK_DIR)model_hwpe/solutions/task4/simple_hwpe DEST_DIR=$(SUBTASKS_MK_DIR)../../../../pulp/pulp/simple_hwpe replace_folder

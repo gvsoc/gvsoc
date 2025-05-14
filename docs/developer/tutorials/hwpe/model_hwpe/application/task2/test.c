@@ -27,21 +27,39 @@
 #include <stdio.h>
 
 #include "hal.h"
+#include "inc/input.h"
+#include "inc/weight.h"
+#include "inc/actual_output.h"
+#include "inc/expected_output.h"
 
 #define NB_ITER 10
 
 static int glob_errors;
 
-PI_L1 uint8_t weight[8];
-PI_L1 uint8_t input[8];
-PI_L1 uint32_t output[1];
-
 int run_test() {
 
-    //Clear the hardware 
-    HWPE_WRITE_CMD(HWPE_SOFT_CLEAR, HWPE_SOFT_CLEAR_ALL);
+  uint8_t*  input_ptr            = hwpe_input          ;
+  uint8_t*  weight_ptr           = hwpe_weight         ;
+  uint32_t* actual_output_ptr    = hwpe_actual_output  ;
+  uint32_t* expected_output_ptr  = hwpe_expected_output;
 
-    return 0;
+  // soft-clear HWPE
+  HWPE_WRITE_CMD(HWPE_SOFT_CLEAR, HWPE_SOFT_CLEAR_ALL);
+  for(volatile int kk=0; kk<10; kk++);
+  // program HWPE
+  HWPE_WRITE_REG(HWPE_REG_INPUT_PTR  ,    input_ptr        );
+  HWPE_WRITE_REG(HWPE_REG_WEIGHT_PTR ,    weight_ptr       );
+  HWPE_WRITE_REG(HWPE_REG_OUTPUT_PTR ,    actual_output_ptr);
+  HWPE_WRITE_REG(HWPE_REG_WEIGHT_OFFS,    -128             );
+
+  // commit HWPE computation
+  HWPE_WRITE_CMD(HWPE_COMMIT_AND_TRIGGER, HWPE_TRIGGER_CMD);
+
+  // wait on barrier
+  HWPE_BARRIER_NOSTATUS();
+
+  int errors = hwpe_compare_int(actual_output_ptr, expected_output_ptr, STIM_HWPE_EXPECTED_OUTPUT_SIZE);
+  return errors;
 }
 
 static struct pi_cluster_task task[1];

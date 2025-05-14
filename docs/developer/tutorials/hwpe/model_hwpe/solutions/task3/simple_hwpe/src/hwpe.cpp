@@ -37,9 +37,6 @@ Hwpe::Hwpe(vp::ComponentConf &config)
 
   this->fsm_start_event = this->event_new(&Hwpe::FsmStartHandler);
   this->fsm_event = this->event_new(&Hwpe::FsmHandler);
-
-  ////////////////////////////////////////   SOLUTION - 1  //////////////////////////////////////// 
-  // attach fsm_end_event to a new event with a callback to the FsmEndHandler
   this->fsm_end_event = this->event_new(&Hwpe::FsmEndHandler);
 }
 
@@ -60,7 +57,6 @@ vp::IoReqStatus Hwpe::hwpe_slave(vp::Block *__this, vp::IoReq *req)
   if(req->get_is_write()) {
     //The write could be to special reigsters or the configuration registers
     if(addr == HWPE_REG_COMMIT_AND_TRIGGER) {
-      ////////////////////////////////////////   SOLUTION - 2  //////////////////////////////////////// 
       // Enqueue the first event on the fsm_start_event with a latency = 1
       if (!_this->fsm_start_event->is_enqueued() && *(uint32_t *) data == 0) {
         _this->fsm_start_event->enqueue(1);
