@@ -368,7 +368,7 @@ index 4124c25..fe66071 100644
  
      // Just enqueue it and trigger the FSM which will check if it must be processed now
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..7db3911 100644
+index 50cb4ac..8cb5118 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -21,6 +21,7 @@
@@ -379,15 +379,16 @@ index 50cb4ac..7db3911 100644
  #include "floonoc.hpp"
  #include "floonoc_router.hpp"
  #include "floonoc_network_interface.hpp"
-@@ -42,6 +43,7 @@ Router::Router(FlooNoc *noc, int x, int y, int queue_size)
+@@ -42,6 +43,8 @@ Router::Router(FlooNoc *noc, int x, int y, int queue_size)
      {
          this->input_queues[i] = new vp::Queue(this, "input_queue_" + std::to_string(i),
              &this->fsm_event);
 +        this->collective_generated_queues[i] = new std::queue<vp::IoReq*>();
++        this->stalled_queues[i] = false;
      }
  }
  
-@@ -87,7 +89,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -87,7 +90,8 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
      for (int i=0; i<5; i++)
      {
          vp::Queue *queue = _this->input_queues[queue_index];
@@ -397,7 +398,7 @@ index 50cb4ac..7db3911 100644
          {
              vp::IoReq *req = (vp::IoReq *)queue->head();
  
-@@ -100,8 +103,44 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -100,14 +104,53 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // to go to the destination
              int next_x, next_y;
              _this->get_next_router_pos(to_x, to_y, next_x, next_y);
@@ -420,6 +421,7 @@ index 50cb4ac..7db3911 100644
 +                    //2.1 No action needed, directly response
 +                    _this->noc->handle_request_end(req);
 +                    queue->pop();
++                    queue_index += 1; if (queue_index == 5) queue_index = 0;
 +                    continue;
 +                } else
 +                if (analyze_result.size() == 1)
@@ -438,13 +440,21 @@ index 50cb4ac..7db3911 100644
 +                    // Generate Kid Requests Accordingly
 +                    _this->collective_generate(req, &analyze_result, _this->x, _this->y);
 +                    queue->pop();
++                    queue_index += 1; if (queue_index == 5) queue_index = 0;
 +                    continue;
 +                }
 +            }
  
              // In case the request goes to a queue which is stalled, skip it
              // we'll retry later
-@@ -173,7 +212,7 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+             int queue_id = _this->get_req_queue(next_x, next_y);
+             if (_this->stalled_queues[queue_id])
+             {
++                queue_index += 1; if (queue_index == 5) queue_index = 0;
+                 continue;
+             }
+ 
+@@ -173,14 +216,49 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              // Since we removed a request, check in next cycle if there is another one to handle
              _this->fsm_event.enqueue();
  
@@ -453,17 +463,18 @@ index 50cb4ac..7db3911 100644
          }
  
          // If we didn't any ready request, try with next queue
-@@ -183,6 +222,45 @@ void Router::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
-             queue_index = 0;
-         }
-     }
+-        queue_index += 1;
+-        if (queue_index == 5)
++        queue_index += 1; if (queue_index == 5) queue_index = 0;
++    }
 +
 +    // Deal with collective primitives generated pending requests
 +    for (int i = 0; i < 5; ++i)
 +    {
 +        std::queue<vp::IoReq *> * queue = _this->collective_generated_queues[i];
 +        if (queue->size())
-+        {
+         {
+-            queue_index = 0;
 +            vp::IoReq *req = (vp::IoReq *)queue->front();
 +            int to_x = req->get_int(FlooNoc::REQ_DEST_X);
 +            int to_y = req->get_int(FlooNoc::REQ_DEST_Y);
@@ -494,11 +505,9 @@ index 50cb4ac..7db3911 100644
 +                }
 +            }
 +            _this->fsm_event.enqueue();
-+        }
-+    }
+         }
+     }
  }
- 
- 
 @@ -204,7 +282,7 @@ void Router::send_to_target(vp::IoReq *req, int pos_x, int pos_y)
          req->status = result;
          this->noc->handle_request_end(req);
@@ -576,7 +585,7 @@ index 50cb4ac..7db3911 100644
 +    if (momentum == FlooNoc::MOMENTUM_ZERO) return "Zero";
 +    return "Unknow";
 +}
- 
++
 +void Router::collective_analyze(vp::IoReq * req, std::queue<int> * queue, int router_x, int router_y)
 +{
 +    int src_x = req->get_int(FlooNoc::REQ_SRC_X) - 1;
@@ -618,7 +627,7 @@ index 50cb4ac..7db3911 100644
 +        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
 +        if (check_momentum(FlooNoc::MOMENTUM_UP,   cur_x,cur_y,src_x,src_y,dim_x,dim_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_UP);
 +    }
-+
+ 
 +    if (req->get_int(FlooNoc::REQ_MOMENTUM) == FlooNoc::MOMENTUM_DOWN)
 +    {
 +        if (check_target(cur_x,cur_y,src_x,src_y,row_m,col_m)) queue->push(FlooNoc::MOMENTUM_ZERO);
