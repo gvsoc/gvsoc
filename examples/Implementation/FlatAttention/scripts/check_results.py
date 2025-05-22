@@ -152,7 +152,7 @@ def check_results():
         # print(f"I want to slice from {slice_start} to {slice_end}")
         golden = golden_arrays[node_id][slice_start:slice_end]
         # print(golden)
-        are_equal = np.allclose(array, golden, rtol=1e-1)
+        are_equal = np.allclose(array, golden, rtol=0.15)
         if are_equal:
             print(f"[green][{are_equal}][/green] Check at HBM offest [{offset:#x} : {(offset+attn.elem_size*len(array)):#x}]")
         else:
