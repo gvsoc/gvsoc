@@ -253,17 +253,8 @@ void flex_dma_async_wait_all(){
 
 //Basic DMA 2d transfter
 void flex_dma_sync_2d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, size_t dst_stride, size_t src_stride, size_t repeat){
-    if (is_hbm_region(dst_addr))
-    {
-        for (int i = 0; i < repeat; i++)
-        {
-            bare_dma_start_1d(dst_addr + i * dst_stride, src_addr + i * src_stride, transfer_size);
-            bare_dma_wait_all();
-        }
-    } else {
-        bare_dma_start_2d(dst_addr, src_addr, transfer_size, dst_stride, src_stride, repeat); //Start iDMA
-        bare_dma_wait_all(); // Wait for iDMA Finishing
-    }
+    bare_dma_start_2d(dst_addr, src_addr, transfer_size, dst_stride, src_stride, repeat); //Start iDMA
+    bare_dma_wait_all(); // Wait for iDMA Finishing
 }
 
 /****************************************
