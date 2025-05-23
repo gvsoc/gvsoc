@@ -152,8 +152,11 @@ def check_results():
         # print(f"I want to slice from {slice_start} to {slice_end}")
         golden = golden_arrays[node_id][slice_start:slice_end]
         # print(golden)
-        are_equal = np.allclose(array, golden, rtol=0.15)
-        if are_equal:
+        numerator = np.linalg.norm(golden - array)
+        denominator = np.linalg.norm(golden)
+        relative_error = numerator / denominator
+        print("Relative Error in Frobenius norm:", relative_error)
+        if relative_error <= 0.05:
             print(f"[green][{are_equal}][/green] Check at HBM offest [{offset:#x} : {(offset+attn.elem_size*len(array)):#x}]")
         else:
             print(f"[red][{are_equal}][/red] Check at HBM offest [{offset:#x} : {(offset+attn.elem_size*len(array)):#x}]")
