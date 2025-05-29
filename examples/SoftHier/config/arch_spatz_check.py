@@ -45,7 +45,7 @@ class FlexClusterArch:
         self.spatz_attaced_core_list = [0]
         self.spatz_num_vlsu_port     = 4
         self.spatz_num_function_unit = 4
-        self.spatz_vlsu_port_width   = 32
+        self.spatz_vlsu_port_width   = 64
 
         #RedMule
         self.redmule_ce_height       = 128
