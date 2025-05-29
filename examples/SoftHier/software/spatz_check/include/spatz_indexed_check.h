@@ -5,7 +5,7 @@
 #include "flex_printf.h"
 #include "flex_libfp16.h"
 
-#define _AVL (128)
+#define _AVL (256)
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
 void l1_layout(uint8_t *addr, uint8_t size){ // size in byte
@@ -399,7 +399,7 @@ void test_spatz_indexed(){
         void * ref_inp = (void *)local(0x2000);
         void * ref_ind = (void *)local(0x4000);
         void * ref_oup = (void *)local(0x6000);
-        tot_err =  test_ele8_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_ele8_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index16(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index32(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index64(ref_inp, ref_ind, ref_oup);
