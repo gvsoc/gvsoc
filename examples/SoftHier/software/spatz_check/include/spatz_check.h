@@ -100,8 +100,8 @@ void test_spatz(){
 
         // bowwang: configurable VLSU buswidth check
         uint32_t avl = _AVL;
-        uint8_t * x_8 = (uint8_t *)local(0x2002);
-        uint8_t * y_8 = (uint8_t *)local(0x8004);
+        uint16_t * x_8 = (uint16_t *)local(0x2002);
+        uint16_t * y_8 = (uint16_t *)local(0x8004);
 
         for (int i = 0; i < avl; ++i)
         {
@@ -113,16 +113,16 @@ void test_spatz(){
 
         printf("[Initialize Vector X]\n");
         for (int i = 0; i < avl; i+=8) {
-            printf("%d - %d >  ", i, i+7);
-            for (int j=0; j<8; j++) printf("%d_", x_8[i+j]);
+            printf("%-5d-%-5d >  ", i, i+7);
+            for (int j=0; j<8; j++) printf("%-10d", x_8[i+j]);
             printf("\n");
         }
 
         do{
-            asm volatile("vsetvli %0, %1, e8, m1, ta, ma" : "=r"(vl) : "r"(avl));
-            asm volatile("vle8.v v0,  (%0)" ::"r"(x_8));
+            asm volatile("vsetvli %0, %1, e16, m1, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle16.v v0,  (%0)" ::"r"(x_8));
             asm volatile("vadd.vv v8, v0, v0");
-            asm volatile("vse8.v v8,  (%0)" ::"r"(y_8));
+            asm volatile("vse16.v v8,  (%0)" ::"r"(y_8));
             avl -= vl;
         } while (avl>0);
 
@@ -130,11 +130,10 @@ void test_spatz(){
         avl = _AVL;
         printf("[Vector Operation: Y = X + X]\n");
         for (int i = 0; i < avl; i+=8) {
-            printf("%d - %d >  ", i, i+7);
-            for (int j=0; j<8; j++) printf("%d_", y_8[i+j]);
+            printf("%-5d-%-5d >  ", i, i+7);
+            for (int j=0; j<8; j++) printf("%-10d", y_8[i+j]);
             printf("\n");
         }
-        
     }
     flex_global_barrier_xy();//Global barrier
 }
