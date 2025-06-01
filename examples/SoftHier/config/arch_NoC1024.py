@@ -47,8 +47,8 @@ class FlexClusterArch:
         self.spatz_num_function_unit = 8
 
         #RedMule
-        self.redmule_ce_height       = 128
-        self.redmule_ce_width        = 32
+        self.redmule_ce_height       = 64
+        self.redmule_ce_width        = 16
         self.redmule_ce_pipe         = 3
         self.redmule_elem_size       = 2
         self.redmule_queue_depth     = 1
