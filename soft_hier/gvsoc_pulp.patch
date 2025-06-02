@@ -1,13 +1,15 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..7599501 100644
+index 668a863..5146e08 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
-@@ -36,6 +36,14 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+@@ -36,6 +36,16 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
      this->dim_x = get_js_config()->get_int("dim_x");
      this->dim_y = get_js_config()->get_int("dim_y");
      this->router_input_queue_size = get_js_config()->get_int("router_input_queue_size");
 +    this->atomics = get_js_config()->get_int("atomics");
 +    this->collective = get_js_config()->get_int("collective");
++    this->edge_node_alias = get_js_config()->get_int("edge_node_alias");
++    this->edge_node_alias_start_bit = get_js_config()->get_int("edge_node_alias_start_bit");
 +    this->interleave_enable = get_js_config()->get_int("interleave_enable");
 +    this->interleave_region_base = get_js_config()->get_int("interleave_region_base");
 +    this->interleave_region_size = get_js_config()->get_int("interleave_region_size");
@@ -17,7 +19,7 @@ index 668a863..7599501 100644
  
      // Reserve the array for the target. We may have one target at each node.
      this->targets.resize(this->dim_x * this->dim_y);
-@@ -71,7 +79,7 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+@@ -71,7 +81,7 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
              // this array indexed by the position
              this->targets[this->entries[id].y * this->dim_x + this->entries[id].x] = itf;
  
@@ -26,7 +28,7 @@ index 668a863..7599501 100644
                  mapping.first.c_str(), this->entries[id].base, this->entries[id].size, this->entries[id].x, this->entries[id].y);
  
              id++;
-@@ -117,10 +125,25 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
+@@ -117,10 +127,25 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
  // - When a router gets a synchronous response
  // - When an interface receives a call to the response callback
  // In both cases, the requests is accounted on the initiator burst, in the network interface
@@ -54,7 +56,7 @@ index 668a863..7599501 100644
  }
  
  
-@@ -196,3 +219,115 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+@@ -196,3 +221,115 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
  {
      return new FlooNoc(config);
  }
@@ -171,7 +173,7 @@ index 668a863..7599501 100644
 +    }
 +}
 diff --git a/pulp/floonoc/floonoc.hpp b/pulp/floonoc/floonoc.hpp
-index 644696a..595cb1b 100644
+index 644696a..4c675ac 100644
 --- a/pulp/floonoc/floonoc.hpp
 +++ b/pulp/floonoc/floonoc.hpp
 @@ -95,7 +95,15 @@ public:
@@ -191,7 +193,7 @@ index 644696a..595cb1b 100644
  
      // The following constants gives the index in the queue array of the queue associated to each direction
      static constexpr int DIR_RIGHT = 0;
-@@ -104,10 +112,36 @@ public:
+@@ -104,10 +112,40 @@ public:
      static constexpr int DIR_DOWN = 3;
      static constexpr int DIR_LOCAL = 4;
  
@@ -212,6 +214,10 @@ index 644696a..595cb1b 100644
 +    // Whether Support Collective
 +    bool collective;
 +
++    // Whether Support HBM node aliasing
++    uint64_t edge_node_alias;
++    uint64_t edge_node_alias_start_bit;
++
 +    // Whether Support Interleaving
 +    uint64_t interleave_enable;
 +    uint64_t interleave_region_base;
@@ -228,7 +234,7 @@ index 644696a..595cb1b 100644
  private:
      // Callback called when a target request is asynchronously granted after a denied error was
      // reported
-@@ -121,10 +155,6 @@ private:
+@@ -121,10 +159,6 @@ private:
      // Set of memory-mapped entries, with one for each target. They give information about each
      // target (base address, size, position)
      std::vector<Entry> entries;
@@ -240,20 +246,21 @@ index 644696a..595cb1b 100644
      // output queue of the sender.
      int router_input_queue_size;
 diff --git a/pulp/floonoc/floonoc.py b/pulp/floonoc/floonoc.py
-index 2aa365c..d19cea8 100644
+index 2aa365c..8c0dbb1 100644
 --- a/pulp/floonoc/floonoc.py
 +++ b/pulp/floonoc/floonoc.py
-@@ -47,7 +47,8 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+@@ -47,7 +47,9 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
          before the source output queue is stalled.
      """
      def __init__(self, parent: gvsoc.systree.Component, name, width: int,
 -            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2):
 +            dim_x: int, dim_y:int, ni_outstanding_reqs: int=8, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
++            edge_node_alias: int=0, edge_node_alias_start_bit: int=48,
 +            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
          super(FlooNoc2dMesh, self).__init__(parent, name)
  
          self.add_sources([
-@@ -64,6 +65,14 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
+@@ -64,6 +66,16 @@ class FlooNoc2dMesh(gvsoc.systree.Component):
          self.add_property('dim_x', dim_x)
          self.add_property('dim_y', dim_y)
          self.add_property('router_input_queue_size', router_input_queue_size)
@@ -265,11 +272,13 @@ index 2aa365c..d19cea8 100644
 +        self.add_property('interleave_granularity', interleave_granularity)
 +        self.add_property('interleave_bit_start', interleave_bit_start)
 +        self.add_property('interleave_bit_width', interleave_bit_width)
++        self.add_property('edge_node_alias', edge_node_alias)
++        self.add_property('edge_node_alias_start_bit', edge_node_alias_start_bit)
  
      def __add_mapping(self, name: str, base: int, size: int, x: int, y: int):
          self.get_property('mappings')[name] =  {'base': base, 'size': size, 'x': x, 'y': y}
 diff --git a/pulp/floonoc/floonoc_network_interface.cpp b/pulp/floonoc/floonoc_network_interface.cpp
-index 4124c25..fe66071 100644
+index 4124c25..08e15ad 100644
 --- a/pulp/floonoc/floonoc_network_interface.cpp
 +++ b/pulp/floonoc/floonoc_network_interface.cpp
 @@ -90,7 +90,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
@@ -281,10 +290,51 @@ index 4124c25..fe66071 100644
                  burst, burst->get_addr(), burst->get_size(), burst->get_is_write());
  
              // By default, we consider the whole burst as valid. In one of the burst request is\
-@@ -111,6 +111,18 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -111,6 +111,59 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          // Get base from current burst
          uint64_t base = _this->pending_burst_base;
  
++        // We apply the HBM node aliasing
++        if (_this->noc->edge_node_alias > 1)
++        {
++            Entry *test_entry = _this->noc->get_entry(base, 1);
++            if (test_entry == NULL) _this->trace.fatal("[NoC Edge Alias] Cannot find entry for base 0x%llx \n",base);
++            if (test_entry->x == 0)
++            {
++                //west edge
++                uint64_t node_id = _this->y - 1;
++                uint64_t alias_offset = 1;
++                alias_offset = alias_offset << _this->noc->edge_node_alias_start_bit;
++                base += alias_offset * (node_id % _this->noc->edge_node_alias);
++                _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[NoC Edge Alias] West edge node %d alias to 0x%llx \n", node_id, base);
++            } else if (test_entry->x == _this->noc->dim_x - 1)
++            {
++                //east edge
++                uint64_t node_id = _this->y - 1;
++                uint64_t alias_offset = 1;
++                alias_offset = alias_offset << _this->noc->edge_node_alias_start_bit;
++                base += alias_offset * (node_id % _this->noc->edge_node_alias);
++                _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[NoC Edge Alias] East edge node %d alias to 0x%llx \n", node_id, base);
++            } else if (test_entry->y == 0)
++            {
++                //south edge
++                uint64_t node_id = _this->x - 1;
++                uint64_t alias_offset = 1;
++                alias_offset = alias_offset << _this->noc->edge_node_alias_start_bit;
++                base += alias_offset * (node_id % _this->noc->edge_node_alias);
++                _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[NoC Edge Alias] South edge node %d alias to 0x%llx \n", node_id, base);
++            } else if (test_entry->y == _this->noc->dim_y - 1)
++            {
++                //north edge
++                uint64_t node_id = _this->x - 1;
++                uint64_t alias_offset = 1;
++                alias_offset = alias_offset << _this->noc->edge_node_alias_start_bit;
++                base += alias_offset * (node_id % _this->noc->edge_node_alias);
++                _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[NoC Edge Alias] North edge node %d alias to 0x%llx \n", node_id, base);
++            }
++
++        }
++
 +        //If support interleaving
 +        if (_this->noc->interleave_enable && base >= _this->noc->interleave_region_base && base < _this->noc->interleave_region_base + _this->noc->interleave_region_size)
 +        {
@@ -300,7 +350,7 @@ index 4124c25..fe66071 100644
          // Size must be at max the noc width to respect the bandwidth
          uint64_t size = std::min(_this->noc->width, _this->pending_burst_size);
          // And must not cross a page to fall into one target
-@@ -130,6 +142,32 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -130,6 +183,32 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          req->set_size(size);
          req->set_data(_this->pending_burst_data);
          req->set_is_write(burst->get_is_write());
@@ -333,7 +383,7 @@ index 4124c25..fe66071 100644
  
          // Get the target entry corresponding to the current base
          Entry *entry = _this->noc->get_entry(base, size);
-@@ -137,7 +175,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -137,7 +216,7 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
          {
              // If any request of the burst is invalid because no target was found, make the whole
              // burst invalid.
@@ -342,7 +392,7 @@ index 4124c25..fe66071 100644
                  base, size);
              burst->status = vp::IO_REQ_INVALID;
  
-@@ -171,11 +209,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
+@@ -171,11 +250,13 @@ void NetworkInterface::fsm_handler(vp::Block *__this, vp::ClockEvent *event)
              req->set_addr(base - entry->base);
              *req->arg_get(FlooNoc::REQ_DEST_X) = (void *)(long)entry->x;
              *req->arg_get(FlooNoc::REQ_DEST_Y) = (void *)(long)entry->y;
@@ -358,7 +408,7 @@ index 4124c25..fe66071 100644
  
              // Noe that the router may not grant tje request if its input queue is full.
              // In this case we must stall the network interface
-@@ -232,7 +272,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
+@@ -232,7 +313,7 @@ vp::IoReqStatus NetworkInterface::req(vp::Block *__this, vp::IoReq *req)
      uint8_t *data = req->get_data();
      uint64_t size = req->get_size();
  

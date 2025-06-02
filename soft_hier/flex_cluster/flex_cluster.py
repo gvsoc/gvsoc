@@ -69,6 +69,14 @@ class FlexClusterSystem(gvsoc.systree.Component):
             if preload_binary is not None:
                 has_preload_binary = 1
 
+        ######################
+        # implicitly setting #
+        ######################
+        if not hasattr(arch, 'spatz_vlsu_port_width'): arch.spatz_vlsu_port_width = 32
+        if not hasattr(arch, 'multi_idma_enable'): arch.multi_idma_enable = 0
+        if not hasattr(arch, 'hbm_node_aliase'): arch.hbm_node_aliase = 1
+        if not hasattr(arch, 'hbm_node_aliase_start_bit'): arch.hbm_node_aliase_start_bit = 48
+
         #############
         # Assertion #
         #############
@@ -85,6 +93,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         assert ((arch.hbm_chan_placement[1] >= num_hbm_ctrl_x) or (arch.hbm_chan_placement[1] == 0)), f"arch.hbm_chan_placement[1] ({arch.hbm_chan_placement[1]}) is smaller than hbm controller on x direction ({num_hbm_ctrl_x})"
         assert ((arch.hbm_chan_placement[2] >= num_hbm_ctrl_y) or (arch.hbm_chan_placement[2] == 0)), f"arch.hbm_chan_placement[2] ({arch.hbm_chan_placement[2]}) is smaller than hbm controller on y direction ({num_hbm_ctrl_y})"
         assert ((arch.hbm_chan_placement[3] >= num_hbm_ctrl_x) or (arch.hbm_chan_placement[3] == 0)), f"arch.hbm_chan_placement[3] ({arch.hbm_chan_placement[3]}) is smaller than hbm controller on x direction ({num_hbm_ctrl_x})"
+        assert (arch.hbm_node_aliase <= arch.num_node_per_ctrl), f"arch.hbm_node_aliase ({arch.hbm_node_aliase}) is larger than arch.num_node_per_ctrl ({arch.num_node_per_ctrl})"
 
         ctrl_chan_west  = arch.hbm_chan_placement[0] // num_hbm_ctrl_y
         ctrl_chan_north = arch.hbm_chan_placement[1] // num_hbm_ctrl_x
@@ -129,9 +138,9 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         spatz_core_list     =   arch.spatz_attaced_core_list,
                                         spatz_num_vlsu      =   arch.spatz_num_vlsu_port,
                                         spatz_num_fu        =   arch.spatz_num_function_unit,
-                                        spatz_vlsu_bw       =   arch.spatz_vlsu_port_width if hasattr(arch, 'spatz_vlsu_port_width') else 32,
+                                        spatz_vlsu_bw       =   arch.spatz_vlsu_port_width,
                                         data_bandwidth      =   arch.noc_link_width/8,
-                                        multi_idma_enable   =   1 if hasattr(arch, 'multi_idma_enable') else 0)
+                                        multi_idma_enable   =   arch.multi_idma_enable)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 
@@ -195,7 +204,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #NoC
         data_noc = FlexMeshNoC(self, 'data_noc', width=arch.noc_link_width/8,
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
-                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1)
+                ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1,
+                edge_node_alias=arch.hbm_node_aliase, edge_node_alias_start_bit=arch.hbm_node_aliase_start_bit)
 
 
         #Debug Memory
@@ -251,7 +261,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
             ctrl_id = node_id // arch.num_node_per_ctrl
             itf_router = router.Router(self, f'west_{node_id}')
             itf_router.add_mapping('output')
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=0, y=node_id+1)
+            aliase_offset = (1 << arch.hbm_node_aliase_start_bit)
+            base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
+            node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
+            data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=0, y=node_id+1)
             self.bind(itf_router, 'output', hbm_ctrl_list_west[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
             pass
         for chan_id in range(arch.hbm_chan_placement[0]):
@@ -265,7 +278,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
             ctrl_id = node_id // arch.num_node_per_ctrl
             itf_router = router.Router(self, f'north_{node_id}')
             itf_router.add_mapping('output')
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=arch.num_cluster_y+1)
+            aliase_offset = (1 << arch.hbm_node_aliase_start_bit)
+            base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
+            node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
+            data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=node_id+1, y=arch.num_cluster_y+1)
             self.bind(itf_router, 'output', hbm_ctrl_list_north[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
             pass
         for chan_id in range(arch.hbm_chan_placement[1]):
@@ -279,7 +295,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
             ctrl_id = node_id // arch.num_node_per_ctrl
             itf_router = router.Router(self, f'east_{node_id}')
             itf_router.add_mapping('output')
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=arch.num_cluster_x+1, y=node_id+1)
+            aliase_offset = (1 << arch.hbm_node_aliase_start_bit)
+            base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
+            node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
+            data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=arch.num_cluster_x+1, y=node_id+1)
             self.bind(itf_router, 'output', hbm_ctrl_list_east[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
             pass
         for chan_id in range(arch.hbm_chan_placement[2]):
@@ -293,7 +312,10 @@ class FlexClusterSystem(gvsoc.systree.Component):
             ctrl_id = node_id // arch.num_node_per_ctrl
             itf_router = router.Router(self, f'south_{node_id}')
             itf_router.add_mapping('output')
-            data_noc.o_MAP(itf_router.i_INPUT(), base=hbm_edge_start_base+node_id*arch.hbm_node_addr_space, size=arch.hbm_node_addr_space, x=node_id+1, y=0)
+            aliase_offset = (1 << arch.hbm_node_aliase_start_bit)
+            base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
+            node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
+            data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=node_id+1, y=0)
             self.bind(itf_router, 'output', hbm_ctrl_list_south[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
             pass
         for chan_id in range(arch.hbm_chan_placement[3]):
