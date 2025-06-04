@@ -42,7 +42,7 @@ clean:
 	rm -rf $(BUILDDIR) $(INSTALLDIR)
 
 test:
-	plptest --no-fail
+	plptest --no-fail run table junit
 
 riscv:
 	wget https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2025.01.17/riscv64-elf-ubuntu-22.04-gcc-nightly-2025.01.17-nightly.tar.xz

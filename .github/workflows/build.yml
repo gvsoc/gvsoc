@@ -48,6 +48,13 @@ jobs:
           set -x
           source sourceme.sh
           make test.withbuild
+      - name: Publish test results
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: JUnit Tests
+          path: junit-reports/*.xml
+          reporter: java-junit  # or `python-pytest`, `jest`, etc.
 
   # Removed due to no space left on eth machine
   # build_eth:
