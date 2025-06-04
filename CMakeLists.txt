@@ -24,4 +24,6 @@ add_subdirectory(plptest)
 
 if(IS_DIRECTORY gui)
 add_subdirectory(gui)
+add_subdirectory(gui-timeline)
+add_subdirectory(gui-database)
 endif()
