@@ -231,6 +231,11 @@ void flex_dma_async_1d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_siz
     bare_dma_start_1d(dst_addr, src_addr, transfer_size); //Start iDMA
 }
 
+//Basic DMA 2d transfter
+void flex_dma_async_2d(uint64_t dst_addr, uint64_t src_addr, size_t transfer_size, size_t dst_stride, size_t src_stride, size_t repeat){
+    bare_dma_start_2d(dst_addr, src_addr, transfer_size, dst_stride, src_stride, repeat); //Start iDMA
+}
+
 //Basic collective primitives
 void flex_dma_async_broadcast(uint64_t dst_offset, uint64_t src_offset, size_t transfer_size, uint16_t row_mask, uint16_t col_mask){
     FlexPosition pos = get_pos(flex_get_cluster_id());
