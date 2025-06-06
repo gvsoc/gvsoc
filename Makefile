@@ -26,9 +26,15 @@ checkout:
 
 .PHONY: build
 
+ifdef DEBUG
+BUILD_TYPE = RelWithDebInfo
+else
+BUILD_TYPE = Release
+endif
+
 build:
 	# Change directory to curdir to avoid issue with symbolic links
-	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
