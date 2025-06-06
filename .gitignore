@@ -19,3 +19,5 @@ sw_build*
 pyenv*
 soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.*
 dump*
+test.sh
+softhier.log

@@ -52,6 +52,7 @@ private:
   vp::IoReq ts_req;
   int interleaving_bits;
   uint64_t node_addr_offset;
+  uint64_t hbm_node_aliase;
 };
 
 hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
@@ -67,6 +68,7 @@ hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
   stage_bits = get_js_config()->get_child_int("stage_bits");
   interleaving_bits = get_js_config()->get_child_int("interleaving_bits");
   node_addr_offset = get_js_config()->get_child_int("node_addr_offset");
+  hbm_node_aliase = get_js_config()->get_child_int("hbm_node_aliase");
 
   if (stage_bits == 0)
   {
@@ -122,10 +124,18 @@ vp::IoReqStatus hbm_ctrl::req_muxed(vp::Block *__this, vp::IoReq *req, int mux_i
   bool is_write = req->get_is_write();
   uint64_t size = req->get_size();
   uint8_t *data = req->get_data();
+  uint64_t node_size = _this->node_addr_offset;
 
-  _this->trace.msg("Received IO req (offset: 0x%llx, id: %d, size: 0x%llx, is_write: %d), translated address to HBM: 0x%llx\n", offset, mux_id, size, is_write, offset + mux_id * _this->node_addr_offset);
+  if (_this->hbm_node_aliase > 1)
+  {
+    // If the HBM is aliased, we need to translate the address to the HBM node address
+    mux_id = (mux_id / _this->hbm_node_aliase);
+    node_size = node_size * _this->hbm_node_aliase;
+  }
+
+  _this->trace.msg("Received IO req (offset: 0x%llx, id: %d, size: 0x%llx, is_write: %d), translated address to HBM: 0x%llx\n", offset, mux_id, size, is_write, offset + mux_id * node_size);
   //add offest on node address
-  offset = offset + mux_id * _this->node_addr_offset;
+  offset = offset + mux_id * node_size;
  
   int bank_id = (offset >> _this->interleaving_bits) & _this->bank_mask;
   uint64_t bank_offset = ((offset >> (_this->stage_bits + _this->interleaving_bits)) << _this->interleaving_bits) + (offset & ((1<<_this->interleaving_bits)-1));

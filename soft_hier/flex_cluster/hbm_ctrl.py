@@ -18,7 +18,7 @@ import gvsoc.systree as st
 
 class hbm_ctrl(st.Component):
 
-    def __init__(self, parent, slave, nb_slaves=0, nb_masters=0, stage_bits=0, interleaving_bits=2, node_addr_offset=0):
+    def __init__(self, parent, slave, nb_slaves=0, nb_masters=0, stage_bits=0, interleaving_bits=2, node_addr_offset=0, hbm_node_aliase=0):
 
         super(hbm_ctrl, self).__init__(parent, slave)
 
@@ -29,5 +29,6 @@ class hbm_ctrl(st.Component):
             'nb_masters': nb_masters,
             'stage_bits': stage_bits,
             'interleaving_bits': interleaving_bits,
-            'node_addr_offset': node_addr_offset
+            'node_addr_offset': node_addr_offset,
+            'hbm_node_aliase': hbm_node_aliase
         })
