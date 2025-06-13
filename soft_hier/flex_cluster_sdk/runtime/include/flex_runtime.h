@@ -115,14 +115,41 @@ uint32_t flex_is_first_core(){
  * Desc: cluster-private heap allocator initialization
  */
 
-void flex_alloc_init(){
-    volatile uint32_t * heap_start      = (volatile uint32_t *) ARCH_CLUSTER_HEAP_BASE;
+extern char __l1_heap_start[];
+extern char __hbm_heap_start[];
+
+static inline void flex_alloc_init(){
+    uint32_t CID = flex_get_cluster_id();
+    // volatile uint32_t * heap_start      = (volatile uint32_t *) (ARCH_CLUSTER_HEAP_BASE + 0x1000);
+    volatile uint32_t * heap_start      = (volatile uint32_t *) __l1_heap_start;
     volatile uint32_t * heap_end        = (volatile uint32_t *) ARCH_CLUSTER_HEAP_END;
     volatile uint32_t   heap_size       = (uint32_t)heap_end - (uint32_t)heap_start;
     if (flex_is_first_core()){
         flex_cluster_alloc_init(flex_get_allocator_l1(), (void *)heap_start, heap_size);
     }
+
+    // HBM allocator
+    uint32_t hbm_nodes = 4; // bowwang: hardcoded for now
+    volatile uint32_t * hbm_heap_start      = (volatile uint32_t *) __hbm_heap_start;
+    volatile uint32_t * hbm_heap_end        = (volatile uint32_t *) (ARCH_HBM_START_BASE + (ARCH_HBM_NODE_ADDR_SPACE * hbm_nodes));
+    volatile uint32_t   hbm_heap_size       = (uint32_t)hbm_heap_end - (uint32_t)hbm_heap_start;
+    if (flex_is_first_core()){
+        flex_cluster_alloc_init(flex_get_allocator_hbm(), (void *)hbm_heap_start, hbm_heap_size);
+    }
+
+    // allocation init summary
+    if (CID==0 && flex_is_first_core()){
+        printf("[Alloc] >>> L1  allocator:    0x%p\n", &alloc_l1);
+        printf("[Alloc] >>> L1  first block:  0x%p\n", (&alloc_l1)->first_block);
+        printf("[Alloc] >>> L1  heap start:   0x%p, size: 0x%x\n\n", heap_start, heap_size);
+        printf("[Alloc] >>> HBM allocator:    0x%p\n", &alloc_hbm);
+        printf("[Alloc] >>> HBM first block:  0x%p\n", (&alloc_hbm)->first_block);
+        printf("[Alloc] >>> HBM heap start:   0x%p, size: 0x%x\n\n", hbm_heap_start, hbm_heap_size);
+    }
+
+    return;
 }
+
 
 /*******************
 *  Global Barrier  *
