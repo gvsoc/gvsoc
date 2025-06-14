@@ -153,6 +153,7 @@ class Heads:
             a_list = container_dict[0][node]
             b_list = container_dict[1][node]
             merge = a_list + b_list
+            merge = [arr.flatten() for arr in merge]
             np_array = np.concatenate(merge)
             west_arrays.append(np_array)
             pass
@@ -161,6 +162,7 @@ class Heads:
             a_list = container_dict[2][node]
             b_list = container_dict[3][node]
             merge = a_list + b_list
+            merge = [arr.flatten() for arr in merge]
             np_array = np.concatenate(merge)
             south_arrays.append(np_array)
             pass

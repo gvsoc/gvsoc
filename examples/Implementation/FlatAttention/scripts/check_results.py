@@ -157,8 +157,10 @@ def check_results():
         relative_error = numerator / denominator
         print("Relative Error in Frobenius norm:", relative_error)
         if relative_error <= 0.05:
+            are_equal = True
             print(f"[green][{are_equal}][/green] Check at HBM offest [{offset:#x} : {(offset+attn.elem_size*len(array)):#x}]")
         else:
+            are_equal = False
             print(f"[red][{are_equal}][/red] Check at HBM offest [{offset:#x} : {(offset+attn.elem_size*len(array)):#x}]")
         pass
     pass

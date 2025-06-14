@@ -28,7 +28,9 @@ init:
 	fi
 
 clean:
-	rm -rf build
+	rm -rf build/preload
+	rm -rf build/sw
+	rm -rf build/soft_hier_release/dump*
 	rm -rf configs/__pycache__/
 
 assert:
