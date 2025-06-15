@@ -54,6 +54,7 @@ jobs:
           source sourceme.sh
           cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
           cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/test make hs run
+          python examples/SoftHier/software/spatz_check/util/spatz_datagen.py -M 64
           cfg=examples/SoftHier/config/arch_spatz_check.py app=examples/SoftHier/software/spatz_check make hs run
           cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs runv
           cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
