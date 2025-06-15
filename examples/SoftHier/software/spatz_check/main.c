@@ -1,6 +1,7 @@
 #include "flex_runtime.h"
 #include "spatz_check.h"
 #include "spatz_indexed_check.h"
+#include "spatz_fp8_check.h"
 #include <math.h>
 
 int main()
@@ -14,6 +15,7 @@ int main()
 
     test_spatz();
     test_spatz_indexed();
+    test_spatz_fp8();
     /**************************************/
     /*  Program Execution Region -- Stop  */
     /**************************************/
