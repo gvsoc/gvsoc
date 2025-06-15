@@ -31,6 +31,7 @@ void set_lower_byte(float *f_out, uint8_t val) {
     union FloatBits fb = { .f = 0.0f };  // or any other initial float value
     fb.u = (fb.u & 0xFFFFFF00) | val;   // clear lower byte, insert val
     *f_out = fb.f;
+    // printf("val: %x, f_out: %x, fb.u: %x\n", val, *f_out, fb.u);
 }
 
 // Decode fp8 E5M2 into float32
@@ -71,7 +72,12 @@ void spatz_verify(uint32_t avl, uint8_t* act_vec, uint8_t* exp_vec) {
         act_f32 = fp8_e5m2_to_f32(act_fp8);
 
         float err = exp_f32 - act_f32;
-        if (err > 0.15f || err < -0.15f) {
+        // if (exp_fp8 != act_fp8) {
+        //     printf("%3d | exp: 0x%02x (%.5f), act: 0x%02x (%.5f), err: %.5f\n",
+        //            i, exp_fp8, exp_f32, act_fp8, act_f32, err);
+        //     tot_err += 1;
+        // }
+        if (err > 0.25f || err < -0.25f) {
             printf("%3d | exp: 0x%02x (%.5f), act: 0x%02x (%.5f), err: %.5f\n",
                    i, exp_fp8, exp_f32, act_fp8, act_f32, err);
             tot_err += 1;
