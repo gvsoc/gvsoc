@@ -44,4 +44,4 @@ class FlatAttetion:
         ## [Async]: Whether to enable asynchronous execution
         self.flatten_async           = 1
         ## [Numer]: Whether to check numerical correctness
-        self.flatten_numerical_check = 0
+        self.flatten_numerical_check = 1
