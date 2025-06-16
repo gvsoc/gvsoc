@@ -1,5 +1,5 @@
 diff --git a/models/cpu/iss/flexfloat/flexfloat.c b/models/cpu/iss/flexfloat/flexfloat.c
-index c26426a1..9dfe38b4 100644
+index c26426a1..1e10e63a 100644
 --- a/models/cpu/iss/flexfloat/flexfloat.c
 +++ b/models/cpu/iss/flexfloat/flexfloat.c
 @@ -537,6 +537,22 @@ INLINE void ff_add(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b
@@ -25,6 +25,14 @@ index c26426a1..9dfe38b4 100644
  INLINE void ff_sub(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b) {
      assert((dest->desc.exp_bits == a->desc.exp_bits) && (dest->desc.frac_bits == a->desc.frac_bits) &&
             (a->desc.exp_bits == b->desc.exp_bits) && (a->desc.frac_bits == b->desc.frac_bits));
+@@ -555,6 +571,7 @@ INLINE void ff_mul(flexfloat_t *dest, const flexfloat_t *a, const flexfloat_t *b
+     assert((dest->desc.exp_bits == a->desc.exp_bits) && (dest->desc.frac_bits == a->desc.frac_bits) &&
+            (a->desc.exp_bits == b->desc.exp_bits) && (a->desc.frac_bits == b->desc.frac_bits));
+     dest->value = a->value * b->value;
++    // printf("dest: %lf, a: %lf, b: %lf\n", dest->value, a->value, b->value);
+     #ifdef FLEXFLOAT_TRACKING
+     dest->exact_value = a->exact_value * b->exact_value;
+     if(dest->tracking_fn) (dest->tracking_fn)(dest, dest->tracking_arg);
 diff --git a/models/cpu/iss/flexfloat/flexfloat.h b/models/cpu/iss/flexfloat/flexfloat.h
 index e7791f10..4f4ca654 100644
 --- a/models/cpu/iss/flexfloat/flexfloat.h
@@ -811,7 +819,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..79557834 100644
+index 26cb748e..5e23b7c5 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -848,7 +856,18 @@ index 26cb748e..79557834 100644
      }
      return c;
  }
-@@ -270,7 +279,8 @@ static inline void buildDataInt(Iss *iss, int vs, int i, int64_t* data){
+@@ -138,7 +147,9 @@ static inline int  sewCase(int sew){ //sew/8
+ static inline void EMCase(int sew, uint8_t *m, uint8_t *e){
+     switch (sew){
+     case 8:{
+-        printf("8 bit is not supported for FLOAT\n");
++        // printf("8 bit is not supported for FLOAT\n");
++        *e = 5;
++        *m = 2;
+         return;
+         break;
+     }
+@@ -270,7 +281,8 @@ static inline void buildDataInt(Iss *iss, int vs, int i, int64_t* data){
      }
      *data = 0;
      for(int j = 0;j < iteration;j++){
@@ -858,7 +877,7 @@ index 26cb748e..79557834 100644
      }
  }
  
-@@ -300,7 +310,8 @@ static inline void myAbs(Iss *iss, int size, int vs, int i, int64_t* data){
+@@ -300,7 +312,8 @@ static inline void myAbs(Iss *iss, int size, int vs, int i, int64_t* data){
  
      *data = 0;
      for(int j = 0;j < iteration;j++){
@@ -868,7 +887,7 @@ index 26cb748e..79557834 100644
      }
      *data += cin;
      *data = cin?(-*data):*data;
-@@ -316,21 +327,23 @@ static inline void myAbsU(Iss *iss,int size, int vs, int i, uint64_t* data){
+@@ -316,21 +329,23 @@ static inline void myAbsU(Iss *iss,int size, int vs, int i, uint64_t* data){
  
      *data = 0;
      for(int j = 0;j < iteration;j++){
@@ -895,7 +914,7 @@ index 26cb748e..79557834 100644
      }
  }
  
-@@ -582,9 +595,44 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+@@ -582,9 +597,44 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
  }
  
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -940,7 +959,7 @@ index 26cb748e..79557834 100644
  
  
  static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
-@@ -3418,6 +3466,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3418,6 +3468,56 @@ static inline void lib_FADDVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -997,7 +1016,7 @@ index 26cb748e..79557834 100644
  static inline void lib_FSUBVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -3591,6 +3689,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+@@ -3591,6 +3691,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
      }
  }
  
@@ -1053,7 +1072,7 @@ index 26cb748e..79557834 100644
  static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -4170,6 +4317,30 @@ static inline void lib_FREDMAXVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
+@@ -4170,6 +4319,30 @@ static inline void lib_FREDMAXVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
      writeToVReg(iss, SEW, vd, 0, resBin);
  }
  
@@ -1084,7 +1103,7 @@ index 26cb748e..79557834 100644
  static inline void lib_FREDMINVS(Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -4221,6 +4392,32 @@ static inline void lib_FREDSUMVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
+@@ -4221,6 +4394,32 @@ static inline void lib_FREDSUMVS(Iss *iss, int vs1,     int vs2, int vd, bool vm
      writeToVReg(iss, SEW, vd, 0, resBin);
  }
  
@@ -1117,7 +1136,7 @@ index 26cb748e..79557834 100644
  static inline void lib_FWADDVV  (Iss *iss, int vs1,     int vs2, int vd, bool vm){
      bool bin[8];
      unsigned long int res, data1, data2;
-@@ -5582,10 +5779,8 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5582,10 +5781,8 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          vp::IoReq *req = &this->io_req;
  
          uint32_t addr = this->io_pending_addr;        
@@ -1130,7 +1149,7 @@ index 26cb748e..79557834 100644
          if (size > this->io_pending_size){
              size = this->io_pending_size;
          }
-@@ -5595,14 +5790,18 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5595,14 +5792,18 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          req->set_size(size);
          req->set_is_write(this->io_pending_is_write);
          req->set_data(this->io_pending_data);
@@ -1151,7 +1170,7 @@ index 26cb748e..79557834 100644
          }
          else if (err == vp::IO_REQ_INVALID){
              this->waiting_io_response = false;
-@@ -5611,6 +5810,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5611,6 +5812,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
          else{
  
          }
@@ -1161,7 +1180,7 @@ index 26cb748e..79557834 100644
      }
      else{
          this->waiting_io_response = false;
-@@ -5620,66 +5822,35 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+@@ -5620,66 +5824,35 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
  
  static inline void lib_VLE8V (Iss *iss, iss_reg_t rs1, int vd , bool vm){
      uint64_t start_add = rs1;
@@ -1245,7 +1264,7 @@ index 26cb748e..79557834 100644
      }
  }
  
-@@ -5693,67 +5864,43 @@ static inline void lib_VLE16V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5693,67 +5866,43 @@ static inline void lib_VLE16V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
@@ -1343,7 +1362,7 @@ index 26cb748e..79557834 100644
  }
  
  static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
-@@ -5766,72 +5913,31 @@ static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5766,72 +5915,31 @@ static inline void lib_VLE32V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
@@ -1433,7 +1452,7 @@ index 26cb748e..79557834 100644
      }
  }
  
-@@ -5845,387 +5951,150 @@ static inline void lib_VLE64V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
+@@ -5845,387 +5953,150 @@ static inline void lib_VLE64V(Iss *iss, iss_reg_t rs1, int vd , bool vm){
      // printf("vd = %d\n",vd);
  
      uint64_t start_add = rs1;
@@ -1908,7 +1927,7 @@ index 26cb748e..79557834 100644
      }
  }
  
-@@ -6647,121 +6516,207 @@ static inline void lib_VSSE64V (Iss *iss, iss_reg_t rs1, iss_reg_t rs2, int vd ,
+@@ -6647,121 +6518,207 @@ static inline void lib_VSSE64V (Iss *iss, iss_reg_t rs1, iss_reg_t rs2, int vd ,
  //                                                            INDEXED LOAD/STORE
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
@@ -2204,7 +2223,7 @@ index 26cb748e..79557834 100644
  
  
  static inline void lib_VSUXEI8V  (Iss *iss, iss_reg_t rs1, int vs2, int vd , bool vm, float r){
-@@ -6943,6 +6898,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,6 +6900,7 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
