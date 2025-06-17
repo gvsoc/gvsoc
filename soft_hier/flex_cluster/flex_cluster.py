@@ -76,6 +76,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
         if not hasattr(arch, 'multi_idma_enable'): arch.multi_idma_enable = 0
         if not hasattr(arch, 'hbm_node_aliase'): arch.hbm_node_aliase = 1
         if not hasattr(arch, 'hbm_node_aliase_start_bit'): arch.hbm_node_aliase_start_bit = 48
+        if not hasattr(arch, 'hbm_ctrl_xor_scrambling'): arch.hbm_ctrl_xor_scrambling = 0
+        if not hasattr(arch, 'hbm_ctrl_red_scrambling'): arch.hbm_ctrl_red_scrambling = 0
 
         #############
         # Assertion #
@@ -180,25 +182,25 @@ class FlexClusterSystem(gvsoc.systree.Component):
         hbm_ctrl_list_west = []
         for hbm_ct in range(num_hbm_ctrl_y):
             nb_slaves=ctrl_chan_west
-            hbm_ctrl_list_west.append(hbm_ctrl(self, f'west_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase))
+            hbm_ctrl_list_west.append(hbm_ctrl(self, f'west_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling))
             pass
 
         hbm_ctrl_list_north = []
         for hbm_ct in range(num_hbm_ctrl_x):
             nb_slaves=ctrl_chan_north
-            hbm_ctrl_list_north.append(hbm_ctrl(self, f'north_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase))
+            hbm_ctrl_list_north.append(hbm_ctrl(self, f'north_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling))
             pass
 
         hbm_ctrl_list_east = []
         for hbm_ct in range(num_hbm_ctrl_y):
             nb_slaves=ctrl_chan_east
-            hbm_ctrl_list_east.append(hbm_ctrl(self, f'east_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase))
+            hbm_ctrl_list_east.append(hbm_ctrl(self, f'east_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling))
             pass
 
         hbm_ctrl_list_south = []
         for hbm_ct in range(num_hbm_ctrl_x):
             nb_slaves=ctrl_chan_south
-            hbm_ctrl_list_south.append(hbm_ctrl(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase))
+            hbm_ctrl_list_south.append(hbm_ctrl(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling))
             pass
 
         #NoC

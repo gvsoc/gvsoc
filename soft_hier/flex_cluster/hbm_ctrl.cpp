@@ -53,6 +53,8 @@ private:
   int interleaving_bits;
   uint64_t node_addr_offset;
   uint64_t hbm_node_aliase;
+  uint64_t xor_scrambling;
+  uint64_t red_scrambling;
 };
 
 hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
@@ -69,6 +71,8 @@ hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
   interleaving_bits = get_js_config()->get_child_int("interleaving_bits");
   node_addr_offset = get_js_config()->get_child_int("node_addr_offset");
   hbm_node_aliase = get_js_config()->get_child_int("hbm_node_aliase");
+  xor_scrambling = get_js_config()->get_child_int("xor_scrambling");
+  red_scrambling = get_js_config()->get_child_int("red_scrambling");
 
   if (stage_bits == 0)
   {
@@ -138,7 +142,26 @@ vp::IoReqStatus hbm_ctrl::req_muxed(vp::Block *__this, vp::IoReq *req, int mux_i
   offset = offset + mux_id * node_size;
  
   int bank_id = (offset >> _this->interleaving_bits) & _this->bank_mask;
+  // Bank Scrambling
+  if (_this->xor_scrambling != 0 && _this->stage_bits > 0)
+  {
+    uint64_t tmp = (offset >> (_this->stage_bits + _this->interleaving_bits));
+    int num_xor = (32 - _this->interleaving_bits - 1) / _this->stage_bits;
+    for (int i = 0; i < num_xor; ++i)
+    {
+      bank_id = bank_id ^ tmp;
+      tmp = tmp >> _this->stage_bits;
+    }
+    bank_id = bank_id & _this->bank_mask;
+  }
   uint64_t bank_offset = ((offset >> (_this->stage_bits + _this->interleaving_bits)) << _this->interleaving_bits) + (offset & ((1<<_this->interleaving_bits)-1));
+
+  if (_this->red_scrambling != 0)
+  {
+      bank_id = (offset >> _this->interleaving_bits) % (_this->nb_slaves - 1);
+      uint64_t tmp = (offset >> _this->interleaving_bits) / (_this->nb_slaves - 1);
+      bank_offset = (tmp << _this->interleaving_bits) + (offset & ((1<<_this->interleaving_bits)-1));
+  }
 
   req->set_addr(bank_offset);
   return _this->out[bank_id]->req_forward(req);
