@@ -20,6 +20,17 @@
 #include "data_spatz_matmul_fp8.h"
 #include <math.h>
 
+// input output type define
+// value aligned with byte-width
+// TYPE (1): fp8
+// TYPE (2): fp16
+// TYPE (4): fp32
+#ifndef _FLEX_TYPE
+#define _FLEX_TYPE
+#define _IN_TYPE  (1)
+#define _OUT_TYPE (2)
+#endif
+
 int main()
 {
     uint32_t eoc_val = 0;
@@ -39,9 +50,15 @@ int main()
 
     if (core_id == 0 && CID == 0){
         // allocation
-        uint8_t *matrix_a = (uint8_t *)flex_l1_malloc(FP8_M * FP8_N);
-        uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P);
-        uint8_t *matrix_c = (uint8_t *)flex_l1_malloc(FP8_M * FP8_P);
+        uint8_t *matrix_a = (uint8_t *)flex_l1_malloc(FP8_M * FP8_N * sizeof(uint8_t));
+        uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * sizeof(uint8_t));
+        #if _OUT_TYPE == 1
+        uint8_t *matrix_c = (uint8_t *)flex_l1_malloc(FP8_M * FP8_P * sizeof(uint8_t));
+        #elif _OUT_TYPE == 2
+        uint16_t *matrix_c = (uint16_t *)flex_l1_malloc(FP8_M * FP8_P * sizeof(uint16_t));
+        #else
+            #error "Unsupported _OUT_TYPE value"
+        #endif
 
         // data movement
         for (uint32_t i=0; i<FP8_M * FP8_N; i++){
@@ -50,11 +67,17 @@ int main()
         for (uint32_t i=0; i<FP8_N * FP8_P; i++){
             matrix_b[i] = matrix_b_fp8[i];
         }
-
-        spatz_matmul(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
-
+        #if _OUT_TYPE == 1
+        spatz_matmul_fp8(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
         // verify
-        spatz_verify(FP8_M * FP8_P, matrix_c, matrix_c_fp8);
+        spatz_verify(FP8_M * FP8_P, matrix_c, matrix_c_fp8, 0.25f);
+        #elif _OUT_TYPE == 2
+        spatz_matmul_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        // verify
+        spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
+        #endif
+
+        
     }
 
     /**************************************/
