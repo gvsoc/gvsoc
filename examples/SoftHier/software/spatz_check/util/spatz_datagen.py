@@ -52,7 +52,7 @@ def main():
     script_dir = os.path.dirname(os.path.realpath(__file__))
     include_dir = os.path.abspath(os.path.join(script_dir, '..', 'include'))
     os.makedirs(include_dir, exist_ok=True)
-    header_path = os.path.join(include_dir, 'spatz_fp8_check_data.h')
+    header_path = os.path.join(include_dir, 'data_spatz_fp8_check.h')
 
     with open(header_path, 'w') as f:
         f.write('#ifndef SPATZ_CHECK_DATA_FP8_H\n')
