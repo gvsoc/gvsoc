@@ -60,7 +60,7 @@ float fp8_e5m2_to_f32(uint8_t val) {
     return sign ? -result : result;
 }
 
-void spatz_verify(uint32_t avl, uint8_t* act_vec, uint8_t* exp_vec) {
+void spatz_verify(uint32_t avl, uint8_t* act_vec, uint8_t* exp_vec, const float tol) {
     uint8_t exp_fp8, act_fp8;
     float exp_f32, act_f32;
     uint32_t tot_err = 0;
@@ -77,14 +77,14 @@ void spatz_verify(uint32_t avl, uint8_t* act_vec, uint8_t* exp_vec) {
         //            i, exp_fp8, exp_f32, act_fp8, act_f32, err);
         //     tot_err += 1;
         // }
-        if (err > 0.25f || err < -0.25f) {
+        if (err > tol || err < -tol) {
             printf("%3d | exp: 0x%02x (%.5f), act: 0x%02x (%.5f), err: %.5f\n",
                    i, exp_fp8, exp_f32, act_fp8, act_f32, err);
             tot_err += 1;
         }
     }
 
-    printf("Errors above threshold (E5M2: 0.25f): %d out of %d\n", tot_err, avl);
+    printf("Errors above threshold (E5M2: %3ff): %d out of %d\n", tol, tot_err, avl);
 }
 
 #endif
