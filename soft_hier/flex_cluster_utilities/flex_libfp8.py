@@ -185,7 +185,7 @@ def generate_fp8_matrix(rows, cols):
 def write_matrix_to_header(f, name, mat, fmt='e4m3', dtype='uint8_t'):
     """Write a flattened matrix to C header as uint8_t fp8-encoded values."""
     flat = mat.flatten()
-    f.write(f'static const {dtype} {name}[{len(flat)}] = {{\n')
+    f.write(f'__attribute__((section(".hbm"))) static const {dtype} {name}[{len(flat)}] = {{\n')
     for i, val in enumerate(flat):
         if fmt == 'e4m3':
             int_val = float_to_fp8_e4m3(val)
