@@ -15,66 +15,7 @@
 import os
 import numpy as np
 import argparse
-
-def float_to_fp8_e4m3(val):
-    """Encode float16 value into simulated fp8 (E4M3) format (bias=7, 4 exponent bits, 3 mantissa bits)."""
-    f16 = np.float16(val)
-    b = np.frombuffer(f16.tobytes(), dtype=np.uint16)[0]
-
-    sign = (b >> 15) & 0x1
-    exp  = (b >> 10) & 0x1F  # 5-bit exponent
-    frac = (b >> 7)  & 0x7   # top 3 mantissa bits
-
-    if exp == 0 and frac == 0:
-        return 0x00
-    elif exp == 0x1F:
-        return 0x7F if sign == 0 else 0xFF  # Inf or NaN
-
-    fp8_exp = exp - 15 + 7  # Bias shift: float16 bias=15, E4M3 bias=7
-    if fp8_exp <= 0:
-        return 0x00  # Underflow to zero
-    elif fp8_exp >= 0xF:
-        return 0x7F if sign == 0 else 0xFF  # Overflow to max
-
-    result = (sign << 7) | ((fp8_exp & 0xF) << 3) | (frac & 0x7)
-    return result
-
-def float_to_fp8_e5m2(val):
-    """Encode float16 value into simulated fp8 (E5M2) format (bias=15, 5 exponent bits, 2 mantissa bits)."""
-    f16 = np.float16(val)
-    b = np.frombuffer(f16.tobytes(), dtype=np.uint16)[0]
-
-    sign = (b >> 15) & 0x1
-    exp  = (b >> 10) & 0x1F  # 5-bit exponent
-    frac = (b >> 8)  & 0x3   # top 2 mantissa bits
-
-    if exp == 0 and frac == 0:
-        return 0x00
-    elif exp == 0x1F:
-        return 0x7F if sign == 0 else 0xFF  # Inf or NaN
-
-    result = (sign << 7) | ((exp & 0x1F) << 2) | (frac & 0x3)
-    return result
-
-def generate_fp8_matrix(rows, cols):
-    """Generate a matrix with values in the range [-1, 1], stored in float16."""
-    return np.random.uniform(-1.0, 1.0, size=(rows, cols)).astype(np.float16)
-
-def write_matrix_to_header(f, name, mat, fmt='e4m3', dtype='uint8_t'):
-    """Write a flattened matrix to C header as uint8_t fp8-encoded values."""
-    flat = mat.flatten()
-    f.write(f'static const {dtype} {name}[{len(flat)}] = {{\n')
-    for i, val in enumerate(flat):
-        if fmt == 'e4m3':
-            int_val = float_to_fp8_e4m3(val)
-        elif fmt == 'e5m2':
-            int_val = float_to_fp8_e5m2(val)
-        else:
-            raise ValueError(f"Unsupported format: {fmt}")
-        f.write(f'  0x{int_val:02X},')
-        if (i + 1) % 8 == 0:
-            f.write('\n')
-    f.write('};\n\n')
+from flex_libfp8 import generate_fp8_matrix, write_matrix_to_header
 
 def main():
     parser = argparse.ArgumentParser(description='FP8 Tensor Generator')
