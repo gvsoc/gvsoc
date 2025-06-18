@@ -63,6 +63,7 @@ def main():
         write_matrix_to_header(f, 'vector_a_fp8', A, fmt=args.format)
         write_matrix_to_header(f, 'vector_b_fp8', B, fmt=args.format)
         write_matrix_to_header(f, 'vector_c_fp8', C, fmt=args.format)
+        write_matrix_to_header(f, 'vector_c_fp16', C, fmt='fp16', dtype='uint16_t') # for widening instructions
         write_matrix_to_header(f, 's_fp8', S, fmt=args.format)
         
         write_matrix_to_header(f, 'vector_c_add_vv_fp8', C_add_vv, fmt=args.format)
@@ -78,6 +79,12 @@ def main():
         write_matrix_to_header(f, 'vector_c_mul_vf_fp8', C_mul_vf, fmt=args.format)
         write_matrix_to_header(f, 'vector_c_madd_vf_fp8', C_madd_vf, fmt=args.format)
         write_matrix_to_header(f, 'vector_c_macc_vf_fp8', C_macc_vf, fmt=args.format)
+        
+        # widening instructions
+        write_matrix_to_header(f, 'vector_c_wadd_vf_fp8', C_add_vf, fmt='fp16', dtype='uint16_t')
+        write_matrix_to_header(f, 'vector_c_wsub_vf_fp8', C_sub_vf, fmt='fp16', dtype='uint16_t')
+        write_matrix_to_header(f, 'vector_c_wmul_vf_fp8', C_mul_vf, fmt='fp16', dtype='uint16_t')
+        write_matrix_to_header(f, 'vector_c_wmacc_vf_fp8', C_macc_vf, fmt='fp16', dtype='uint16_t')
 
         f.write('#endif // SPATZ_CHECK_DATA_FP8_H\n')
 
