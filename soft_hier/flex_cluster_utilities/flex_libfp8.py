@@ -14,14 +14,15 @@
 
 import numpy as np
 
-#########################################################
-#                  Format transform
+#################################################################
+#                     Format transform
 # float_to_fp8_e4m3():        Scalar np.float16 --> fp8 (E4M3)
 # float_to_fp8_e5m2():        Scalar np.float16 --> fp8 (E5M2)
 # fp8_e5m2_to_fp16():         Scalar fp8 (E5M2) --> np.float16
 # float_to_fp16():            Scalar np.float16 --> fp16 (E5M10)
 # matrix_float_to_fp8_e5m2(): Matrix np.float16 --> fp8 (E5M2)
 # matrix_fp8_e5m2_to_fp16():  Matrix fp8 (E5M2) --> np.float16
+#################################################################
 
 
 def float_to_fp8_e4m3(val):
@@ -163,10 +164,20 @@ def matrix_fp8_e5m2_to_fp16(fp8):
 
     return result
 
-################################################################
-#                      Data Generation
-# generate_fp8_matrix(): generate a fp16-represented fp8 matrix 
-#                        with specified scales
+#############################################################################
+#                           Data Generation
+# generate_fp8_matrix():        generate a fp16-represented fp8 matrix 
+#                               with specified scales
+#
+# generate_nm_sparse_matrix():  generate a fp16 sparse matrix
+#
+# generate_sparse_fp8_matrix(): wrapper function to cast sparse fp16 matrix 
+#                               to fp8 precision
+#
+# extract_nm_sparsity():        take a sparse matrix as input and generate 
+#                               the compact layout and indices
+#############################################################################
+
 
 def generate_fp8_matrix(rows, cols):
     """Generate a matrix with values in the range [-1, 1], stored in float16."""
@@ -175,12 +186,63 @@ def generate_fp8_matrix(rows, cols):
     matrix_fp16_cast = matrix_fp8_e5m2_to_fp16(fp8_encoded)
     return matrix_fp16_cast.astype(np.float16)
 
-################################################################
-#                    Data Dump to Header
+def generate_nm_sparse_matrix(rows, cols, N, M, seed=None):
+    assert cols % M == 0, "Each row must be divisible by M"
+    if seed is not None:
+        np.random.seed(seed)
+    
+    matrix = np.zeros((rows, cols), dtype=np.float16)
+    
+    for i in range(rows):
+        for j in range(0, cols, M):
+            # Choose N random positions out of M
+            nz_indices = np.random.choice(M, N, replace=False)
+            # Assign random values to these N positions
+            block_values = np.zeros(M, dtype=np.float16)
+            block_values[nz_indices] = np.random.randn(N)
+            # Fill the block into the matrix
+            matrix[i, j:j+M] = block_values
+            
+    return matrix
+
+def generate_sparse_fp8_matrix(rows, cols, N, M):
+    """Cast the fp16 sparse matrix to fp8 precision."""
+    matrix_fp16_ori = generate_nm_sparse_matrix(rows, cols, N, M).astype(np.float16)
+    fp8_encoded = matrix_float_to_fp8_e5m2(matrix_fp16_ori)
+    matrix_fp16_cast = matrix_fp8_e5m2_to_fp16(fp8_encoded)
+    return matrix_fp16_cast.astype(np.float16)
+
+def extract_nm_sparsity(matrix, N, M):
+    rows, cols = matrix.shape
+    assert cols % M == 0, "Each row must be divisible by M"
+    
+    num_blocks_per_row = cols // M
+    compact_vals = []
+    index_matrix = np.zeros((rows, num_blocks_per_row * N), dtype=np.uint8)
+    
+    for i in range(rows):
+        idx_offset = 0
+        for j in range(0, cols, M):
+            block = matrix[i, j:j+M]
+            nz_indices = np.nonzero(block)[0]
+            nz_values = block[nz_indices]
+
+            assert len(nz_indices) == N, f"Block at row {i}, col {j} does not have exactly {N} non-zeros"
+            
+            compact_vals.extend(nz_values)
+            index_matrix[i, idx_offset:idx_offset+N] = nz_indices.astype(np.uint8)
+            idx_offset += N
+    
+    compact_vals = np.array(compact_vals, dtype=np.float16)
+    return compact_vals, index_matrix
+
+###############################################################################################
+#                                      Data Dump to Header
 # write_matrix_to_header(): wrapper for data dump
 #
 # example usage: write_matrix_to_header(f, 'matrix_c_name', C, fmt='fp16', dtype='uint16_t')
 #                write_matrix_to_header(f, 'matrix_c_name', C, fmt='e5m2', dtype='uint8_t')
+###############################################################################################
 
 def write_matrix_to_header(f, name, mat, fmt='e4m3', dtype='uint8_t'):
     """Write a flattened matrix to C header as uint8_t fp8-encoded values."""
@@ -196,6 +258,9 @@ def write_matrix_to_header(f, name, mat, fmt='e4m3', dtype='uint8_t'):
         elif fmt == 'fp16':
             int_val = float_to_fp16(val)
             f.write(f'  0x{int_val:04X},')
+        elif fmt == 'uint8':
+            int_val = val
+            f.write(f'  0x{int_val:02X},')
         else:
             raise ValueError(f"Unsupported format: {fmt}")
         if (i + 1) % 8 == 0:
