@@ -21,8 +21,8 @@ class FlexClusterArch:
     def __init__(self):
 
         #Cluster
-        self.num_cluster_x           = 8
-        self.num_cluster_y           = 8
+        self.num_cluster_x           = 32
+        self.num_cluster_y           = 32
         self.num_core_per_cluster    = 3
 
         self.cluster_tcdm_bank_width = 32
@@ -62,13 +62,14 @@ class FlexClusterArch:
         #HBM
         self.hbm_start_base          = 0xc0000000
         self.hbm_node_addr_space     = 0xc0000000
-        self.num_node_per_ctrl       = 8
-        self.hbm_chan_placement      = [8,0,0,8]
-        self.hbm_node_aliase         = 8
+        self.num_node_per_ctrl       = 32
+        self.hbm_chan_placement      = [0,0,0,32]
+        self.hbm_node_aliase         = 32
+        self.hbm_ctrl_xor_scrambling = 1
 
         #NoC
         self.noc_outstanding         = 64
-        self.noc_link_width          = 1024
+        self.noc_link_width          = 2048
 
         #System
         self.instruction_mem_base    = 0x80000000

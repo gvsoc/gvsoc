@@ -1,6 +1,7 @@
 #include "flex_runtime.h"
-// #include "hello_world.h"
-#include "MLA_decode_MHA.h"
+#include "deepseek_config.h"
+#include "vector_lib.h"
+#include "deepseek_moe_gate.h"
 #include <math.h>
 
 int main()
@@ -12,14 +13,12 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    MLA_Decode_MHA(
-        hbm_west(0,0)/*MetaQ_base_address*/,
-        hbm_south(0,0)/*CKVR_base_address*/,
-        hbm_west(0,0)/*Output_base_address*/,
-        8/*speculative_length*/,
-        1024/*kv_sequence_length*/,
-        8/*batch_size*/,
-        2/*elem_size*/);
+    DeepSeek_MoE_gate_C32x32(
+        hbm_south(0,0)/*input_address*/,
+        hbm_south(0,0)/*weight_address*/,
+        hbm_south(0,0)/*index_address*/,
+        hbm_south(0,0)/*score_address*/,
+        8192/*seq_length*/);
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
