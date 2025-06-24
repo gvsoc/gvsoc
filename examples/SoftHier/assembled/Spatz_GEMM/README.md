@@ -20,12 +20,11 @@ python examples/SoftHier/assembled/Spatz_GEMM/software/util/spatz_sp_matmul_data
 # run simulation
 cfg=examples/SoftHier/assembled/Spatz_GEMM/config/arch_spatz.py app=examples/SoftHier/assembled/Spatz_GEMM/software make hs; make run
 ```
-[Attention!] 
+#### Attention!
 - We utilize `vsuxei8.v` instruction to handle index store operations. Therefore, the current implementation only support dimension `P` up to `256`. 
 - `fp16` accumulation is by default.
 - Index load and stroe is through VLSU. More efficiently is through VSLIDE unit. Could be extended baseline emulation.
 - [TODO] Merge data generation scripts.
-- [TODO] Add test for `vsuxeiX.v` instructions.
 
 
 ### Widening accumulation (18.06.25)
