@@ -1,3 +1,23 @@
+// Copyright 2025 ETH Zurich and University of Bologna.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Author: Bowen Wang, ETH Zurich
+
+// RVV indexed load and store instruction tests
+
 #ifndef _INDEXED_H_
 #define _INDEXED_H_
 
@@ -5,35 +25,19 @@
 #include "flex_printf.h"
 #include "flex_libfp16.h"
 
-#define _AVL (256)
+#define _AVL (128)
+#define PRECISION_8BIT  (8)
+#define PRECISION_16BIT (16)
+#define PRECISION_32BIT (32)
+#define PRECISION_64BIT (64)
+
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
-void l1_layout(uint8_t *addr, uint8_t size){ // size in byte
-    // align the output
-    uint8_t offset = ((uint32_t)addr) % (8*8);
-    uint8_t * addr_aligned = (uint8_t *)((uint32_t)addr - offset);
-    // dump info 8 x 8bytes
-    int8_t size_aligned = size + offset;
-
-    do{
-        printf("0x%8x - 0x%8x >  ", addr_aligned, addr_aligned+8*8-1);
-        for (int j=0; j<4; j++){
-            for (int k=0; k<8; k++){
-                if (k<7) printf("%2x_", addr_aligned[j+k]);
-                else     printf("%2x", addr_aligned[j+k]);
-            }
-            printf("  |  ");
-        }
-        printf("\n");
-        addr_aligned += 4*8;
-        size_aligned -= 4*8;
-    } while (size_aligned>0);
-}
-
+// Indexed load
 uint8_t test_ele8_index8(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 8-bit ele, 8-bit index]\n");
+    printf("[Index Load Tests: 8-bit ele, 8-bit index] ");
     uint8_t * inp_8 = (uint8_t *)ref_inp;
     uint8_t * ind_8 = (uint8_t *)ref_ind;
     uint8_t * oup_8 = (uint8_t *)ref_oup;
@@ -41,10 +45,8 @@ uint8_t test_ele8_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp_8[i] = i+1;
-    printf("[Init inp_8, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind_8[i] = 3*i+1;
-    printf("[Init ind_8, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp_8[i] = 2 * inp_8[ind_8[i]];
@@ -61,7 +63,6 @@ uint8_t test_ele8_index8(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp_8[i] != oup_8[i]) err+=1;
@@ -82,7 +83,7 @@ uint8_t test_ele8_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele8_index16(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 8-bit ele, 16-bit index]\n");
+    printf("[Index Load Tests: 8-bit ele, 16-bit index] ");
     uint8_t  * inp = (uint8_t *)ref_inp;
     uint16_t * ind = (uint16_t *)ref_ind;
     uint8_t  * oup = (uint8_t *)ref_oup;
@@ -90,10 +91,8 @@ uint8_t test_ele8_index16(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -110,7 +109,6 @@ uint8_t test_ele8_index16(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp[i] != oup[i]) err+=1;
@@ -132,7 +130,7 @@ uint8_t test_ele8_index16(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele8_index32(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 8-bit ele, 32-bit index]\n");
+    printf("[Index Load Tests: 8-bit ele, 32-bit index] ");
     uint8_t  * inp = (uint8_t *)ref_inp;
     uint32_t * ind = (uint32_t *)ref_ind;
     uint8_t  * oup = (uint8_t *)ref_oup;
@@ -140,10 +138,8 @@ uint8_t test_ele8_index32(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -160,7 +156,6 @@ uint8_t test_ele8_index32(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp[i] != oup[i]) err+=1;
@@ -182,7 +177,7 @@ uint8_t test_ele8_index32(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele8_index64(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 8-bit ele, 64-bit index]\n");
+    printf("[Index Load Tests: 8-bit ele, 64-bit index] ");
     uint8_t  * inp = (uint8_t *)ref_inp;
     uint64_t * ind = (uint64_t *)ref_ind;
     uint8_t  * oup = (uint8_t *)ref_oup;
@@ -190,10 +185,8 @@ uint8_t test_ele8_index64(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -210,7 +203,6 @@ uint8_t test_ele8_index64(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp[i] != oup[i]) err+=1;
@@ -232,7 +224,7 @@ uint8_t test_ele8_index64(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele16_index8(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 16-bit ele, 8-bit index]\n");
+    printf("[Index Load Tests: 16-bit ele, 8-bit index] ");
     uint16_t  * inp = (uint16_t *)ref_inp;
     uint8_t   * ind = (uint8_t *)ref_ind;
     uint16_t  * oup = (uint16_t *)ref_oup;
@@ -240,10 +232,8 @@ uint8_t test_ele16_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -260,7 +250,6 @@ uint8_t test_ele16_index8(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp[i] != oup[i]){
@@ -285,7 +274,7 @@ uint8_t test_ele16_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele32_index8(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 32-bit ele, 8-bit index]\n");
+    printf("[Index Load Tests: 32-bit ele, 8-bit index] ");
     uint32_t  * inp = (uint32_t *)ref_inp;
     uint8_t   * ind = (uint8_t *)ref_ind;
     uint32_t  * oup = (uint32_t *)ref_oup;
@@ -293,10 +282,8 @@ uint8_t test_ele32_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -313,7 +300,6 @@ uint8_t test_ele32_index8(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
         if (exp[i] != oup[i]){
@@ -338,7 +324,7 @@ uint8_t test_ele32_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 uint8_t test_ele64_index8(void * ref_inp, void * ref_ind, void * ref_oup){
     uint32_t vl;
     uint32_t avl;
-    printf("[Index Load Tests: 64-bit ele, 8-bit index]\n");
+    printf("[Index Load Tests: 64-bit ele, 8-bit index] ");
     uint64_t  * inp = (uint64_t *)ref_inp;
     uint8_t   * ind = (uint8_t *)ref_ind;
     uint64_t  * oup = (uint64_t *)ref_oup;
@@ -346,10 +332,8 @@ uint8_t test_ele64_index8(void * ref_inp, void * ref_ind, void * ref_oup){
 
     // init vector
     for (int i = 0; i < _AVL*8; ++i) inp[i] = i+1;
-    printf("[Init inp, done]\n");
     // init index
     for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
-    printf("[Init ind, done]\n");
     // calculate expected output
     for (int i = 0; i < _AVL; ++i){
         exp[i] = 2 * inp[ind[i]];
@@ -366,9 +350,387 @@ uint8_t test_ele64_index8(void * ref_inp, void * ref_ind, void * ref_oup){
         avl -= vl;
     } while (avl>0);
 
-    printf("[Check indexed load]\n");
     uint8_t err = 0;
     for (int i = 0; i < _AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+// Indexed store
+uint8_t test_st_ele8_index8(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 8-bit ele, 8-bit index] ");
+    uint8_t  * inp = (uint8_t *)ref_inp;
+    uint8_t  * ind = (uint8_t *)ref_ind;
+    uint8_t  * oup = (uint8_t *)ref_oup;
+    uint8_t  * exp = (uint8_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle8.v v0, (%0)" ::"r"(ind));
+        asm volatile("vle8.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei8.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele16_index8(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 16-bit ele, 8-bit index] ");
+    uint16_t  * inp = (uint16_t *)ref_inp;
+    uint8_t   * ind = (uint8_t *)ref_ind;
+    uint16_t  * oup = (uint16_t *)ref_oup;
+    uint16_t  * exp = (uint16_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle8.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle16.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei8.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele32_index8(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 32-bit ele, 8-bit index] ");
+    uint32_t  * inp = (uint32_t *)ref_inp;
+    uint8_t   * ind = (uint8_t *)ref_ind;
+    uint32_t  * oup = (uint32_t *)ref_oup;
+    uint32_t  * exp = (uint32_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e32, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle8.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle32.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei8.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele64_index8(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 64-bit ele, 8-bit index] ");
+    uint64_t  * inp = (uint64_t *)ref_inp;
+    uint8_t   * ind = (uint8_t *)ref_ind;
+    uint64_t  * oup = (uint64_t *)ref_oup;
+    uint64_t  * exp = (uint64_t *)local(0x10000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e64, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle8.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle64.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei8.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    int8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err = err + 1;
+            printf("exp: %d, oup: %d, err: %d\n", exp[i], oup[i], err);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele16_index16(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 16-bit ele, 16-bit index] ");
+    uint16_t  * inp = (uint16_t *)ref_inp;
+    uint16_t  * ind = (uint16_t *)ref_ind;
+    uint16_t  * oup = (uint16_t *)ref_oup;
+    uint16_t  * exp = (uint16_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle16.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle16.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei16.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele16_index32(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 16-bit ele, 32-bit index] ");
+    uint16_t  * inp = (uint16_t *)ref_inp;
+    uint32_t  * ind = (uint32_t *)ref_ind;
+    uint16_t  * oup = (uint16_t *)ref_oup;
+    uint16_t  * exp = (uint16_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle32.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle16.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei32.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
+        if (exp[i] != oup[i]){
+            err+=1;
+            printf("exp: %d, oup: %d\n", exp[i], oup[i]);
+        } 
+    }
+    printf(">>> %d error(s) out of %d checks\n\n", err, _AVL);
+
+    // clean up
+    for (int i = 0; i < _AVL; ++i){
+        for (int j=0; j<8; j++){
+            inp[i*8+j] = 0;
+        }
+        ind[i] = 0;
+        exp[i] = 0;
+        oup[i] = 0;
+    }
+    return err;
+}
+
+uint8_t test_st_ele16_index64(void * ref_inp, void * ref_ind, void * ref_oup){
+    uint32_t vl;
+    uint32_t avl;
+    printf("[Index Store Tests: 16-bit ele, 64-bit index] ");
+    uint16_t  * inp = (uint16_t *)ref_inp;
+    uint64_t  * ind = (uint64_t *)ref_ind;
+    uint16_t  * oup = (uint16_t *)ref_oup;
+    uint16_t  * exp = (uint16_t *)local(0x8000);
+
+    // init vector
+    for (int i = 0; i < _AVL; ++i) inp[i] = i+1;
+    // init output
+    for (int i = 0; i < 8 * _AVL; ++i) {
+        oup[i] = 0;
+        exp[i] = 0;
+    }
+    // init index
+    for (int i = 0; i < _AVL; ++i) ind[i] = 3*i+1;
+    // calculate expected output
+    for (int i = 0; i < _AVL; ++i){
+        exp[ind[i]] = inp[i];
+    }
+
+    // index load
+    avl = _AVL;
+    do{
+        asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        asm volatile("vle64.v  v0, (%0)" ::"r"(ind));
+        asm volatile("vle16.v v2, (%0)" ::"r"(inp));
+        asm volatile("vsuxei64.v v2, (%0), v0" ::"r"(oup));
+        avl -= vl;
+    } while (avl>0);
+
+    uint8_t err = 0;
+    for (int i = 0; i < 8*_AVL; ++i){
         if (exp[i] != oup[i]){
             err+=1;
             printf("exp: %d, oup: %d\n", exp[i], oup[i]);
@@ -406,12 +768,23 @@ void test_spatz_indexed(){
         tot_err += test_ele16_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele32_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele64_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele8_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele32_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele64_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index16(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index32(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index64(ref_inp, ref_ind, ref_oup);
 
         ref_inp = (void *)local(0x2003);
         tot_err += test_ele8_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index16(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index32(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele8_index64(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele8_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele32_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele64_index8(ref_inp, ref_ind, ref_oup);
 
         ref_inp = (void *)local(0x2000);
         ref_ind = (void *)local(0x4005);
@@ -419,6 +792,10 @@ void test_spatz_indexed(){
         tot_err += test_ele16_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele32_index8(ref_inp, ref_ind, ref_oup);
         tot_err += test_ele64_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele8_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele16_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele32_index8(ref_inp, ref_ind, ref_oup);
+        tot_err += test_st_ele64_index8(ref_inp, ref_ind, ref_oup);
 
         printf(">>> tot_error: %d\n", tot_err);
     }

@@ -2,6 +2,7 @@
 #include "spatz_check.h"
 #include "spatz_indexed_check.h"
 #include "spatz_fp8_check.h"
+#include "spatz_custom_isa.h"
 #include <math.h>
 
 int main()
@@ -16,6 +17,7 @@ int main()
     test_spatz();
     test_spatz_indexed();
     test_spatz_fp8();
+    test_spatz_isa();
     /**************************************/
     /*  Program Execution Region -- Stop  */
     /**************************************/

@@ -25,7 +25,7 @@
 #include "flex_printf.h"
 #include "flex_libfp8.h"
 
-#include "spatz_fp8_check_data.h"
+#include "data_spatz_fp8_check.h"
 
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
@@ -40,23 +40,27 @@ void test_spatz_fp8(){
 
     if (CID == 0 && core_id == 0)
     {
-        uint8_t *vector_a   = (uint8_t *)flex_l1_malloc(_AVL);
-        uint8_t *vector_b   = (uint8_t *)flex_l1_malloc(_AVL);
-        uint8_t *vector_c   = (uint8_t *)flex_l1_malloc(_AVL);
-        uint8_t *vector_res = (uint8_t *)flex_l1_malloc(_AVL);
+        uint8_t *vector_a   = (uint8_t *)flex_l1_malloc(_AVL * sizeof(uint8_t));
+        uint8_t *vector_b   = (uint8_t *)flex_l1_malloc(_AVL * sizeof(uint8_t));
+        uint8_t *vector_c   = (uint8_t *)flex_l1_malloc(_AVL * sizeof(uint8_t));
+        uint8_t *vector_res = (uint8_t *)flex_l1_malloc(_AVL * sizeof(uint8_t));
+        // for widening instructions
+        uint16_t *vector_16_c   = (uint16_t *)flex_l1_malloc(_AVL * sizeof(uint16_t));
+        uint16_t *vector_16_res = (uint16_t *)flex_l1_malloc(_AVL * sizeof(uint16_t));
         // data movement
         for (uint32_t i=0; i<_AVL; i++){
             vector_a[i] = vector_a_fp8[i];
             vector_b[i] = vector_b_fp8[i];
             vector_c[i] = vector_c_fp8[i];
+            vector_16_c[i] = vector_c_fp16[i];
         }
 
-        // float scalar_s  = (float)s_fp8[0]; // put this element in fp register
-        float scalar_s;
-        set_lower_byte(&scalar_s, s_fp8[0]);
+        // load scalar
+        asm volatile("flw fa0, (%0)" :: "r"(s_fp8));
 
         uint32_t avl, vl, p;
         uint8_t *p_a, *p_b, *p_c, *p_res;
+        uint16_t *p_c_16, *p_res_16;
         // vfadd.vv
         printf("[ins] vfadd.vv \n");
         avl = _AVL;
@@ -73,7 +77,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_add_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_add_vv_fp8, 0.25f);
 
         // vfsub.vv
         printf("[ins] vfsub.vv \n");
@@ -91,7 +95,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_sub_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_sub_vv_fp8, 0.25f);
 
         // vfmin.vv
         printf("[ins] vfmin.vv \n");
@@ -109,7 +113,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_min_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_min_vv_fp8, 0.25f);
 
         // vfmax.vv
         printf("[ins] vfmax.vv \n");
@@ -127,7 +131,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_max_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_max_vv_fp8, 0.25f);
 
         // vfmul.vv
         printf("[ins] vfmul.vv \n");
@@ -145,7 +149,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_mul_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_mul_vv_fp8, 0.25f);
 
         // vfmadd.vv
         printf("[ins] vfmadd.vv \n");
@@ -165,7 +169,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_madd_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_madd_vv_fp8, 0.25f);
 
         // vfmacc.vv
         printf("[ins] vfmacc.vv \n");
@@ -185,7 +189,7 @@ void test_spatz_fp8(){
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_macc_vv_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_macc_vv_fp8, 0.25f);
 
         // vfadd.vf
         printf("[ins] vfadd.vf \n");
@@ -196,12 +200,12 @@ void test_spatz_fp8(){
             p_res = vector_res + p;
             asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
             asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
-            asm volatile("vfadd.vf v8, v0, %0" ::"f"(scalar_s)); // res = a + broadcast(s);
+            asm volatile("vfadd.vf v8, v0, fa0"); // res = a + broadcast(s);
             asm volatile("vse8.v v8, (%0)" ::"r"(p_res));
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_add_vf_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_add_vf_fp8, 0.25f);
 
         // vfsub.vf
         printf("[ins] vfsub.vf \n");
@@ -212,12 +216,12 @@ void test_spatz_fp8(){
             p_res = vector_res + p;
             asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
             asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
-            asm volatile("vfsub.vf v8, v0, %0" ::"f"(scalar_s)); // res = a - broadcast(s);
+            asm volatile("vfsub.vf v8, v0, fa0"); // res = a - broadcast(s);
             asm volatile("vse8.v v8, (%0)" ::"r"(p_res));
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_sub_vf_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_sub_vf_fp8, 0.25f);
 
         // vfmul.vf
         printf("[ins] vfmul.vf \n");
@@ -228,12 +232,12 @@ void test_spatz_fp8(){
             p_res = vector_res + p;
             asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
             asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
-            asm volatile("vfmul.vf v8, v0, %0" ::"f"(scalar_s)); // res = a - broadcast(s);
+            asm volatile("vfmul.vf v8, v0, fa0"); // res = a - broadcast(s);
             asm volatile("vse8.v v8, (%0)" ::"r"(p_res));
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_mul_vf_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_mul_vf_fp8, 0.25f);
 
         // vfmadd.vf
         printf("[ins] vfmadd.vf \n"); // C = C x s + A
@@ -241,16 +245,17 @@ void test_spatz_fp8(){
         p = 0;
         do{
             p_a = vector_a + p;
+            p_c = vector_c + p;
             p_res = vector_res + p;
             asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
             asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
             asm volatile("vle8.v v8, (%0)" ::"r"(p_c));
-            asm volatile("vfmadd.vf v8, %0, v0" ::"f"(scalar_s));
+            asm volatile("vfmadd.vf v8, fa0, v0");
             asm volatile("vse8.v v8, (%0)" ::"r"(p_res));
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_madd_vf_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_madd_vf_fp8, 0.25f);
 
         // vfmacc.vf
         printf("[ins] vfmacc.vf \n"); // C = A x s + C
@@ -258,16 +263,84 @@ void test_spatz_fp8(){
         p = 0;
         do{
             p_a = vector_a + p;
+            p_c = vector_c + p;
             p_res = vector_res + p;
             asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
             asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
             asm volatile("vle8.v v8, (%0)" ::"r"(p_c));
-            asm volatile("vfmacc.vf v8, %0, v0" ::"f"(scalar_s));
+            asm volatile("vfmacc.vf v8, fa0, v0");
             asm volatile("vse8.v v8, (%0)" ::"r"(p_res));
             avl -= vl;
             p += vl;
         } while (avl>0);
-        spatz_verify(_AVL, vector_res, vector_c_macc_vf_fp8);
+        spatz_verify(_AVL, vector_res, vector_c_macc_vf_fp8, 0.25f);
+
+        // Widening instructions
+        // vfwadd.vf
+        printf("[ins] vfwadd.vf \n");
+        avl = _AVL;
+        p = 0;
+        do{
+            p_a = vector_a + p;
+            p_res_16 = vector_16_res + p;
+            asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
+            asm volatile("vfwadd.vf v8, v0, fa0"); // res = a - broadcast(s);
+            asm volatile("vse16.v v8, (%0)" ::"r"(p_res_16));
+            avl -= vl;
+            p += vl;
+        } while (avl>0);
+        spatz_verify_16(_AVL, vector_16_res, vector_c_wadd_vf_fp8, 0.0f);
+
+        // vfwsub.vf
+        printf("[ins] vfwsub.vf \n");
+        avl = _AVL;
+        p = 0;
+        do{
+            p_a = vector_a + p;
+            p_res_16 = vector_16_res + p;
+            asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
+            asm volatile("vfwsub.vf v8, v0, fa0"); // res = a - broadcast(s);
+            asm volatile("vse16.v v8, (%0)" ::"r"(p_res_16));
+            avl -= vl;
+            p += vl;
+        } while (avl>0);
+        spatz_verify_16(_AVL, vector_16_res, vector_c_wsub_vf_fp8, 0.0f);
+
+        // vfwmul.vf
+        printf("[ins] vfwmul.vf \n");
+        avl = _AVL;
+        p = 0;
+        do{
+            p_a = vector_a + p;
+            p_res_16 = vector_16_res + p;
+            asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
+            asm volatile("vfwmul.vf v8, v0, fa0"); // res = a - broadcast(s);
+            asm volatile("vse16.v v8, (%0)" ::"r"(p_res_16));
+            avl -= vl;
+            p += vl;
+        } while (avl>0);
+        spatz_verify_16(_AVL, vector_16_res, vector_c_wmul_vf_fp8, 0.0f);
+
+        // vfwmacc.vf
+        printf("[ins] vfwmacc.vf \n");
+        avl = _AVL;
+        p = 0;
+        do{
+            p_a = vector_a + p;
+            p_c_16 = vector_16_c + p;
+            p_res_16 = vector_16_res + p;
+            asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(avl));
+            asm volatile("vle8.v v0, (%0)" ::"r"(p_a));
+            asm volatile("vle16.v v8, (%0)" ::"r"(p_c_16));
+            asm volatile("vfwmacc.vf v8, fa0, v0");
+            asm volatile("vse16.v v8, (%0)" ::"r"(p_res_16));
+            avl -= vl;
+            p += vl;
+        } while (avl>0);
+        spatz_verify_16(_AVL, vector_16_res, vector_c_wmacc_vf_fp8, 0.0f);
     }
 
     flex_global_barrier_xy();//Global barrier

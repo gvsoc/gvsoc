@@ -17,8 +17,21 @@
 #include "flex_runtime.h"
 
 #include "spatz_matmul.h"
-#include "data_spatz_matmul_fp8.h"
+#include "data_spatz_sp_matmul_fp8.h"
 #include <math.h>
+
+// input output type define
+// value aligned with byte-width
+// TYPE (1): fp8
+// TYPE (2): fp16
+// TYPE (4): fp32
+#ifndef _FLEX_TYPE
+#define _FLEX_TYPE
+#define _IN_TYPE  (1)
+#define _OUT_TYPE (2)
+#define _IDX_COMPACT (1)
+#define _IDX_TYPE (_IDX_COMPACT)
+#endif
 
 int main()
 {
@@ -38,23 +51,80 @@ int main()
     uint32_t core_id = flex_get_core_id();
 
     if (core_id == 0 && CID == 0){
-        // allocation
-        uint8_t *matrix_a = (uint8_t *)flex_l1_malloc(FP8_M * FP8_N);
-        uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P);
-        uint8_t *matrix_c = (uint8_t *)flex_l1_malloc(FP8_M * FP8_P);
+        // Step1: allocation
+        uint8_t *matrix_a = (uint8_t *)flex_l1_malloc(FP8_M * FP8_N * sizeof(uint8_t));
+        #ifndef __SPARSE__
+        uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * sizeof(uint8_t));
+        #else
+        uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t));
+        #if _IDX_TYPE == _IDX_COMPACT
+        uint8_t *index_b  = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t) / _IDX_PER_BYTE);
+        #else
+        uint8_t *index_b  = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t));
+        #endif // _IDX_TYPE == _IDX_COMPACT
+        #endif // __SPARSE__ allocation
 
-        // data movement
+        #if _OUT_TYPE == 1
+        uint8_t *matrix_c = (uint8_t *)flex_l1_malloc(FP8_M * FP8_P * sizeof(uint8_t));
+        #elif _OUT_TYPE == 2
+        uint16_t *matrix_c = (uint16_t *)flex_l1_malloc(FP8_M * FP8_P * sizeof(uint16_t));
+        #else
+            #error "Unsupported _OUT_TYPE value"
+        #endif // _OUT_TYPE
+
+        // Step 2: data movement
         for (uint32_t i=0; i<FP8_M * FP8_N; i++){
             matrix_a[i] = matrix_a_fp8[i];
         }
+        #ifndef __SPARSE__
         for (uint32_t i=0; i<FP8_N * FP8_P; i++){
             matrix_b[i] = matrix_b_fp8[i];
         }
+        #else
 
-        spatz_matmul(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        #if _IDX_TYPE == _IDX_COMPACT
+        for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM; i++){
+            matrix_b[i] = matrix_b_compact_fp8[i];
+        }
+        for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM / _IDX_PER_BYTE; i++){
+            // less movement required for compact indices
+            index_b[i] = matrix_b_index_compact_uint8[i];
+        }
+        #else
+        for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM; i++){
+            matrix_b[i] = matrix_b_compact_fp8[i];    
+            index_b[i] = matrix_b_index_uint8[i];
+        }
+        #endif // _IDX_TYPE == _IDX_COMPACT
+
+        for (uint32_t i=0; i<FP8_M * FP8_P; i++){
+            matrix_c[i] = 0; // init matrix c
+        }
+        #endif // __SPARSE__ data movement
+
+        // Step 3: Compute
+        flex_timer_start();
+        #if _OUT_TYPE == 1
+        spatz_matmul_fp8(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        // verify
+        spatz_verify(FP8_M * FP8_P, matrix_c, matrix_c_fp8, 0.25f);
+        #elif _OUT_TYPE == 2
+
+        #ifndef __SPARSE__
+        spatz_matmul_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        #else
+
+        #if _IDX_TYPE == _IDX_COMPACT
+        spatz_AspB_matmul_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        #else
+        spatz_AspB_matmul_fp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        #endif
+        #endif // __SPARSE__ compute
+        flex_timer_end();
 
         // verify
-        spatz_verify(FP8_M * FP8_P, matrix_c, matrix_c_fp8);
+        spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
+        #endif // _OUT_TYPT compute
     }
 
     /**************************************/
