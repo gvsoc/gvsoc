@@ -194,7 +194,7 @@ void spatz_AspB_matmul_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint16_t* ma
                 // load index 
                 uint8_t *p_index = &index_b[(p + n*P*spN/spM)/IDX_PER_BYTE];
                 asm volatile("vle8.v v8, (%0)" ::"r"(p_index));
-
+                // flex_timer_start();
                 if (n==0){ // first iter
                     // reset registers
                     asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl_dump) : "r"(2*avl));
@@ -221,8 +221,9 @@ void spatz_AspB_matmul_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint16_t* ma
                                 (0b10000   <<  7) | \
                                 (0b1010110 <<  0)   \n");
                 }
+                // flex_timer_end();
             }
-            asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
+            asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
             asm volatile("vse16.v v16, (%0)" ::"r"(p_c));
             asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(avl));
         }

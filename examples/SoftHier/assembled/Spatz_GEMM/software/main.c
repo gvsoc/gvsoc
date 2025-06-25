@@ -103,6 +103,7 @@ int main()
         #endif // __SPARSE__ data movement
 
         // Step 3: Compute
+        flex_timer_start();
         #if _OUT_TYPE == 1
         spatz_matmul_fp8(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
         // verify
@@ -119,6 +120,7 @@ int main()
         spatz_AspB_matmul_fp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         #endif
         #endif // __SPARSE__ compute
+        flex_timer_end();
 
         // verify
         spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
