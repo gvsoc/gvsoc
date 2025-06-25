@@ -275,6 +275,7 @@ def write_index_to_header(f, name, mat, fmt='nm2bit', dtype='uint8_t'):
     if fmt == 'nm2bit':
         # Check that number of elements is divisible by 4
         assert len(flat) % 4 == 0, "Length of index matrix must be divisible by 4 for 2-bit packing"
+        f.write(f'#define _IDX_PER_BYTE (4)\n\n')
 
         packed = []
         for i in range(0, len(flat), 4):
