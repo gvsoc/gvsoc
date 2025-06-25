@@ -266,3 +266,31 @@ def write_matrix_to_header(f, name, mat, fmt='e4m3', dtype='uint8_t'):
         if (i + 1) % 8 == 0:
             f.write('\n')
     f.write('};\n\n')
+    
+    
+def write_index_to_header(f, name, mat, fmt='nm2bit', dtype='uint8_t'):
+    """Write a flattened matrix to C header with optional compact formats."""
+    flat = mat.flatten()
+    
+    if fmt == 'nm2bit':
+        # Check that number of elements is divisible by 4
+        assert len(flat) % 4 == 0, "Length of index matrix must be divisible by 4 for 2-bit packing"
+
+        packed = []
+        for i in range(0, len(flat), 4):
+            b0 = flat[i]   & 0x03
+            b1 = flat[i+1] & 0x03
+            b2 = flat[i+2] & 0x03
+            b3 = flat[i+3] & 0x03
+            byte = (b3 << 6) | (b2 << 4) | (b1 << 2) | b0
+            packed.append(byte)
+
+        f.write(f'__attribute__((section(".hbm"))) static const uint8_t {name}[{len(packed)}] = {{\n')
+        for i, val in enumerate(packed):
+            f.write(f'  0x{val:02X},')
+            if (i + 1) % 8 == 0:
+                f.write('\n')
+        f.write('};\n\n')
+
+    else:
+        raise ValueError(f"Unsupported format: {fmt}")
