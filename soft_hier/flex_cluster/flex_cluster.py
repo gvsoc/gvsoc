@@ -200,7 +200,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         hbm_ctrl_list_south = []
         for hbm_ct in range(num_hbm_ctrl_x):
             nb_slaves=ctrl_chan_south
-            hbm_ctrl_list_south.append(hbm_ctrl(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling))
+            hbm_ctrl_list_south.append(hbm_ctrl(self, f'south_hbm_ctrl_{hbm_ct}', nb_slaves=nb_slaves, nb_masters=arch.num_node_per_ctrl, interleaving_bits=int(math.log2(arch.noc_link_width/8)), node_addr_offset=arch.hbm_node_addr_space, hbm_node_aliase=arch.hbm_node_aliase, xor_scrambling=arch.hbm_ctrl_xor_scrambling, red_scrambling=arch.hbm_ctrl_red_scrambling, fall_through=1))
             pass
 
         #NoC

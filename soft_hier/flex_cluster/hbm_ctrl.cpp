@@ -55,6 +55,7 @@ private:
   uint64_t hbm_node_aliase;
   uint64_t xor_scrambling;
   uint64_t red_scrambling;
+  uint64_t fall_through;
 };
 
 hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
@@ -73,6 +74,7 @@ hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
   hbm_node_aliase = get_js_config()->get_child_int("hbm_node_aliase");
   xor_scrambling = get_js_config()->get_child_int("xor_scrambling");
   red_scrambling = get_js_config()->get_child_int("red_scrambling");
+  fall_through = get_js_config()->get_child_int("fall_through");
 
   if (stage_bits == 0)
   {
@@ -129,6 +131,12 @@ vp::IoReqStatus hbm_ctrl::req_muxed(vp::Block *__this, vp::IoReq *req, int mux_i
   uint64_t size = req->get_size();
   uint8_t *data = req->get_data();
   uint64_t node_size = _this->node_addr_offset;
+
+  if (_this->fall_through)
+  {
+    req->set_addr(offset);
+    return _this->out[mux_id]->req_forward(req);
+  }
 
   if (_this->hbm_node_aliase > 1)
   {
