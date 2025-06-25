@@ -29,6 +29,8 @@
 #define _FLEX_TYPE
 #define _IN_TYPE  (1)
 #define _OUT_TYPE (2)
+#define _IDX_COMPACT (1)
+#define _IDX_TYPE (_IDX_COMPACT)
 #endif
 
 int main()
@@ -55,8 +57,12 @@ int main()
         uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * sizeof(uint8_t));
         #else
         uint8_t *matrix_b = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t));
+        #if _IDX_TYPE == _IDX_COMPACT
+        uint8_t *index_b  = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t) / _IDX_PER_BYTE);
+        #else
         uint8_t *index_b  = (uint8_t *)flex_l1_malloc(FP8_N * FP8_P * spN/spM * sizeof(uint8_t));
-        #endif //__SPARSE__ allocation
+        #endif // _IDX_TYPE == _IDX_COMPACT
+        #endif // __SPARSE__ allocation
 
         #if _OUT_TYPE == 1
         uint8_t *matrix_c = (uint8_t *)flex_l1_malloc(FP8_M * FP8_P * sizeof(uint8_t));
@@ -75,10 +81,22 @@ int main()
             matrix_b[i] = matrix_b_fp8[i];
         }
         #else
+
+        #if _IDX_TYPE == _IDX_COMPACT
         for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM; i++){
             matrix_b[i] = matrix_b_compact_fp8[i];
+        }
+        for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM / _IDX_PER_BYTE; i++){
+            // less movement required for compact indices
+            index_b[i] = matrix_b_index_compact_uint8[i];
+        }
+        #else
+        for (uint32_t i=0; i<FP8_N * FP8_P * spN/spM; i++){
+            matrix_b[i] = matrix_b_compact_fp8[i];    
             index_b[i] = matrix_b_index_uint8[i];
         }
+        #endif // _IDX_TYPE == _IDX_COMPACT
+
         for (uint32_t i=0; i<FP8_M * FP8_P; i++){
             matrix_c[i] = 0; // init matrix c
         }
@@ -94,7 +112,12 @@ int main()
         #ifndef __SPARSE__
         spatz_matmul_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
         #else
+
+        #if _IDX_TYPE == _IDX_COMPACT
+        spatz_AspB_matmul_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        #else
         spatz_AspB_matmul_fp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        #endif
         #endif // __SPARSE__ compute
 
         // verify

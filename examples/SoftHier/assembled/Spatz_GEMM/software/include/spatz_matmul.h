@@ -165,4 +165,70 @@ void spatz_AspB_matmul_fp16(uint8_t* matrix_a, uint8_t* matrix_b, uint16_t* matr
     } while (avl>0);
 }
 
+// sparse matmul [Gustav], AspB, input _fp8, index _uint2, output _fp16
+// effective output elements are gather/scatter with VLSU
+#define IDX_PER_BYTE (4)
+void spatz_AspB_matmul_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint16_t* matrix_c, uint8_t* index_b,
+                  const uint32_t M, const uint32_t N, const uint32_t P, 
+                  const uint8_t spN, const uint8_t spM){
+
+    // init counters
+    uint32_t p = 0;
+
+    uint32_t avl = P * spN / spM;
+    uint32_t vl, vl_dump;
+
+    do{ // outer loop 
+        asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(avl));
+        for (uint32_t m = 0; m < M; m++){ // mid loop
+            uint16_t *p_c = matrix_c + m*P + p;
+            for (uint32_t n = 0; n < N; n++){
+                // load a
+                uint8_t *p_a = &matrix_a[m*N + n];
+                asm volatile("flw ft0, (%0)" :: "r"(p_a));
+
+                // load b vec
+                uint8_t *p_b = &matrix_b[p + n*P*spN/spM];
+                asm volatile("vle8.v v0, (%0)" ::"r"(p_b));
+
+                // load index 
+                uint8_t *p_index = &index_b[(p + n*P*spN/spM)/IDX_PER_BYTE];
+                asm volatile("vle8.v v8, (%0)" ::"r"(p_index));
+
+                if (n==0){ // first iter
+                    // reset registers
+                    asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl_dump) : "r"(2*avl));
+                    asm volatile("vmv.v.i v16, 0");
+                    asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(avl));
+                    // vfwxmul.vf _inp, _idx, _fp, _oup
+                    asm volatile(
+                        ".word  (0b110011  << 26) | \
+                                (0b1       << 25) | \
+                                (0b00000   << 20) | \
+                                (0b01000   << 15) | \
+                                (0b000     << 12) | \
+                                (0b10000   <<  7) | \
+                                (0b1010110 <<  0)   \n");
+                    
+                } else {
+                    // vfwxmacc.vf _inp, _idx, _fp, _oup
+                    asm volatile(
+                        ".word  (0b110001  << 26) | \
+                                (0b1       << 25) | \
+                                (0b00000   << 20) | \
+                                (0b01000   << 15) | \
+                                (0b000     << 12) | \
+                                (0b10000   <<  7) | \
+                                (0b1010110 <<  0)   \n");
+                }
+            }
+            asm volatile("vsetvli %0, %1, e8, m4, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
+            asm volatile("vse16.v v16, (%0)" ::"r"(p_c));
+            asm volatile("vsetvli %0, %1, e8, m8, ta, ma" : "=r"(vl) : "r"(avl));
+        }
+        avl -= vl;
+        p += vl;
+    } while (avl>0);
+}
+
 #endif
