@@ -10,6 +10,19 @@ cfg={SOFTHIER_ROOT}/examples/SoftHier/assembled/Spatz_GEMM/config/arch_spatz.py 
 
 ## Updates
 
+### Merged dense/sparse data generation script
+How to use:
+```tcl
+# for dense 
+python examples/SoftHier/assembled/Spatz_GEMM/software/util/spatz_matmul_datagen.py -M 32 -N 32 -P 32 -spN 2 -spM 4
+
+# for sparse (index fp8)
+python examples/SoftHier/assembled/Spatz_GEMM/software/util/spatz_matmul_datagen.py -M 32 -N 32 -P 32 -spN 2 -spM 4 --sparse
+
+# for sparse (compact)
+python examples/SoftHier/assembled/Spatz_GEMM/software/util/spatz_matmul_datagen.py -M 32 -N 32 -P 32 -spN 2 -spM 4 --sparse --idx_compact
+```
+
 ### Add compact index tensor generator (25.06.25)
 In this update, data generator script for compact N:M format has been added `write_index_to_header()`.
 - Currently only support 2:4 format for verification
