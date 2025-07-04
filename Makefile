@@ -203,6 +203,19 @@ runv_simple:
 rund:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace-level=6 --trace=/chip/cluster_4/pe0/insn
 
+run_spatz:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster \
+		--binary sw_build/softhier.elf run $(preload_arg) \
+		--trace=/chip/cluster_0/pe0/insn \
+		--trace=spatz \
+		| tee sw_build/analyze_trace.txt; \
+	if [ -n "$(trace_name)" ]; then \
+		cp sw_build/analyze_trace.txt ./$(trace_name)_trace.txt; \
+		echo "Copied trace to ./$(trace_name)_trace.txt"; \
+	else \
+		echo "No trace_name specified. File kept as sw_build/analyze_trace.txt"; \
+	fi
+
 ######################################################################
 ## 				Make Targets for Trace Analyzer		 				##
 ######################################################################
@@ -214,3 +227,20 @@ endif
 pfto:
 	python soft_hier/flex_cluster_utilities/trace_perfetto/parse.py $(trace_file) sw_build/roi.json
 	python soft_hier/flex_cluster_utilities/trace_perfetto/visualize.py sw_build/roi.json -o sw_build/perfetto.json
+
+
+pfto_spatz:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster \
+		--binary sw_build/softhier.elf run $(preload_arg) \
+		--trace-level=trace \
+		--trace="/chip/cluster_0/*" \
+		--trace="icache" \
+		| tee $(trace_file); \
+	if [ -n "$(trace_name)" ]; then \
+		out_name=$(trace_name)_trace; \
+	else \
+		out_name=perfetto; \
+	fi; \
+	python soft_hier/flex_cluster_utilities/trace_perfetto/parse.py $(trace_file) sw_build/roi.json; \
+	python soft_hier/flex_cluster_utilities/trace_perfetto/visualize.py sw_build/roi.json -o ./$$out_name.json; \
+	echo "Generated ./$$out_name.json"
