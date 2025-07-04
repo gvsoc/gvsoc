@@ -28,8 +28,8 @@ def main():
     parser.add_argument('-P', type=int, required=True, default=16, help='Number of columns in matrix B and C')
     # sparsity format: N:M
     parser.add_argument('--sparse', action='store_true', help='Enable sparsity generation')
-    parser.add_argument('-spN', type=int, required=True, default=2, help='[N]:M format')
-    parser.add_argument('-spM', type=int, required=True, default=4, help='N:[M] format')
+    parser.add_argument('-spN', type=int, default=2, help='[N]:M format')
+    parser.add_argument('-spM', type=int, default=4, help='N:[M] format')
     parser.add_argument('--idx_compact', action='store_true', help='Store index compactly')
     # data format
     parser.add_argument('--input_format', choices=['e4m3', 'e5m2'], default='e5m2',
