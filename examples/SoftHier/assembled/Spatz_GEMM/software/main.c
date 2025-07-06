@@ -17,21 +17,8 @@
 #include "flex_runtime.h"
 
 #include "spatz_matmul.h"
-#include "data_spatz_sp_matmul_fp8.h"
+#include "data_spatz_matmul_fp8.h"
 #include <math.h>
-
-// input output type define
-// value aligned with byte-width
-// TYPE (1): fp8
-// TYPE (2): fp16
-// TYPE (4): fp32
-#ifndef _FLEX_TYPE
-#define _FLEX_TYPE
-#define _IN_TYPE  (1)
-#define _OUT_TYPE (2)
-#define _IDX_COMPACT (1)
-#define _IDX_TYPE (_IDX_COMPACT)
-#endif
 
 int main()
 {
