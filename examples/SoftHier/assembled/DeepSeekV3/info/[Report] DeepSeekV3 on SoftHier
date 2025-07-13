@@ -1,0 +1,392 @@
+Ciao Luca,
+
+Welcome back from your holiday! hope you enjoyed. During these WR-less days I did an end-to-end DeepSeekV3 decoding on SoftHier Platform and did a lot of experiment and evaluation. here I write this report for you, It would take around 7min for reading.
+
+Improvement for SoftHier HW
+
+before we go into the SW level discussion, I would first talk about what I add in SoftHier HW. there are mainly two parts:
+1.Add an matrix transpose engine in Each cluster tile:
+	the design is simply following the DataMover in Darkside chip. the engine is mainly for efficient matrix transposition in kernels of MLA and MOE_Gate
+2.HBM Ctrl port aliasing
+	In previous SoftHier design, we are give each HBM CTRL port a unique address space for main memory, in that case SoftHier's programming model is a disaggragate memory model, this need programmer to carefully think about how to split there matrix to which disaggragate memory. as you see in Aofeng's thesis for different kerenls we are having different data layout scheme in different HBM channels. Such a static solution is not flexible for the need of end-to-end application, which has a chain of different shape of kernels. Moreover we have to realize the dynamic intrinc for end-to-end deployment, which a static solution is not a good answer, I will give 3 typical examples: a. dynamic seqeunce length when serving for decoding and prefilling at runtime; b. various shape of kerenls are one after another; c. matrix concat needed with KV cache growing.
+	To solve this we want, at lease for HBM ports on one side, are sharing one uinfied address space, and cluster accessing matrix tiles using 2D DMA transfer. for each port sharing the same address space, we are separate them using address bits > 48, this allows also different cluster to manage which port to go, having better control of NoC traffic. and for ports sharing the same address space, inside the HBM CTRL, there are a Xbar to manage them with neccesary address scrambling to make evenly interleaving. I add one configuration entry for SoftHier to define how many ports are sharing the same address space.
+
+
+
+
+
+DeepSeekV3 One Layer Kernel Fuse, Transformation and Dataflow Animation on SoftHier 
+
+To not wasting your time and make you understand quickly how the dataflow is designed for one layer of DeepSeekV3 on SoftHier, I make the following animation, if your emial browser does not support it, you can find the "dataflow.gif" or "dataflow.pptx" in the attachements.
+
+There are 2 key points:
+1. Use the weight absorption tricks and our FlatMLA dataflow for DeepSeekMLA. for details you can find my previous WR23 and the attached "MLA_can_be_compute_bound_for_decode.pptx". the key finding is, even for decoding our FlatMLA can reach to high utilization, especially with sepculative decoding with >= 4 speculative draft length, see the figure below
+
+2. For Routed Experts in MoE part, we apply dispatch-compute-combine fashion
+dispatch: sending tokens to a new place where tokens use the same expert are gathered together
+combine: Expert output are weighted, reduced according to which token it origin from.
+
+
+
+
+Experiment setup
+
+1. SoftHier configured with 1024TFLOPs @FP16, 4TB/s HBM BW (2TB/s for west and south edge of die), HBM port from on edge are all aliased.
+detail configuration listed below
+2. We only did Docoding evaluation, under the situation of LLM serving for massive users (free to chose batch size), considering a speculative decoding with k=4, assuming accepetaed rate of 0.75. see below the reference for various speculative token acceptance rate
+3. assuming every user has the same KV cache length of 4096, and Expert routing are balanced, ie each expert will be equvalently selected.
+4. we use the Full DeepSeek configuration of 671B parameter, of course one SoftHier chip can not hold all parameters, we considering a pipeline parallelsim that each SoftHier deal with one layer, and 61 Chips are chained together
+5. key metrix: for severing LLM decoding, there are two key metrix: throughput, normally we normalize to each Chip, unit = token/s/chip and TPOT, time per output token, TPOT is from each user's prespective, what is the average interval of each token output for user. normally we want to maximum througput but keep TPOT < 100ms, namely each user feel > 10 token/s, where human feel fluence flow. Normally throughput incresae will cuase TPOT increase.
+
+
+Result of PP (Pipeline Parallelsim)
+
+The first plot shows overall performance (per chip throughput and TPOT) with batch size per chip
+The second plot shows the runtime breakdown and each kernel's utilzaiton and overall utilization at different batch size per chip
+
+we can see that Pipeline Parallelsim can not meet the basic TPOT constraint (127ms > 100ms) even at very low batch size per chip, when looking at the runtime breakdown, under low batch size, most of the time are spend in MoE computation, but with very low utilzation. why? becasue each expert only takle a few tokens, for eample, under our balanced expert load assumption, If batch 8 user per chip, each routed expert shares = 8 * 4 (speculative draft length) * 8 (selected expert per token) / 256 (number of tatol routed experts) = 1 token, which each expert compute undergoing a GEMV-like fashion, we have to iterate for 256 differnt experts. this become a very big bottelneck for a purly Pipeline Parallelsim scheme. when we slightly improve the batch size per chip, even to a very aggresive value of 64k, the MoE part are improving their utilzaiton and runtime percentage is shrinking, however the MLA part become dominate because of each user has their own distinct KV cache (here I even ignore the enomous main memory space to keep such big amount of user's KV cache). althrought under this extreme case we achieve an overall utilziaton of 64.7% and a 3447 token/s/chip throughput, the TPOT reach to 19s, namely each user wait for 19s for a token ... nearly useless serving quality ... ahahaha;)
+
+
+At this point, don't be sad! in the next chapter we will improve a lot!
+
+Moving to Expert Parallelsim
+
+In the Pipeline Parallelsim, we are sequencially process all routed experts, which is the source of big inference latency. In recent industry and research of LLM infra, people are moving to Expert Parallelsim (EP), namely each chip handle only a subset of experts, when do MoE computation they are working in parallel, and of course there are heavy inter-chip communication for dispatch and combine routed tokens to corresponding Expert Chip. I've draft the figure below to show the EP scheme.
+
+To overlap the kernel execution and inter-chip communication, let's image a "Data Move Unit (DMU)"  attched to each chip, sharing the HBM space access and working for send and receive packets for inter-chip communication, I know there are many exsiting solution like RDMA and SmartNIC etc with protocol of PCIE, CXL, NVlink as well as Ethnet. let's abstract them here as DMU I call here (maybe you a better term to use please let me know).
+
+The following execution flow could help us to overlap the kernel execution and inter-chip communication. we assume the inter-chip communication can be fully covered by kernel computation. In Huawei's ClouldMatrix384 paper for DeepSeek they use a similar scheme.
+
+Result of EP
+
+The first plot shows overall performance (per chip throughput and TPOT) with batch size per chip
+The second plot shows the runtime breakdown and each kernel's utilzaiton and overall utilization at different batch size per chip
+
+we could see the TPOT has improved a lot!, at <100ms constraint, we could reach to 3497 token/s/chip at a 128 batch size per chip with 73ms TPOT, the overall utilzation of decoding at this point reach to 67%. if we keep to increase batch size per chip, we could reach up to 77% overall utilziaton and a 252ms TPOT.
+
+Compare to SoA
+
+Here we take the take from Huawei's ClouldMatrix384 paper for DeepSeek. we are 1.8x more throughput, and 2.7x more Throughput per TFLOPS. in the next step, I will turn to FP8 data precision, with configure 2048TFLOPs @FP8 on SoftHier. I expected the TPOT could decrease further and the throughput double (hopefully as keep the Throughput per TFLOPS)
+
+Summary and Open Question
+
+
+Below are my understanding and reflecting:
+For the situation of LLM serving, the use of EP is a must.
+We have to thanks to DeepSeek's Model archtecture innovations: MLA make us possiblity to push decoding in near-compute-bound region, the MoE+EP effectivly reduce the runtime of MLP part, making MLA dominate
+We also thanks to FlatAttention idea, it can push FlatMLA to upto 74% uti for decoding (speculative draft length of 4).
+If we switch back to the vallina transformer (MHA + MLP), we can not reach to high utilization during decoding, due to MHA.
+
+For the situation of LLM serving DeepSeek, Compute-to-BW ratio of ~500 FLOP/Elem is safe. But For the situation of edge LLM inference, where batch size = 1, all tricks we discussing here may not suitable, BW is the key, we need to decrease the compute-to-BW ratio, 3D stack memory then make sense.
+
+Right now, let's review all assumption we used:
+1. speculative decoding with k=4, assuming accepetaed rate of 0.75 -- 4-token speculative draft length is default setting of SGlang for DeepSeekR1, and the accepatance rate is pretty reasonable according to a lot of evidence
+2. assuming every user has the same KV cache length of 4096, and Expert routing are balanced -- we align the with Huawei's ClouldMatrix384 paper for DeepSeek, if they feel OK, I'm OK. This is OK if you want to sale your HW, but for normal use case for LLM serving, I can presee a lot challenge due to dynamic user's KV cache lenght and workload unbalancing.
+3. we assume the inter-chip communication can be fully covered by kernel computation --  this is the most trick one
+
+If we want to reach the result of EP here, we need each off-chip link (one-way) reach to an effective BW >= 200GB/s, but this is estimated at very ideal case (a fully 64x64 Xbar with unlimited buffers). what about other topologies, especially we want to have a chiplet system, let's say we have a mesh chiplet interconnet of 8x8 (64 Chip), what is the BW requirment at various token routing patterns? Is it feasible for fabrication? can we do any improvements, eg, maybe Collevtive Primtives on Network on Substrate, a smart router in Silicon substrate. I think this is more valuable questions to answer.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sure—here’s your text with grammar fixed (but *not* over-polished):
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ciao Luca,
+
+Welcome back from your holiday! I hope you enjoyed it. During these WR-less days, I did an end-to-end DeepSeekV3 decoding on the SoftHier platform and conducted a lot of experiments and evaluations. Here I’m writing this report for you. It should take around 7 minutes to read.
+
+---
+
+**Improvements for SoftHier HW**
+
+Before we go into the SW-level discussion, I’d first like to talk about what I added in SoftHier HW. There are mainly two parts:
+
+1. **Matrix Transpose Engine in Each Cluster Tile**
+   The design simply follows the DataMover in the Darkside chip. The engine is mainly for efficient matrix transposition in kernels of MLA and MOE\_Gate.
+
+2. **HBM Ctrl Port Aliasing**
+   In the previous SoftHier design, we gave each HBM CTRL port a unique address space for main memory. In that case, SoftHier’s programming model was a disaggregated memory model, which required the programmer to carefully consider how to split their matrices across different disaggregated memories. As you can see in Aofeng’s thesis, for different kernels we had different data layout schemes in different HBM channels. Such a static solution is not flexible for end-to-end applications, which have a chain of kernels of different shapes. Moreover, we must support dynamic intrinsic behavior for end-to-end deployment, for which a static solution is not a good answer. I will give 3 typical examples:
+   a. Dynamic sequence length when serving decoding and pre-filling at runtime
+   b. Various shapes of kernels appearing one after another
+   c. Matrix concat needed as KV cache grows
+
+   To solve this, we want, at least for HBM ports on one edge, to share a unified address space and have clusters access matrix tiles via 2D DMA transfers. For each port sharing the same address space, we separate them using higher address bits (>48). This also allows different clusters to manage which port to use, providing better control of NoC traffic. For ports sharing the same address space, inside the HBM CTRL there is an Xbar to manage them, with necessary address scrambling to ensure evenly interleaved accesses. I added one configuration entry for SoftHier to define how many ports are sharing the same address space.
+
+---
+
+**DeepSeekV3 One Layer Kernel Fuse, Transformation, and Dataflow Animation on SoftHier**
+
+To avoid wasting your time and help you quickly understand how the dataflow is designed for one layer of DeepSeekV3 on SoftHier, I made the following animation. If your email browser doesn’t support it, you can find “dataflow\.gif” or “dataflow\.pptx” in the attachments.
+
+There are 2 key points:
+
+1. We use the weight absorption tricks and our FlatMLA dataflow for DeepSeekMLA. For details, see my previous WR23 and the attached “MLA\_can\_be\_compute\_bound\_for\_decode.pptx.” The key finding is that even for decoding, our FlatMLA can reach high utilization, especially with speculative decoding with ≥4 speculative draft length (see the figure below).
+
+2. For Routed Experts in the MoE part, we apply a dispatch-compute-combine pattern:
+
+   * **Dispatch:** Sending tokens to a new location where tokens using the same expert are gathered.
+   * **Combine:** Expert outputs are weighted and reduced according to which token they originated from.
+
+---
+
+**Experiment Setup**
+
+1. SoftHier configured with 1024 TFLOPs @ FP16, 4 TB/s HBM BW (2 TB/s for the west and south edge of die), with HBM ports on one edge all aliased. Detailed configuration listed below.
+2. We only did decoding evaluation, under the scenario of LLM serving for massive users (free to choose batch size), considering speculative decoding with k=4, assuming an acceptance rate of 0.75. See below the reference for various speculative token acceptance rates.
+3. Assuming every user has the same KV cache length of 4096, and expert routing is balanced, i.e., each expert will be equally selected.
+4. We used the full DeepSeek configuration of 671B parameters. Of course, one SoftHier chip cannot hold all parameters, so we considered pipeline parallelism where each SoftHier handles one layer, with 61 chips chained together.
+5. **Key metrics:** For serving LLM decoding, there are two key metrics:
+
+   * **Throughput:** Normally normalized per chip, unit = tokens/s/chip.
+   * **TPOT (Time Per Output Token):** From each user’s perspective, this is the average interval between output tokens. Normally we want to maximize throughput but keep TPOT <100 ms, i.e., each user perceives >10 tokens/s, providing a fluent flow. Usually, increasing throughput will increase TPOT.
+
+---
+
+**Result of Pipeline Parallelism**
+
+The first plot shows overall performance (per-chip throughput and TPOT) vs batch size per chip.
+The second plot shows runtime breakdown and each kernel’s utilization and overall utilization at different batch sizes per chip.
+
+We can see that pipeline parallelism cannot meet the basic TPOT constraint (127 ms >100 ms) even at very low batch size per chip. Looking at the runtime breakdown, under low batch size, most of the time is spent in MoE computation but with very low utilization. Why? Because each expert only tackles a few tokens. For example, under our balanced expert load assumption, if batch=8 users per chip, each routed expert shares = 8 \*4 (speculative draft length) \*8 (selected experts per token) /256 (total routed experts) = \~1 token. Each expert compute operates in a GEMV-like fashion, requiring iteration across 256 experts. This becomes a major bottleneck for a pure pipeline parallelism scheme.
+
+When we slightly increase the batch size per chip—even to an aggressive value of 64k—the MoE utilization improves and its runtime share shrinks. However, the MLA part then dominates because each user has their own distinct KV cache (here I even ignore the enormous main memory needed to hold this many KV caches). Although under this extreme case we achieved an overall utilization of 64.7% and 3447 tokens/s/chip throughput, the TPOT reaches 19 seconds—meaning each user waits 19 seconds per token…nearly unusable serving quality…ahahaha ;)
+
+---
+
+At this point, don’t be sad! In the next chapter, things improve a lot.
+
+---
+
+**Moving to Expert Parallelism**
+
+In pipeline parallelism, we sequentially process all routed experts, which is the source of high inference latency. In recent industry and research on LLM infra, people are moving to Expert Parallelism (EP), where each chip handles only a subset of experts, working in parallel for MoE computation. Of course, this requires heavy inter-chip communication for dispatching and combining routed tokens to the corresponding expert chip. I drafted the figure below to illustrate the EP scheme.
+
+The following execution flow could help us overlap kernel execution and inter-chip communication. We assume inter-chip communication can be fully hidden by kernel computation. Huawei’s CloudMatrix384 paper on DeepSeek used a similar scheme.
+
+---
+
+**Result of EP**
+
+The first plot shows overall performance (per-chip throughput and TPOT) vs batch size per chip.
+The second plot shows runtime breakdown and each kernel’s utilization and overall utilization at different batch sizes per chip.
+
+We see that TPOT has improved a lot! Under the <100 ms constraint, we can reach 3497 tokens/s/chip at 128 batch size per chip with 73 ms TPOT. The overall utilization of decoding at this point reaches 67%. If we further increase the batch size per chip, utilization can reach up to 78% with a 498 ms TPOT.
+
+---
+
+**Comparison to SoA**
+
+Here we compare with Huawei’s CloudMatrix384 paper for DeepSeek:
+We achieve \~1.8× more throughput and \~2.7× more throughput per TFLOP. In the next step, I will switch to FP8 data precision, configuring 2048 TFLOPs @ FP8 on SoftHier. I expect TPOT could decrease further and throughput could double (hopefully while maintaining throughput per TFLOP).
+
+---
+
+**Summary and Open Questions**
+
+Below are my understanding and reflections:
+
+* For LLM serving, the use of EP is a must.
+* Thanks to DeepSeek’s model architecture innovations: MLA makes it possible to push decoding near compute-bound, and MoE+EP effectively reduces MLP runtime, making MLA dominate.
+* Also thanks to the FlatAttention idea: it allows FlatMLA to reach up to 74% utilization in decoding (speculative draft length=4).
+* If we switch back to vanilla Transformer (MHA+MLP), we cannot reach high utilization during decoding due to MHA.
+
+For LLM serving on DeepSeek, a compute-to-BW ratio of \~500 FLOP/element is safe. But for edge LLM inference (batch size=1), most of the tricks discussed here are not suitable—bandwidth is the key. We need to reduce compute-to-BW ratio; 3D stacked memory then makes sense.
+
+---
+
+**Assumptions Review**
+
+1. Speculative decoding with k=4, assuming acceptance rate 0.75—this is the default setting of SGlang for DeepSeekR1 and is quite reasonable based on many observations.
+2. Every user has the same KV cache length (4096) and expert routing is balanced—we aligned this with Huawei’s CloudMatrix384 paper for DeepSeek. If they’re OK with it, I am too. This may be fine if you want to sell your HW, but for real LLM serving, dynamic KV cache lengths and workload imbalance will be challenging.
+3. Inter-chip communication can be fully hidden under kernel computation—this is the trickiest assumption.
+
+To reach the EP results here, each off-chip link (one-way) must achieve effective bandwidth ≥100 GB/s. This estimate assumes a very ideal scenario (fully 64×64 Xbar with unlimited buffers). What about other topologies, especially for chiplet systems? For example, with a mesh chiplet interconnect of 8×8 (64 chips), what is the bandwidth requirement under different token routing patterns? Is this feasible in fabrication? Could we improve further—e.g., collective primitives on the network on interposer/substrate or smart routers in silicon interposer? I think these are the more valuable questions to answer.
+
+---
+
+Let me know if you’d like this adjusted further or formatted differently!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Absolutely—here’s your content distilled into clear **bullet points for slides**:
+
+---
+
+### **SoftHier HW Improvements**
+
+* **Matrix Transpose Engine**
+
+  * Added per cluster tile.
+  * Based on DataMover in Darkside chip.
+  * Speeds up matrix transposition in MLA & MOE\_Gate kernels.
+* **HBM Ctrl Port Aliasing**
+
+  * Unified address space across HBM ports on one edge.
+  * Address bits >48 distinguish ports.
+  * Xbar inside HBM CTRL ensures even interleaving.
+  * Simplifies programming model and supports dynamic workloads.
+
+---
+
+### **DeepSeekV3 Dataflow on SoftHier**
+
+* **FlatMLA Dataflow**
+
+  * Weight absorption tricks.
+  * High utilization even during decoding.
+  * Speculative decoding (≥4 tokens) improves throughput.
+* **Routed Experts**
+
+  * Dispatch-compute-combine pattern:
+
+    * Dispatch tokens to expert chips.
+    * Compute per expert.
+    * Combine weighted outputs.
+
+---
+
+### **Experiment Setup**
+
+* **SoftHier Config**
+
+  * 1024 TFLOPs @ FP16, 4TB/s HBM BW.
+  * Pipeline parallelism: 61 chips, each handling 1 layer.
+* **Test Scenario**
+
+  * Speculative decoding (k=4), acceptance rate 0.75.
+  * KV cache length: 4096 tokens per user.
+  * Balanced expert routing.
+* **Key Metrics**
+
+  * **Throughput:** tokens/s/chip.
+  * **TPOT:** avg. time per token for each user (target <100 ms).
+
+---
+
+### **Pipeline Parallelism Results**
+
+* **Performance**
+
+  * Fails TPOT constraint (<100 ms) even at low batch sizes.
+  * Example: TPOT \~127 ms with 8 users/chip.
+* **Bottlenecks**
+
+  * Low MoE utilization due to sequential expert processing.
+  * Large KV caches exacerbate memory use.
+* **Scaling Up**
+
+  * Very high batch sizes improve utilization.
+  * But TPOT becomes unacceptable (e.g., 19 s per token).
+
+---
+
+### **Expert Parallelism (EP) Approach**
+
+* **Concept**
+
+  * Each chip handles a subset of experts in parallel.
+  * Requires heavy inter-chip communication (dispatch & combine).
+* **Implementation**
+
+  * Introduced Data Move Unit (DMU) abstraction for inter-chip transfers.
+  * Overlaps communication with kernel execution.
+
+---
+
+### **EP Results**
+
+* **Performance**
+
+  * TPOT significantly improved.
+  * Example: Batch size=128 → TPOT=73 ms, throughput=3497 tokens/s/chip.
+  * Utilization up to 77% at higher batch sizes (with higher TPOT).
+* **Comparison**
+
+  * \~1.8× throughput vs. Huawei CloudMatrix384.
+  * \~2.7× throughput per TFLOP.
+* **Next Step**
+
+  * Move to FP8 (2048 TFLOPs) for further gains.
+
+---
+
+### **Key Takeaways**
+
+* EP is essential for low-latency LLM serving.
+* DeepSeek’s MLA + MoE architecture enables high utilization.
+* FlatAttention contributes significantly to decoding efficiency.
+* Vanilla Transformer (MHA+MLP) cannot match this utilization.
+
+---
+
+### **Limitations & Open Questions**
+
+* **Assumptions**
+
+  * Speculative decoding (k=4), acceptance rate 0.75.
+  * Uniform KV cache length & balanced expert load.
+  * Ideal inter-chip bandwidth (≥200 GB/s).
+* **Challenges**
+
+  * Dynamic workloads and variable KV cache lengths.
+  * Feasibility of large off-chip interconnects in chiplet systems.
+* **Future Directions**
+
+  * Explore collective primitives and smart routers.
+  * Evaluate real-world interconnect topologies and bandwidth.
+
+---
+
+Let me know if you’d like help creating visuals or formatting specific slides!
