@@ -22,3 +22,4 @@ dump*
 test.sh
 softhier.log
 data*.h
+*_trace.json

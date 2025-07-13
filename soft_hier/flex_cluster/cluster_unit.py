@@ -202,10 +202,10 @@ class ClusterUnit(gvsoc.systree.Component):
         loader = utils.loader.loader.ElfLoader(self, 'loader', binary=binary)
 
         #Instruction memory
-        instr_mem = memory.Memory(self, 'instr_mem', size=arch.insn_area.size, atomics=True)
+        instr_mem = memory.Memory(self, 'instr_mem', size=arch.insn_area.size, atomics=True, width_log2=-1)
 
         #Instruction router
-        instr_router = router.Router(self, 'instr_router', bandwidth=8)
+        instr_router = router.Router(self, 'instr_router', bandwidth=0x20)
 
         # Main router
         wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm')
@@ -326,7 +326,7 @@ class ClusterUnit(gvsoc.systree.Component):
         wide_axi_goto_tcdm.o_MAP(tcdm.i_BUS_INPUT())
         wide_axi_from_idma.o_MAP(self.i_WIDE_SOC())
         wide_axi_from_idma.o_MAP(zero_mem.i_INPUT(), base=arch.zomem_area.base, size=arch.zomem_area.size, rm_base=True)
-        
+
 
         # iDMA connection
         if arch.multi_idma_enable:
