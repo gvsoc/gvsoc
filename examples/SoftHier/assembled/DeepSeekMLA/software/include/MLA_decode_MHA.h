@@ -6,14 +6,25 @@
 #include "flex_redmule.h"
 #include "flex_dma_pattern.h"
 #include "flex_group_barrier.h"
-#include "MLA_util.h"
 
 #define TILE_DIM 128
 #define K_DIM    128
 #define HEAD_NUM 128
 #define COMP_DIM 512
 #define ROPE_DIM 64
+
+#define DATA_TYPE_BYTE       2
+#define DATA_TYPE_WIDTH      16
 #define REDMULE_COMPUTE_TYPE REDMULE_NONE_16
+
+// #define DATA_TYPE_BYTE       1
+// #define DATA_TYPE_WIDTH      8
+// #define REDMULE_COMPUTE_TYPE REDMULE_FP_8
+
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
+#include "MLA_util.h"
 
 typedef struct MLADecodeMHAInfo
 {

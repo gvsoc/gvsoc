@@ -27,6 +27,8 @@ union FloatBits {
     uint32_t u;
 };
 
+typedef uint8_t fp8_e5m2;
+
 void set_lower_byte(float *f_out, uint8_t val) {
     union FloatBits fb = { .f = 0.0f };  // or any other initial float value
     fb.u = (fb.u & 0xFFFFFF00) | val;   // clear lower byte, insert val
@@ -58,6 +60,38 @@ float fp8_e5m2_to_f32(uint8_t val) {
 
     float result = mant * scale;
     return sign ? -result : result;
+}
+
+uint8_t fp32_to_fp8_e5m2(float input) {
+    if (input == 0.0f) return 0x00;  // Zero
+
+    union FloatBits fb = { .f = input };
+    uint32_t bits = fb.u;
+
+    uint8_t sign = (bits >> 31) & 0x1;
+    int32_t exponent = ((bits >> 23) & 0xFF) - 127;  // unbiased exponent
+    uint32_t mantissa = bits & 0x7FFFFF;
+
+    // Convert exponent from float32 bias (127) to FP8 bias (15)
+    int32_t fp8_exp = exponent + 15;
+
+    // Handle underflow
+    if (fp8_exp <= 0) {
+        return (sign << 7);  // Too small to represent, flush to signed zero
+    }
+
+    // Handle overflow (return max finite value or inf)
+    if (fp8_exp >= 0x1F) {
+        return (sign << 7) | 0x7C;  // Max FP8 exponent, mantissa = 0
+    }
+
+    // Normalize mantissa: extract 2 MSBs of the 23-bit mantissa (rounding could be added here)
+    uint8_t fp8_mantissa = (mantissa >> (23 - 2)) & 0x03;
+
+    // Assemble FP8 value
+    uint8_t fp8 = (sign << 7) | (fp8_exp << 2) | fp8_mantissa;
+
+    return fp8;
 }
 
 void spatz_verify(uint32_t avl, uint8_t* act_vec, uint8_t* exp_vec) {
