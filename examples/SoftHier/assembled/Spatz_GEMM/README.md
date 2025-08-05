@@ -22,12 +22,15 @@ Simply use the following command with marked steps to run multiple benchmarks:
 
 ### Add optimized sparse kernels
 All the following kernels have been tested with 2:4 format:
+
 **Dense**
 - `spatz_matmul_fp16()`: baseline
 - `spatz_matmul_unroll2_fp16()`: 2x-unroll on N-dimension
 - `spatz_matmul_unroll4_fp16()`: 4x-unroll on N-dimension
+
 **Software-emulation**
 - `spatz_AspB_matmul_fp16()`: baseline
+
 **Custom RVV: widening-indexed(vfwx_.vf)**
 - `spatz_AspB_matmul_wxfp16()`: baseline
 - `spatz_AspB_matmul_unroll4_wxfp16()`: 4x-unroll on N-dimension
