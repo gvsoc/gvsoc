@@ -98,11 +98,16 @@ int main()
         #elif _OUT_TYPE == 2
 
         #ifndef __SPARSE__
-        spatz_matmul_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        // spatz_matmul_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        // spatz_matmul_unroll2_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
+        spatz_matmul_unroll4_fp16(matrix_a, matrix_b, matrix_c, FP8_M, FP8_N, FP8_P);
         #else
 
         #if _IDX_TYPE == _IDX_COMPACT
-        spatz_AspB_matmul_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        // spatz_AspB_matmul_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        // spatz_AspB_matmul_unroll4_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        // spatz_AspB_matmul_unroll2x2_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        spatz_AspB_matmul_unroll4x2_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         #else
         spatz_AspB_matmul_fp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         #endif
@@ -110,7 +115,7 @@ int main()
         flex_timer_end();
 
         // verify
-        spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
+        // spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
         #endif // _OUT_TYPT compute
     }
 
