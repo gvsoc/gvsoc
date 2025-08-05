@@ -115,7 +115,7 @@ int main()
         flex_timer_end();
 
         // verify
-        // spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
+        spatz_verify_16(FP8_M * FP8_P, matrix_c, matrix_c_fp16, 0.25f);
         #endif // _OUT_TYPT compute
     }
 
