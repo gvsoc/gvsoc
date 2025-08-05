@@ -96,6 +96,35 @@ index 354a1e51..c640eeb8 100644
  #include "cpu/iss/include/isa/rv32frep.hpp"
  #include "cpu/iss/include/isa/rv32ssr.hpp"
  
+diff --git a/models/cpu/iss/include/exec/exec_inorder_implem.hpp b/models/cpu/iss/include/exec/exec_inorder_implem.hpp
+index 85018018..edf88094 100644
+--- a/models/cpu/iss/include/exec/exec_inorder_implem.hpp
++++ b/models/cpu/iss/include/exec/exec_inorder_implem.hpp
+@@ -77,6 +77,7 @@ static inline iss_reg_t iss_exec_stalled_insn(Iss *iss, iss_insn_t *insn, iss_re
+ 
+ inline int64_t Exec::get_cycles()
+ {
++    // printf("stall cycles:%d\n", this->stall_cycles);
+     return this->iss.top.clock.get_cycles() + this->stall_cycles;
+ }
+ 
+@@ -117,6 +118,7 @@ inline void Exec::insn_hold(vp::ClockEventMeth *meth)
+ inline void Exec::insn_resume()
+ {
+     // Instruction execution can go on
++    // this->trace.msg("[include/exec/exec_inorder_implem.hpp] (addr: 0x%x) insn_resume\n", this->iss.exec.current_insn);
+     this->insn_on_hold = false;
+     this->instr_event.set_callback(&Exec::exec_instr_check_all);
+ }
+@@ -196,7 +198,7 @@ inline void Exec::stalled_dec()
+ 
+ inline void Exec::insn_exec_profiling()
+ {
+-    this->trace.msg("Executing instruction (addr: 0x%x)\n", this->iss.exec.current_insn);
++    this->trace.msg("[include/exec/exec_inorder_implem.hpp] Executing instruction (addr: 0x%x)\n", this->iss.exec.current_insn);
+     if (this->iss.timing.pc_trace_event.get_event_active())
+     {
+         this->iss.timing.pc_trace_event.event((uint8_t *)&this->iss.exec.current_insn);
 diff --git a/models/cpu/iss/include/isa/redmule.hpp b/models/cpu/iss/include/isa/redmule.hpp
 new file mode 100644
 index 00000000..fde9d634
@@ -2634,7 +2663,7 @@ index 26cb748e..412b5077 100644
  #endif 
 \ No newline at end of file
 diff --git a/models/cpu/iss/include/spatz.hpp b/models/cpu/iss/include/spatz.hpp
-index 8b348cd0..3a95941f 100644
+index 8b348cd0..2be6b1ec 100644
 --- a/models/cpu/iss/include/spatz.hpp
 +++ b/models/cpu/iss/include/spatz.hpp
 @@ -29,9 +29,9 @@ typedef uint8_t iss_Vel_t;
@@ -2666,7 +2695,7 @@ index 8b348cd0..3a95941f 100644
  
  private:
      Iss &iss;
-@@ -133,6 +134,15 @@ public:
+@@ -133,6 +134,17 @@ public:
  
      VRegfile vregfile;
      Vlsu vlsu;
@@ -2674,6 +2703,8 @@ index 8b348cd0..3a95941f 100644
 +    uint64_t last_stamp;
 +    uint64_t runtime;
 +
++    // Additional scoreboard for WAR
++    uint64_t reg_war_score_board [ISS_NB_VREGS];
 +    //Scoreboard
 +    uint64_t reg_score_board [ISS_NB_VREGS];
 +    uint64_t unit_score_board [3]; //fpu, slide, vlsu
@@ -2870,6 +2901,23 @@ index 3c39da9e..83572133 100644
              #                           V 1.0
              Instr('vsetvli' ,   Format_OPVLI,    '- ----------- ----- 111 ----- 1010111'), # zimm = {3'b000,vma,vta,vsew[2:0],vlmul[2:0]}
  
+diff --git a/models/cpu/iss/src/exec/exec_inorder.cpp b/models/cpu/iss/src/exec/exec_inorder.cpp
+index fb7456f0..4baf57d3 100644
+--- a/models/cpu/iss/src/exec/exec_inorder.cpp
++++ b/models/cpu/iss/src/exec/exec_inorder.cpp
+@@ -255,9 +255,11 @@ void Exec::exec_instr_check_all(vp::Block *__this, vp::ClockEvent *event)
+     Iss *iss = (Iss *)__this;
+     Exec *_this = &iss->exec;
+ 
++    _this->trace.msg(vp::Trace::LEVEL_TRACE, "[src/exec/exec_inorder.cpp - PRE STALL] (pc: 0x%lx) stall: %d\n", iss->exec.current_insn, iss->exec.stall_cycles);
++
+     if (iss->exec.handle_stall_cycles()) return;
+ 
+-    _this->trace.msg(vp::Trace::LEVEL_TRACE, "Handling instruction with slow handler (pc: 0x%lx)\n", iss->exec.current_insn);
++    _this->trace.msg(vp::Trace::LEVEL_TRACE, "[src/exec/exec_inorder.cpp] Handling instruction with slow handler (pc: 0x%lx)\n", iss->exec.current_insn);
+ 
+     if(_this->pending_flush)
+     {
 diff --git a/models/cpu/iss/src/snitch/decode.cpp b/models/cpu/iss/src/snitch/decode.cpp
 index 6bf10c9b..a6efa5a0 100644
 --- a/models/cpu/iss/src/snitch/decode.cpp
@@ -2922,10 +2970,10 @@ index c7b46b87..d4cb9adb 100644
      // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
      this->event = this->top.event_new((vp::Block *)this, handle_event);
 diff --git a/models/cpu/iss/src/spatz.cpp b/models/cpu/iss/src/spatz.cpp
-index e4cb6c51..60c463db 100644
+index e4cb6c51..1cd8f155 100644
 --- a/models/cpu/iss/src/spatz.cpp
 +++ b/models/cpu/iss/src/spatz.cpp
-@@ -8,8 +8,17 @@
+@@ -8,8 +8,18 @@
  
  
  Spatz::Spatz(Iss &iss)
@@ -2936,6 +2984,7 @@ index e4cb6c51..60c463db 100644
 +    for (int i = 0; i < ISS_NB_VREGS; ++i)
 +    {
 +        this->reg_score_board[i] = 0;
++        this->reg_war_score_board[i] = 0;
 +    }
 +    for (int i = 0; i < 3; ++i)
 +    {
@@ -2944,7 +2993,7 @@ index e4cb6c51..60c463db 100644
  }
  
  void Spatz::build()
-@@ -25,6 +34,48 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
+@@ -25,6 +35,64 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
      VRegfile::reset(true);
  }
  
@@ -2958,22 +3007,29 @@ index e4cb6c51..60c463db 100644
 +        meet_point = (this->unit_score_board[uint_id] > meet_point)? this->unit_score_board[uint_id] : meet_point;
 +    }
 +
++
 +    if (vs1 >= 0)
 +    {
 +        meet_point = (this->reg_score_board[vs1] > meet_point)? this->reg_score_board[vs1] : meet_point;
 +    }
++
 +
 +    if (vs2 >= 0)
 +    {
 +        meet_point = (this->reg_score_board[vs2] > meet_point)? this->reg_score_board[vs2] : meet_point;
 +    }
 +
-+    delay = meet_point - timestamp;
-+    if (uint_id == 2 && (this->unit_score_board[2] > timestamp))
++    // bowwang: handle WAR
++    if (vd >= 0)
 +    {
-+        latency = latency - (this->unit_score_board[2] - timestamp);
++        meet_point = (this->reg_war_score_board[vd] > meet_point)? this->reg_war_score_board[vd] : meet_point;
++    }
++    // bowwang: handle two vle instr in a row
++    if (uint_id == 2){
++        meet_point = (this->unit_score_board[2] > meet_point)? this->unit_score_board[2] : meet_point; 
 +    }
 +    
++    delay = meet_point - timestamp;
 +    future_point = meet_point + latency;
 +
 +    uint64_t add_runtime = (this->last_stamp >= future_point)? 0: (this->last_stamp >= meet_point)? future_point - this->last_stamp : future_point - meet_point;
@@ -2986,6 +3042,15 @@ index e4cb6c51..60c463db 100644
 +    {
 +        this->reg_score_board[vd] = future_point;
 +    }
++    // bowwang: war dependency
++    if (vs1 >= 0)
++    {
++        this->reg_war_score_board[vs1] = future_point;
++    }
++    if (vs2 >= 0)
++    {
++        this->reg_war_score_board[vs2] = future_point;
++    }
 +
 +    return delay;
 +}
@@ -2993,7 +3058,7 @@ index e4cb6c51..60c463db 100644
  
  
  void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
-@@ -34,17 +85,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+@@ -34,17 +102,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
  
  Vlsu::Vlsu(Iss &iss) : iss(iss)
  {
@@ -3014,7 +3079,7 @@ index e4cb6c51..60c463db 100644
  }
  inline void VRegfile::reset(bool active){
      if (active){
-@@ -56,9 +107,9 @@ inline void VRegfile::reset(bool active){
+@@ -56,9 +124,9 @@ inline void VRegfile::reset(bool active){
      }
  }
  
