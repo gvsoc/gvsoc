@@ -234,7 +234,6 @@ pfto_spatz:
 		--binary sw_build/softhier.elf run $(preload_arg) \
 		--trace-level=trace \
 		--trace="/chip/cluster_0/*" \
-		--trace="icache" \
 		| tee $(trace_file); \
 	if [ -n "$(trace_name)" ]; then \
 		out_name=$(trace_name)_trace; \
@@ -244,3 +243,6 @@ pfto_spatz:
 	python soft_hier/flex_cluster_utilities/trace_perfetto/parse.py $(trace_file) sw_build/roi.json; \
 	python soft_hier/flex_cluster_utilities/trace_perfetto/visualize.py sw_build/roi.json -o ./$$out_name.json; \
 	echo "Generated ./$$out_name.json"
+
+clean_trace:
+	rm *_trace.json

@@ -10,6 +10,33 @@ cfg={SOFTHIER_ROOT}/examples/SoftHier/assembled/Spatz_GEMM/config/arch_spatz.py 
 
 ## Updates
 
+### Add auto-benchmark script `spatz_auto_benchmark.sh`
+Simply use the following command with marked steps to run multiple benchmarks:
+1. Set `P` dimension in the script
+2. set the data format config (`--sparse`, `--idx_compact`) in the script
+3. Set kernel to benchmark in `main.c`
+4. Run the following command
+```tcl
+./examples/SoftHier/assembled/Spatz_GEMM/software/util/spatz_auto_benchmark.sh > benchmark_output.txt
+```
+
+### Add optimized sparse kernels
+All the following kernels have been tested with 2:4 format:
+
+**Dense**
+- `spatz_matmul_fp16()`: baseline
+- `spatz_matmul_unroll2_fp16()`: 2x-unroll on N-dimension
+- `spatz_matmul_unroll4_fp16()`: 4x-unroll on N-dimension
+
+**Software-emulation**
+- `spatz_AspB_matmul_fp16()`: baseline
+
+**Custom RVV: widening-indexed(vfwx_.vf)**
+- `spatz_AspB_matmul_wxfp16()`: baseline
+- `spatz_AspB_matmul_unroll4_wxfp16()`: 4x-unroll on N-dimension
+- `spatz_AspB_matmul_unroll2x2_wxfp16()`: 2x-unroll on N-dimension, 2x-unroll on M-dimension
+- `spatz_AspB_matmul_unroll4x2_wxfp16()`: 4x-unroll on N-dimension, 2x-unroll on M-dimension
+
 ### Merged dense/sparse data generation script
 How to use:
 ```tcl
