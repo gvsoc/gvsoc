@@ -11,7 +11,7 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    test_nm_config();
+    hello_world_all_cluster();
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
