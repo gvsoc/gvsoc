@@ -1477,6 +1477,41 @@ index 673529f..080f26f 100644
  
  #include <vp/vp.hpp>
  #include <vp/itf/io.hpp>
+diff --git a/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson b/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
+index e3a0c48..1e66943 100644
+--- a/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
++++ b/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
+@@ -411,6 +411,30 @@
+             name: "ICACHE_PREFETCH_ENABLE",
+             desc: "Enable instruction prefetching."
+         }]
++    },
++    {
++        name: "NM_CONFIG",
++        desc: "Structured-sparsity format configuration register",
++        swaccess: "rw",
++        hwaccess: "hrw",
++        resval: "0",
++        fields: [
++            {
++                bits: "3:0",
++                name: "Format_N",
++                desc: "N value in N:M format (1, 2, 3, 4, 8)"
++            },
++            {
++                bits: "7:4",
++                name: "Format_M",
++                desc: "M value in N:M format (2, 4, 8, 16)"
++            },
++            {
++                bits: "31:8",
++                name: "RESERVED",
++                desc: "Reserved bits"
++            }
++        ]
+     }
+     ]
+ }
 diff --git a/pulp/snitch/snitch_core.py b/pulp/snitch/snitch_core.py
 index 0bda5e4..896bb54 100644
 --- a/pulp/snitch/snitch_core.py

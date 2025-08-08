@@ -37,6 +37,9 @@ public:
 
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req);
 
+    inline uint32_t get_nm_n() { return this->regmap.nm_config.format_n_get(); }
+    inline uint32_t get_nm_m() { return this->regmap.nm_config.format_m_get(); }
+
 private:
     static void barrier_sync(vp::Block *__this, bool value, int id);
     static vp::IoReqStatus global_barrier_sync(vp::Block *__this, vp::IoReq *req);
@@ -44,6 +47,7 @@ private:
     static void response(vp::Block *__this, vp::IoReq *req);
     void cl_clint_set_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
     void cl_clint_clear_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
+    void nm_config_req(uint64_t offset, int size, uint8_t *value, bool is_write);
 
     vp::Trace     trace;
 
@@ -74,6 +78,7 @@ private:
 
     uint16_t global_sync_enable;
     uint64_t global_sync_timestamp;
+
 };
 
 ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
@@ -123,6 +128,7 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
     this->regmap.build(this, &this->trace, "regmap");
     this->regmap.cl_clint_set.register_callback(std::bind(&ClusterRegisters::cl_clint_set_req, this, _1, _2, _3, _4));
     this->regmap.cl_clint_clear.register_callback(std::bind(&ClusterRegisters::cl_clint_clear_req, this, _1, _2, _3, _4));
+    this->regmap.nm_config.register_callback(std::bind(&ClusterRegisters::nm_config_req, this, _1, _2, _3, _4));
 }
 
 vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
@@ -285,6 +291,27 @@ void ClusterRegisters::cl_clint_clear_req(uint64_t reg_offset, int size, uint8_t
         {
             this->external_irq_itf[i].sync(false);
         }
+    }
+}
+
+void ClusterRegisters::nm_config_req(uint64_t offset, int size, uint8_t *value, bool is_write)
+{
+    if (is_write)
+    {
+        // Let the register update its internal value
+        this->regmap.nm_config.update(offset, size, value, is_write);
+
+        // Read back the fields using the auto-generated accessors
+        uint32_t n = this->regmap.nm_config.format_n_get();
+        uint32_t m = this->regmap.nm_config.format_m_get();
+
+        // Trace it
+        this->trace.msg(vp::DEBUG, "NM_CONFIG write: N=%u, M=%u\n", n, m);
+    }
+    else
+    {
+        // Just forward to the register’s default read behavior
+        this->regmap.nm_config.update(offset, size, value, is_write);
     }
 }
 
