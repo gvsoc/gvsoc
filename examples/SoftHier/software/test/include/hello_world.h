@@ -433,5 +433,74 @@ void test_malloc_single_cluster(){
     flex_intra_cluster_sync();//Cluster barrier
     flex_global_barrier_xy();//Global barrier
 }
+
+void test_nm_config(){
+    flex_global_barrier_xy();//Global barrier
+    flex_intra_cluster_sync();//Cluster barrier
+
+    uint32_t CID = flex_get_cluster_id();//Get cluster ID
+
+    // test memory allocation with 1 cluster (CID==0)
+    if (flex_is_first_core() && (CID == 0))//Use the first core for memory allocation
+        {
+            // nmconfig.v N:M=1:2
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b00010   << 15) | \
+                        (0b000     << 12) | \
+                        (0b00001   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+            // nmconfig.v N:M=2:4
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b00100   << 15) | \
+                        (0b000     << 12) | \
+                        (0b00010   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+            // nmconfig.v N:M=4:8
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b01000   << 15) | \
+                        (0b000     << 12) | \
+                        (0b00100   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+            // nmconfig.v N:M=4:16
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b10000   << 15) | \
+                        (0b000     << 12) | \
+                        (0b00100   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+            // nmconfig.v N:M=2:3
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b00011   << 15) | \
+                        (0b000     << 12) | \
+                        (0b0010   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+            // nmconfig.v N:M=3:2
+            asm volatile(
+                ".word  (0b100000  << 26) | \
+                        (0b1       << 25) | \
+                        (0b00000   << 20) | \
+                        (0b00010   << 15) | \
+                        (0b000     << 12) | \
+                        (0b0011   <<  7) | \
+                        (0b1010110 <<  0)   \n");
+        }
+
+    flex_intra_cluster_sync();//Cluster barrier
+    flex_global_barrier_xy();//Global barrier
+}
 #endif
 

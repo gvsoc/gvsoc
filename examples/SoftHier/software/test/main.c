@@ -11,7 +11,7 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    hello_world_all_core();
+    test_nm_config();
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
