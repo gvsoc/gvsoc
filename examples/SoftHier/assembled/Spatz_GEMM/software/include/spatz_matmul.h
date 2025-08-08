@@ -607,6 +607,16 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
     uint32_t avl = P * spN / spM;
     uint32_t vl, vl_dump;
 
+    // config n:m format (nmconfig.v N:M=2:4)
+    asm volatile(
+        ".word  (0b100000  << 26) | \
+                (0b1       << 25) | \
+                (0b00000   << 20) | \
+                (0b00100   << 15) | \
+                (0b000     << 12) | \
+                (0b00010   <<  7) | \
+                (0b1010110 <<  0)   \n");
+
     do{ // outer loop 
         asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
         for (uint32_t m = 0; m < M; m+=4){ // mid loop
