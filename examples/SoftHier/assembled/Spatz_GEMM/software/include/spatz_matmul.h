@@ -196,7 +196,6 @@ inline void nm_config(const uint8_t spN, const uint8_t spM){
 
 // sparse matmul [Gustav], AspB, input _fp8, index _uint2, output _fp16
 // effective output elements are gather/scatter with VLSU
-#define IDX_PER_BYTE (4)
 void spatz_AspB_matmul_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint16_t* matrix_c, uint8_t* index_b,
                   const uint32_t M, const uint32_t N, const uint32_t P, 
                   const uint8_t spN, const uint8_t spM){
@@ -385,6 +384,13 @@ void spatz_AspB_matmul_unroll4_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint
     uint32_t avl = P * spN / spM;
     uint32_t vl, vl_dump;
 
+    uint8_t index_per_byte=0;
+    if      (spM==2)            index_per_byte=8;
+    else if (spM==4)            index_per_byte=4;
+    else if (spM==8 || spM==16) index_per_byte=2;
+
+    nm_config(spN, spM);
+
     do{ // outer loop 
         asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
         for (uint32_t m = 0; m < M; m+=4){ // mid loop
@@ -406,19 +412,18 @@ void spatz_AspB_matmul_unroll4_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint
 
                 // load b vec
                 // TODO: adapt to other formats
-                // uint8_t *p_b = &matrix_b[p + n*P*spN/spM];
-                
-                uint8_t *p_b = &matrix_b[p + n*P/2];
+                uint8_t *p_b = &matrix_b[p + n*P*spN/spM];
+                // uint8_t *p_b = &matrix_b[p + n*P/2];
                 asm volatile("vle8.v v0, (%0)" ::"r"(p_b));
 
                 // load index 
-                // uint8_t *p_index = &index_b[(p + n*P*spN/spM)/IDX_PER_BYTE];
-                uint8_t *p_index = &index_b[(p + n*P/2)/IDX_PER_BYTE];
+                uint8_t *p_index = &index_b[(p + n*P*spN/spM)/index_per_byte];
+                // uint8_t *p_index = &index_b[(p + n*P/2)/index_per_byte];
                 asm volatile("vle8.v v4, (%0)" ::"r"(p_index));
 
                 if (n==0){ // first iter
                     // reset registers
-                    asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(2*avl));
+                    asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM/spN*avl));
                     asm volatile("vmv.v.i v8, 0");
                     asm volatile("vmv.v.i v12, 0");
                     asm volatile("vmv.v.i v16, 0");
@@ -499,7 +504,7 @@ void spatz_AspB_matmul_unroll4_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, uint
                 }
                 // flex_timer_end();
             }
-            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*spM/spN));
             asm volatile("vse16.v v8, (%0)" ::"r"(p_c));
             asm volatile("vse16.v v12, (%0)" ::"r"(p_c2));
             asm volatile("vse16.v v16, (%0)" ::"r"(p_c3));
@@ -520,6 +525,13 @@ void spatz_AspB_matmul_unroll2x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
 
     uint32_t avl = P * spN / spM;
     uint32_t vl, vl_dump;
+
+    uint8_t index_per_byte=0;
+    if      (spM==2)            index_per_byte=8;
+    else if (spM==4)            index_per_byte=4;
+    else if (spM==8 || spM==16) index_per_byte=2;
+
+    nm_config(spN, spM);
 
     do{ // outer loop 
         asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
@@ -542,18 +554,18 @@ void spatz_AspB_matmul_unroll2x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
             uint8_t *p_b0 = &matrix_b[p];
             asm volatile("vle8.v v0, (%0)" ::"r"(p_b0));
             // load Index: first row
-            uint8_t *p_index0 = &index_b[p/IDX_PER_BYTE];
+            uint8_t *p_index0 = &index_b[p/index_per_byte];
             asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
             // load B: preload second row
-            uint8_t *p_b1 = &matrix_b[p + P/2];
+            uint8_t *p_b1 = &matrix_b[p + P*spN/spM];
             asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
             // load index: preload second row
-            uint8_t *p_index1 = &index_b[(p + P/2)/IDX_PER_BYTE];
+            uint8_t *p_index1 = &index_b[(p + P*spN/spM)/index_per_byte];
             asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
 
             // reset registers
-            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(2*avl));
+            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM/spN*avl));
             asm volatile("vmv.v.i v8, 0");
             asm volatile("vmv.v.i v12, 0");
             asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
@@ -585,10 +597,10 @@ void spatz_AspB_matmul_unroll2x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft0, (%0)" :: "r"(p_a00));
                 asm volatile("flw ft1, (%0)" :: "r"(p_a10));
                 // preload B: first set
-                p_b0 = &matrix_b[p + (n+2)*P/2];
+                p_b0 = &matrix_b[p + (n+2)*P*spN/spM];
                 asm volatile("vle8.v v0, (%0)" ::"r"(p_b0));
                 // preload index: first set
-                p_index0 = &index_b[(p + (n+2)*P/2)/IDX_PER_BYTE];
+                p_index0 = &index_b[(p + (n+2)*P*spN/spM)/index_per_byte];
                 asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
                 // second iteration: vfwxmacc.vf _inp, _idx, _fp, _oup
@@ -617,13 +629,13 @@ void spatz_AspB_matmul_unroll2x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft2, (%0)" :: "r"(p_a01));
                 asm volatile("flw ft3, (%0)" :: "r"(p_a11));
                 // preload B: second set
-                p_b1 = &matrix_b[p + (n+3)*P/2];
+                p_b1 = &matrix_b[p + (n+3)*P*spN/spM];
                 asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
                 // preload index: second set
-                p_index1 = &index_b[(p + (n+3)*P/2)/IDX_PER_BYTE];
+                p_index1 = &index_b[(p + (n+3)*P*spN/spM)/index_per_byte];
                 asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
             }
-            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*spM/spN));
             asm volatile("vse16.v v8, (%0)" ::"r"(p_c));
             asm volatile("vse16.v v12, (%0)" ::"r"(p_c2));
             asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
@@ -643,15 +655,12 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
     uint32_t avl = P * spN / spM;
     uint32_t vl, vl_dump;
 
-    // config n:m format (nmconfig.v N:M=2:4)
-    asm volatile(
-        ".word  (0b100000  << 26) | \
-                (0b1       << 25) | \
-                (0b00000   << 20) | \
-                (0b00100   << 15) | \
-                (0b000     << 12) | \
-                (0b00001   <<  7) | \
-                (0b1010110 <<  0)   \n");
+    uint8_t index_per_byte=0;
+    if      (spM==2)            index_per_byte=8;
+    else if (spM==4)            index_per_byte=4;
+    else if (spM==8 || spM==16) index_per_byte=2;
+
+    nm_config(spN, spM);
 
     do{ // outer loop 
         asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
@@ -684,18 +693,18 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
             uint8_t *p_b0 = &matrix_b[p];
             asm volatile("vle8.v v0, (%0)" ::"r"(p_b0));
             // load Index: first row
-            uint8_t *p_index0 = &index_b[p/IDX_PER_BYTE];
+            uint8_t *p_index0 = &index_b[p/index_per_byte];
             asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
             // load B: preload second row
-            uint8_t *p_b1 = &matrix_b[p + P/2];
+            uint8_t *p_b1 = &matrix_b[p + P*spN/spM];
             asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
             // load index: preload second row
-            uint8_t *p_index1 = &index_b[(p + P/2)/IDX_PER_BYTE];
+            uint8_t *p_index1 = &index_b[(p + P*spN/spM)/index_per_byte];
             asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
 
             // reset registers
-            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(2*avl));
+            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM/spN*avl));
             asm volatile("vmv.v.i v8, 0");
             asm volatile("vmv.v.i v12, 0");
             asm volatile("vmv.v.i v16, 0");
@@ -751,10 +760,10 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft4, (%0)" :: "r"(p_a20));
                 asm volatile("flw ft5, (%0)" :: "r"(p_a30));
                 // preload B: first set
-                p_b0 = &matrix_b[p + (n+2)*P/2];
+                p_b0 = &matrix_b[p + (n+2)*P*spN/spM];
                 asm volatile("vle8.v v0, (%0)" ::"r"(p_b0));
                 // preload index: first set
-                p_index0 = &index_b[(p + (n+2)*P/2)/IDX_PER_BYTE];
+                p_index0 = &index_b[(p + (n+2)*P*spN/spM)/index_per_byte];
                 asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
                 // second iteration: vfwxmacc.vf _inp, _idx, _fp, _oup
@@ -805,13 +814,13 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft6, (%0)" :: "r"(p_a21));
                 asm volatile("flw ft7, (%0)" :: "r"(p_a31));
                 // preload B: second set
-                p_b1 = &matrix_b[p + (n+3)*P/2];
+                p_b1 = &matrix_b[p + (n+3)*P*spN/spM];
                 asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
                 // preload index: second set
-                p_index1 = &index_b[(p + (n+3)*P/2)/IDX_PER_BYTE];
+                p_index1 = &index_b[(p + (n+3)*P*spN/spM)/index_per_byte];
                 asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
             }
-            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*2));
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*spM/spN));
             asm volatile("vse16.v v8, (%0)" ::"r"(p_c));
             asm volatile("vse16.v v12, (%0)" ::"r"(p_c2));
             asm volatile("vse16.v v16, (%0)" ::"r"(p_c3));
