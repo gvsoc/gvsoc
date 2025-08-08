@@ -18,7 +18,7 @@
 import os
 import numpy as np
 import argparse
-from flex_libfp8 import write_matrix_to_header, write_index_to_header, generate_sparse_fp8_matrix, generate_fp8_matrix, extract_nm_sparsity
+from flex_libfp8 import write_matrix_to_header, generate_sparse_fp8_matrix, generate_fp8_matrix, extract_nm_sparsity, write_index_to_header_multi_format
 
 def main():
     parser = argparse.ArgumentParser(description='FP8 Matrix Generator')
@@ -40,6 +40,7 @@ def main():
 
     M, N, P = args.M, args.N, args.P
     spM, spN = args.spM, args.spN
+    fmt_str = f"{spN}:{spM}"
     _sparse = args.sparse
     _idx_compact = args.idx_compact
 
@@ -100,7 +101,7 @@ def main():
             if not _idx_compact:
                 write_matrix_to_header(f, 'matrix_b_index_uint8', B_index, fmt='uint8', dtype='uint8_t')
             else:
-                write_index_to_header(f, 'matrix_b_index_compact_uint8', B_index, fmt='nm2bit', dtype='uint8_t')
+                write_index_to_header_multi_format(f, 'matrix_b_index_compact_uint8', B_index, fmt=fmt_str)
             
         if args.output_format == 'fp16':
             write_matrix_to_header(f, 'matrix_c_fp16', C, fmt='fp16', dtype='uint16_t')

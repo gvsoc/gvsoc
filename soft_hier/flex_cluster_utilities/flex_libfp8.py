@@ -13,6 +13,7 @@
 # This script includes FP8 common functions for data generation
 
 import numpy as np
+import math
 
 #################################################################
 #                     Format transform
@@ -295,3 +296,93 @@ def write_index_to_header(f, name, mat, fmt='nm2bit', dtype='uint8_t'):
 
     else:
         raise ValueError(f"Unsupported format: {fmt}")
+
+def _pack_bits(values, bits):
+    """Pack a list/array of non-negative integers into bytes using `bits` bits per value (LSB-first)."""
+    if bits < 1 or bits > 8:
+        raise ValueError("bits must be between 1 and 8")
+    out = []
+    acc = 0
+    acc_bits = 0
+    mask = (1 << bits) - 1
+
+    for v in values:
+        if v < 0 or v > mask:
+            raise ValueError(f"value {v} does not fit in {bits} bits")
+        acc |= (v & mask) << acc_bits
+        acc_bits += bits
+        while acc_bits >= 8:
+            out.append(acc & 0xFF)
+            acc >>= 8
+            acc_bits -= 8
+
+    if acc_bits > 0:
+        out.append(acc & 0xFF)
+    return out
+
+def _bits_for_fmt(fmt, flat):
+    """Resolve bits-per-index from fmt string, with X:8 forced to 4 bits."""
+    fmt = str(fmt).lower().strip()
+
+    # Direct N:M formats
+    nm_map = {
+        "1:2": 1,
+        "1:4": 2, "2:4": 2,
+        "1:8": 4, "2:8": 4, "4:8": 4,   # forced 4-bit for X:8
+        "1:16": 4, "2:16": 4, "4:16": 4, "8:16": 4,
+    }
+    if fmt in nm_map:
+        return nm_map[fmt]
+
+    # Legacy/explicit bit formats
+    if fmt in ("nm1bit", "1bit"):
+        return 1
+    if fmt in ("nm2bit", "2bit"):
+        return 2
+    if fmt in ("nm4bit", "4bit"):
+        return 4
+
+    if fmt == "auto":
+        # Auto-detect, but cap to 4 bits (your supported max)
+        maxv = 0 if len(flat) == 0 else max(flat)
+        bits = max(1, math.ceil(math.log2(maxv + 1))) if maxv > 0 else 1
+        if bits > 4:
+            raise ValueError(f"auto-detected {bits} bits (>4). Expected <= 4.")
+        return bits
+
+    raise ValueError(f"Unsupported format: {fmt}")
+
+def write_index_to_header_multi_format(f, name, mat, fmt='auto', array_c_type='uint8_t', section='.hbm'):
+    """
+    Write a flattened index matrix to a C header as packed bytes.
+
+    Supported formats:
+      - '1:2'  -> 1 bit/index
+      - '1:4','2:4' -> 2 bits/index
+      - '1:8','2:8','4:8' -> **4 bits/index (forced for hardware)**
+      - '1:16' -> 4 bits/index
+      - Legacy: 'nm1bit'..'nm4bit', 'auto' (detects up to 4 bits)
+    """
+    flat = mat.flatten().tolist()
+    bits = _bits_for_fmt(fmt, flat)
+
+    packed = _pack_bits(flat, bits)
+
+    # Emit macros
+    f.write(f'#define _IDX_BITS_PER_INDEX ({bits})\n')
+    if 8 % bits == 0:
+        f.write(f'#define _IDX_PER_BYTE ({8 // bits})\n')
+    f.write('\n')
+
+    # Byte array
+    f.write(f'__attribute__((section("{section}"))) '
+            f'static const uint8_t {name}[{len(packed)}] = {{\n')
+    for i, val in enumerate(packed):
+        f.write(f'  0x{val:02X},')
+        if (i + 1) % 16 == 0:
+            f.write('\n')
+    f.write('\n};\n\n')
+
+    # Optional alias
+    f.write(f'static const {array_c_type} * const {name}_data = {name};\n\n')
+
