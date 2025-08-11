@@ -73,6 +73,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         # implicitly setting #
         ######################
         if not hasattr(arch, 'spatz_vlsu_port_width'): arch.spatz_vlsu_port_width = 32
+        if not hasattr(arch, 'spatz_vreg_gather_eff'): arch.spatz_vreg_gather_eff = 100
         if not hasattr(arch, 'multi_idma_enable'): arch.multi_idma_enable = 0
         if not hasattr(arch, 'hbm_node_aliase'): arch.hbm_node_aliase = 1
         if not hasattr(arch, 'hbm_node_aliase_start_bit'): arch.hbm_node_aliase_start_bit = 48
