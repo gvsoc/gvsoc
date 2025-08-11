@@ -195,7 +195,7 @@ index 00000000..fde9d634
 +    return iss_insn_next(iss, insn, pc);
 +}
 diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
-index 188f2877..c45e5fe0 100644
+index 188f2877..55bd9b53 100644
 --- a/models/cpu/iss/include/isa/rv32v.hpp
 +++ b/models/cpu/iss/include/isa/rv32v.hpp
 @@ -20,8 +20,24 @@
@@ -891,7 +891,7 @@ index 188f2877..c45e5fe0 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -1005,7 +1290,27 @@ static inline iss_reg_t vfncvt_rtz_x_f_w_exec(Iss *iss, iss_insn_t *insn, iss_re
+@@ -1005,7 +1290,32 @@ static inline iss_reg_t vfncvt_rtz_x_f_w_exec(Iss *iss, iss_insn_t *insn, iss_re
  
  
  
@@ -903,7 +903,8 @@ index 188f2877..c45e5fe0 100644
  
 +static inline iss_reg_t vfwxmul_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL5(lib_FWXMULVF , REG_IN(2), REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) +2;
++    uint8_t vreg_gather_penalty = iss->spatz.nm_config_m / iss->spatz.nm_config_n;
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) * vreg_gather_penalty;
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(2), REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
 +    return iss_insn_next(iss, insn, pc);
@@ -911,7 +912,11 @@ index 188f2877..c45e5fe0 100644
 +
 +static inline iss_reg_t vfwxmacc_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL5(lib_FWXMACCVF , REG_IN(2), REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) +3;
++    // consider gather efficiency
++    float vreg_gather_penalty = static_cast<float>(iss->spatz.nm_config_m) / iss->spatz.nm_config_n / (iss->spatz.vreg_gather_eff/100.0);
++    if (vreg_gather_penalty < 1.0f) vreg_gather_penalty = 1.0f;
++    // cast the FP latency to int
++    uint32_t latency = static_cast<uint32_t>(((VL + NUM_FPU - 1)/NUM_FPU) * vreg_gather_penalty);
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(2), REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
 +    return iss_insn_next(iss, insn, pc);
@@ -933,7 +938,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..2454403f 100644
+index 26cb748e..0431f9a5 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -2540,7 +2545,7 @@ index 26cb748e..2454403f 100644
      return VL;
  }
  
-@@ -6943,9 +6895,143 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,9 +6895,145 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
@@ -2585,6 +2590,7 @@ index 26cb748e..2454403f 100644
 +        iss->spatz.nm_config_n = imm1;
 +        iss->spatz.nm_config_m = imm2;
 +        iss->spatz.nm_config_idx_bits = __builtin_ctz(static_cast<unsigned>(m));
++        if (imm2==8) iss->spatz.nm_config_idx_bits = 4; // enforce X:8 format has 4-bit index
 +        printf("NM_CONFIG >>> N:M - %d:%d --> %d:%d (idx_bits=%d)\n", old_n, old_m, iss->spatz.nm_config_n, iss->spatz.nm_config_m, iss->spatz.nm_config_idx_bits);
 +    } else if (imm2<=imm1){
 +        printf("ERROR: Unsupported value M should larger than N, got M=%d, N=%d.\n", imm2, imm1);
@@ -2632,6 +2638,7 @@ index 26cb748e..2454403f 100644
 +            restoreFFRoundingMode(old);
 +            intToBinU(SEW*2, res, resBin);
 +            writeToVReg(iss, SEW*2, vd, block_idx + index, resBin);
++            // printf("final index: %d\n", block_idx + index);
 +        }
 +    }
 +}
@@ -2686,7 +2693,7 @@ index 26cb748e..2454403f 100644
  #endif 
 \ No newline at end of file
 diff --git a/models/cpu/iss/include/spatz.hpp b/models/cpu/iss/include/spatz.hpp
-index 8b348cd0..5e40248c 100644
+index 8b348cd0..93155b84 100644
 --- a/models/cpu/iss/include/spatz.hpp
 +++ b/models/cpu/iss/include/spatz.hpp
 @@ -29,9 +29,9 @@ typedef uint8_t iss_Vel_t;
@@ -2718,7 +2725,7 @@ index 8b348cd0..5e40248c 100644
  
  private:
      Iss &iss;
-@@ -133,6 +134,22 @@ public:
+@@ -133,6 +134,23 @@ public:
  
      VRegfile vregfile;
      Vlsu vlsu;
@@ -2738,6 +2745,7 @@ index 8b348cd0..5e40248c 100644
 +    uint8_t nm_config_n;  
 +    uint8_t nm_config_m;
 +    uint8_t nm_config_idx_bits;
++    float vreg_gather_eff;
  
  };
  
@@ -3007,10 +3015,10 @@ index c7b46b87..d4cb9adb 100644
      // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
      this->event = this->top.event_new((vp::Block *)this, handle_event);
 diff --git a/models/cpu/iss/src/spatz.cpp b/models/cpu/iss/src/spatz.cpp
-index e4cb6c51..e4f8a9f2 100644
+index e4cb6c51..4db4b1a3 100644
 --- a/models/cpu/iss/src/spatz.cpp
 +++ b/models/cpu/iss/src/spatz.cpp
-@@ -8,8 +8,22 @@
+@@ -8,8 +8,23 @@
  
  
  Spatz::Spatz(Iss &iss)
@@ -3031,10 +3039,11 @@ index e4cb6c51..e4f8a9f2 100644
 +    nm_config_n = 0;
 +    nm_config_m = 0;
 +    nm_config_idx_bits = 0;
++    vreg_gather_eff = CONFIG_GVSOC_ISS_SPATZ_VREG_GATHER_EFF;
  }
  
  void Spatz::build()
-@@ -25,6 +39,64 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
+@@ -25,6 +40,64 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
      VRegfile::reset(true);
  }
  
@@ -3099,7 +3108,7 @@ index e4cb6c51..e4f8a9f2 100644
  
  
  void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
-@@ -34,17 +106,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+@@ -34,17 +107,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
  
  Vlsu::Vlsu(Iss &iss) : iss(iss)
  {
@@ -3120,7 +3129,7 @@ index e4cb6c51..e4f8a9f2 100644
  }
  inline void VRegfile::reset(bool active){
      if (active){
-@@ -56,9 +128,9 @@ inline void VRegfile::reset(bool active){
+@@ -56,9 +129,9 @@ inline void VRegfile::reset(bool active){
      }
  }
  
