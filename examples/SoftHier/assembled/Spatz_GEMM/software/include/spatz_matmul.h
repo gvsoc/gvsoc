@@ -28,6 +28,7 @@
 #include "flex_runtime.h"
 #include "flex_printf.h"
 #include "flex_libfp8.h"
+#include "spatz_rvv_extensions.h"
 
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
@@ -652,7 +653,10 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
     // init counters
     uint32_t p = 0;
 
-    uint32_t avl = P * spN / spM;
+    // params
+    uint32_t register spM_over_spN = spM/spN;
+
+    uint32_t avl = P / spM_over_spN;
     uint32_t vl, vl_dump;
 
     uint8_t index_per_byte=0;
@@ -697,14 +701,14 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
             asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
             // load B: preload second row
-            uint8_t *p_b1 = &matrix_b[p + P*spN/spM];
+            uint8_t *p_b1 = &matrix_b[p + P/spM_over_spN];
             asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
             // load index: preload second row
-            uint8_t *p_index1 = &index_b[(p + P*spN/spM)/index_per_byte];
+            uint8_t *p_index1 = &index_b[(p + P/spM_over_spN)/index_per_byte];
             asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
 
             // reset registers
-            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM/spN*avl));
+            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM_over_spN*avl));
             asm volatile("vmv.v.i v8, 0");
             asm volatile("vmv.v.i v12, 0");
             asm volatile("vmv.v.i v16, 0");
@@ -760,10 +764,10 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft4, (%0)" :: "r"(p_a20));
                 asm volatile("flw ft5, (%0)" :: "r"(p_a30));
                 // preload B: first set
-                p_b0 = &matrix_b[p + (n+2)*P*spN/spM];
+                p_b0 = &matrix_b[p + (n+2)*P/spM_over_spN];
                 asm volatile("vle8.v v0, (%0)" ::"r"(p_b0));
                 // preload index: first set
-                p_index0 = &index_b[(p + (n+2)*P*spN/spM)/index_per_byte];
+                p_index0 = &index_b[(p + (n+2)*P/spM_over_spN)/index_per_byte];
                 asm volatile("vle8.v v4, (%0)" ::"r"(p_index0));
 
                 // second iteration: vfwxmacc.vf _inp, _idx, _fp, _oup
@@ -814,13 +818,13 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
                 asm volatile("flw ft6, (%0)" :: "r"(p_a21));
                 asm volatile("flw ft7, (%0)" :: "r"(p_a31));
                 // preload B: second set
-                p_b1 = &matrix_b[p + (n+3)*P*spN/spM];
+                p_b1 = &matrix_b[p + (n+3)*P/spM_over_spN];
                 asm volatile("vle8.v v2, (%0)" ::"r"(p_b1));
                 // preload index: second set
-                p_index1 = &index_b[(p + (n+3)*P*spN/spM)/index_per_byte];
+                p_index1 = &index_b[(p + (n+3)*P/spM_over_spN)/index_per_byte];
                 asm volatile("vle8.v v6, (%0)" ::"r"(p_index1));
             }
-            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*spM/spN));
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl*spM_over_spN));
             asm volatile("vse16.v v8, (%0)" ::"r"(p_c));
             asm volatile("vse16.v v12, (%0)" ::"r"(p_c2));
             asm volatile("vse16.v v16, (%0)" ::"r"(p_c3));
@@ -831,5 +835,146 @@ void spatz_AspB_matmul_unroll4x2_wxfp16(uint8_t* matrix_a, uint8_t* matrix_b, ui
         p += vl;
     } while (avl>0);
 }
+
+static inline unsigned ipb_to_shift(unsigned ipb) {
+    switch (ipb) { case 1: return 0; case 2: return 1; case 4: return 2; case 8: return 3;
+                   default: return 0; }
+}
+
+void spatz_AspB_matmul_unroll4x2_wxfp16_opt(
+    uint8_t* __restrict matrix_a,
+    uint8_t* __restrict matrix_b,
+    uint16_t* __restrict matrix_c,
+    uint8_t* __restrict index_b,
+    const uint32_t M, const uint32_t N, const uint32_t P,
+    const uint8_t spN, const uint8_t spM)
+{
+    // params & precomputed shifts
+    uint32_t spM_over_spN = spM / spN;              // {2,4,8,16}
+    uint32_t rowStride    = P / spM_over_spN;       // == p_over_spM_over_spN
+    uint32_t avl          = P / spM_over_spN;       // vector length in bytes (per your code)
+    uint32_t vl, vl_dump;
+
+    // index-per-byte (powers of two → shift)
+    uint8_t index_per_byte = (spM==2) ? 8 : (spM==4) ? 4 : 2;
+    unsigned s_index = ipb_to_shift(index_per_byte);
+
+    // shift for rowStride (since spM_over_spN ∈ {2,4,8,16})
+    static const unsigned sh_tab[17] = { [2]=1, [4]=2, [8]=3, [16]=4 };
+    unsigned s = sh_tab[spM_over_spN];
+
+    nm_config(spN, spM);
+
+    // handy multiples of rowStride without MUL in the loop
+    const uint32_t rs  = rowStride;
+    const uint32_t rs2 = rowStride << 1;            // 2*rowStride
+
+    uint32_t p = 0;                                  // running column offset
+
+    do { // outer loop over avl
+        asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
+
+        for (uint32_t m = 0; m < M; m += 4) { // block of 4 rows
+            // ---- Pointers for C (carry them, avoid recomputing m*P repeatedly)
+            uint16_t *pc  = matrix_c + (size_t)m * P + p;
+
+            // ---- Preload A for the first two columns (n and n+1 at start)
+            uint8_t *a_row0 = matrix_a + (size_t)m * N;   // row 0 base
+            uint8_t *a_row1 = a_row0 + N;                 // row 1 base
+            uint8_t *a_row2 = a_row1 + N;                 // row 2 base
+            uint8_t *a_row3 = a_row2 + N;                 // row 3 base
+            // column 0
+            asm volatile("flw ft0, (%0)" :: "r"(a_row0));
+            asm volatile("flw ft2, (%0)" :: "r"(a_row0 + 1));
+            // column 0 + N
+            asm volatile("flw ft1, (%0)" :: "r"(a_row1));
+            asm volatile("flw ft3, (%0)" :: "r"(a_row1 + 1));
+            // column 0 + 2N
+            asm volatile("flw ft4, (%0)" :: "r"(a_row2));
+            asm volatile("flw ft6, (%0)" :: "r"(a_row2 + 1));
+            // column 0 + 3N
+            asm volatile("flw ft5, (%0)" :: "r"(a_row3));
+            asm volatile("flw ft7, (%0)" :: "r"(a_row3 + 1));
+
+            // ---- B and index base for current p
+            uint8_t *b_base   = matrix_b + p;
+            size_t   off_base = (size_t)p;               // for index shift
+
+            // load B/index for current rows (k = 0 and 1)
+            asm volatile("vle8.v v0, (%0)" ::"r"(b_base));             // k=0
+            asm volatile("vle8.v v4, (%0)" ::"r"(index_b + (off_base >> s_index)));
+            asm volatile("vle8.v v2, (%0)" ::"r"(b_base + rs));        // k=1
+            asm volatile("vle8.v v6, (%0)" ::"r"(index_b + ((off_base + rs) >> s_index)));
+
+            // ---- Reset accumulators (once per m-block)
+            asm volatile("vsetvli %0, %1, e16, m2, ta, ma" : "=r"(vl_dump) : "r"(spM_over_spN * avl));
+            asm volatile("vmv.v.i v8, 0");
+            asm volatile("vmv.v.i v12, 0");
+            asm volatile("vmv.v.i v16, 0");
+            asm volatile("vmv.v.i v20, 0");
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
+
+            // ---- Inner loop: advance in pairs (n, n+1) each iteration
+            // Keep rolling bases so we never multiply or divide inside.
+            uint8_t *b_cur   = b_base;        // corresponds to n
+            size_t   off_cur = off_base;      // for index (n)
+            for (uint32_t n = 0; n < N; n += 2) {
+                // 1st iter uses: (v0,v4) with ft0/1/4/5
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V8,  RVV_V0, RVV_V4, RVF_RS1_FT0, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V12, RVV_V0, RVV_V4, RVF_RS1_FT1, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V16, RVV_V0, RVV_V4, RVF_RS1_FT4, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V20, RVV_V0, RVV_V4, RVF_RS1_FT5, 1) );
+
+                // Preload A for (n+2)
+                uint32_t col2 = n + 2;
+                asm volatile("flw ft0, (%0)" :: "r"(a_row0 + col2));
+                asm volatile("flw ft1, (%0)" :: "r"(a_row1 + col2));
+                asm volatile("flw ft4, (%0)" :: "r"(a_row2 + col2));
+                asm volatile("flw ft5, (%0)" :: "r"(a_row3 + col2));
+
+                // Preload B/index for (n+2) into (v0,v4)
+                asm volatile("vle8.v v0, (%0)" ::"r"(b_cur + rs2));
+                asm volatile("vle8.v v4, (%0)" ::"r"(index_b + ((off_cur + rs2) >> s_index)));
+
+                // 2nd iter uses: (v2,v6) with ft2/3/6/7
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V8,  RVV_V2, RVV_V6, RVF_RS1_FT2, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V12, RVV_V2, RVV_V6, RVF_RS1_FT3, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V16, RVV_V2, RVV_V6, RVF_RS1_FT6, 1) );
+                EMIT_WORD_IMM( VFWXMACC_VF(RVV_V20, RVV_V2, RVV_V6, RVF_RS1_FT7, 1) );
+
+                // Preload A for (n+3)
+                uint32_t col3 = col2 + 1;
+                asm volatile("flw ft2, (%0)" :: "r"(a_row0 + col3));
+                asm volatile("flw ft3, (%0)" :: "r"(a_row1 + col3));
+                asm volatile("flw ft6, (%0)" :: "r"(a_row2 + col3));
+                asm volatile("flw ft7, (%0)" :: "r"(a_row3 + col3));
+
+                // Preload B/index for (n+3) into (v2,v6)
+                asm volatile("vle8.v v2, (%0)" ::"r"(b_cur + rs2 + rs)); // rs*3 without MUL
+                asm volatile("vle8.v v6, (%0)" ::"r"(index_b + ((off_cur + rs2 + rs) >> s_index)));
+
+                // advance bases for next (n+=2)
+                b_cur   += rs2;
+                off_cur += rs2;
+            }
+
+            // ---- Store C rows
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl_dump) : "r"(avl * spM_over_spN));
+            asm volatile("vse16.v v8,  (%0)" ::"r"(pc));
+            pc += P;
+            asm volatile("vse16.v v12, (%0)" ::"r"(pc));
+            pc += P;
+            asm volatile("vse16.v v16, (%0)" ::"r"(pc));
+            pc += P;
+            asm volatile("vse16.v v20, (%0)" ::"r"(pc));
+
+            asm volatile("vsetvli %0, %1, e8, m2, ta, ma" : "=r"(vl) : "r"(avl));
+        }
+
+        avl -= vl;
+        p   += vl;
+    } while (avl > 0);
+}
+
 
 #endif

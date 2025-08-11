@@ -107,7 +107,8 @@ int main()
         // spatz_AspB_matmul_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         // spatz_AspB_matmul_unroll4_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         // spatz_AspB_matmul_unroll2x2_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
-        spatz_AspB_matmul_unroll4x2_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        // spatz_AspB_matmul_unroll4x2_wxfp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
+        spatz_AspB_matmul_unroll4x2_wxfp16_opt(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         #else
         spatz_AspB_matmul_fp16(matrix_a, matrix_b, matrix_c, index_b, FP8_M, FP8_N, FP8_P, spN, spM);
         #endif
