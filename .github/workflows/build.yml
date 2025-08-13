@@ -37,7 +37,7 @@ jobs:
         run: |
           set -x
           source sourceme_systemc.sh
-          make test
+          make github.test
       - name: Run RISCV tests
         run: |
           set -x
