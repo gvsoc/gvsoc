@@ -15,7 +15,8 @@ TARGETS ?= rv64 \
     ara \
     spatz \
     snitch:core_type=fast \
-    pulp.snitch.snitch_cluster_single
+    pulp.snitch.snitch_cluster_single \
+    chimera
 
 BUILDDIR ?= build
 INSTALLDIR ?= install
