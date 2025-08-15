@@ -1,3 +1,5 @@
+PLPTEST_CMD = plptest --target pulp-open --target chimera --max-timeout 60 run table junit
+
 test.clean:
 	rm -rf tests/pulp-sdk
 	rm -rf tests/chimera-sdk
@@ -10,6 +12,8 @@ test.checkout.pulp-sdk:
 	git fetch --all && \
 	git checkout 9627e586916ea69d58efa69cb7068a40b85e0632
 
+test.build.pulp-sdk: test.checkout.pulp-sdk
+
 test.checkout.chimera-sdk:
 	@if [ ! -d "tests/chimera-sdk" ]; then \
 		git clone "git@github.com:pulp-platform/chimera-sdk.git" "tests/chimera-sdk"; \
@@ -20,15 +24,16 @@ test.checkout.chimera-sdk:
 
 test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk
 
-test.build.chimera-sdk:
+test.build.chimera-sdk: test.checkout.chimera-sdk
 	cd tests/chimera-sdk && cmake -DTARGET_PLATFORM=chimera-open -DTOOLCHAIN_DIR=$(CHIMERA_LLVM) -B build
 	cd tests/chimera-sdk && cmake --build build -j
 
 test.build: test.build.chimera-sdk
 
 test.run:
-	plptest --target pulp-open --target chimera --max-timeout 60 run table junit
+	$(PLPTEST_CMD)
 
-test: test.checkout test.build test.run
+test: test.checkout test.build
+	$(PLPTEST_CMD)
 
 .PHONY: test
