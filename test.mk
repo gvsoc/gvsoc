@@ -105,11 +105,32 @@ test.build.spatz: test.checkout.spatz
 	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
 
 
-test.clean: test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz
+#
+# ARA RTL
+#
 
-test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz
+test.clean.ara:
+	rm -rf tests/ara-rtl
 
-test.build: test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz
+test.checkout.ara:
+	@if [ ! -d "tests/ara-rtl" ]; then \
+		git clone "git@github.com:pulp-platform/ara.git" "tests/ara-rtl"; \
+	fi
+	cd "tests/ara-rtl" && \
+	git fetch --all && \
+	git checkout 05c1616d2317d2fda09b3fdf69e8aae4c2e55eaf
+
+test.build.ara: test.checkout.ara
+	cd tests/ara-rtl/apps && make riscv_tests GCC_INSTALL_DIR=$(RISCV_GCC) LLVM_INSTALL_DIR=$(ARA_LLVM)
+
+
+
+
+test.clean: test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara
+
+test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara
+
+test.build: test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara
 
 test.run:
 	$(PLPTEST_CMD)
