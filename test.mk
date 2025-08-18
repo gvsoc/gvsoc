@@ -61,7 +61,7 @@ test.build.chimera-sdk: test.checkout.chimera-sdk
 
 
 #
-# SNITCH
+# SNITCH RTL
 #
 
 test.clean.snitch:
@@ -80,15 +80,36 @@ test.build.snitch: test.checkout.snitch
 	cd tests/snitch && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
 		tar xzf bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz
 	cd tests/snitch && pip install .
-	export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/snitch/target/snitch_cluster && make DEBUG=ON OPENOCD_SEMIHOSTING=ON bin/snitch_cluster.gvsoc sw
+	export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/snitch/target/snitch_cluster && $(MAKE) DEBUG=ON OPENOCD_SEMIHOSTING=ON bin/snitch_cluster.gvsoc sw
 
 
+#
+# SPATZ RTL
+#
 
-test.clean: test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch
+test.clean.spatz:
+	rm -rf tests/spatz-rtl
 
-test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch
+test.checkout.spatz:
+	@if [ ! -d "tests/spatz-rtl" ]; then \
+		git clone "git@github.com:haugoug/spatz.git" "tests/spatz-rtl"; \
+	fi
+	cd "tests/spatz-rtl" && \
+	git fetch --all && \
+	git checkout 04a9859089d5f25a732a31f3c9eb8fa9e19a1621
 
-test.build: test.build.pulp-sdk test.build.chimera-sdk test.build.snitch
+test.build.spatz: test.checkout.spatz
+	cd tests/spatz-rtl && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
+		tar xzf bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz
+	cd tests/spatz-rtl && $(MAKE) sw/toolchain/riscv-opcodes BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender
+	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
+
+
+test.clean: test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz
+
+test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz
+
+test.build: test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz
 
 test.run:
 	$(PLPTEST_CMD)
