@@ -195,7 +195,7 @@ index 00000000..fde9d634
 +    return iss_insn_next(iss, insn, pc);
 +}
 diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
-index 188f2877..ac83901e 100644
+index 188f2877..55bd9b53 100644
 --- a/models/cpu/iss/include/isa/rv32v.hpp
 +++ b/models/cpu/iss/include/isa/rv32v.hpp
 @@ -20,8 +20,24 @@
@@ -891,22 +891,32 @@ index 188f2877..ac83901e 100644
      return iss_insn_next(iss, insn, pc);
  }
  
-@@ -1005,7 +1290,22 @@ static inline iss_reg_t vfncvt_rtz_x_f_w_exec(Iss *iss, iss_insn_t *insn, iss_re
+@@ -1005,7 +1290,32 @@ static inline iss_reg_t vfncvt_rtz_x_f_w_exec(Iss *iss, iss_insn_t *insn, iss_re
  
  
  
 +// index scalar-vector multiplication
++static inline iss_reg_t nmconfig_v_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_NMCONFIGV , UIM_GET(3), UIM_GET(2), UIM_GET(1), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
+ 
 +static inline iss_reg_t vfwxmul_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL5(lib_FWXMULVF , REG_IN(2), REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) +2;
++    uint8_t vreg_gather_penalty = iss->spatz.nm_config_m / iss->spatz.nm_config_n;
++    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) * vreg_gather_penalty;
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(2), REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
 +    return iss_insn_next(iss, insn, pc);
 +}
- 
++
 +static inline iss_reg_t vfwxmacc_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
 +    LIB_CALL5(lib_FWXMACCVF , REG_IN(2), REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
-+    uint32_t latency = ((VL + NUM_FPU - 1)/NUM_FPU) +3;
++    // consider gather efficiency
++    float vreg_gather_penalty = static_cast<float>(iss->spatz.nm_config_m) / iss->spatz.nm_config_n / (iss->spatz.vreg_gather_eff/100.0);
++    if (vreg_gather_penalty < 1.0f) vreg_gather_penalty = 1.0f;
++    // cast the FP latency to int
++    uint32_t latency = static_cast<uint32_t>(((VL + NUM_FPU - 1)/NUM_FPU) * vreg_gather_penalty);
 +    uint64_t delay = iss->spatz.timing_insn(insn, 0, REG_OUT(0), REG_IN(2), REG_IN(1), latency, iss->top.clock.get_cycles());
 +    iss->exec.stall_cycles = (iss->exec.stall_cycles > delay)? iss->exec.stall_cycles : delay;
 +    return iss_insn_next(iss, insn, pc);
@@ -928,7 +938,7 @@ index 84e01c06..cadf5f31 100644
      IssOffloadInsn<iss_reg_t> offload_insn = {
          .opcode=insn->opcode,
 diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
-index 26cb748e..412b5077 100644
+index 26cb748e..0431f9a5 100644
 --- a/models/cpu/iss/include/isa_lib/vint.h
 +++ b/models/cpu/iss/include/isa_lib/vint.h
 @@ -31,6 +31,12 @@
@@ -1033,7 +1043,7 @@ index 26cb748e..412b5077 100644
 +
 +        int32_t val = i;
 +        bool resBin[64];
-+
+ 
 +        intToBin(SEW, abs(val), resBin);
 +
 +        writeToVReg(iss, SEW, vd, i, resBin);
@@ -1054,7 +1064,7 @@ index 26cb748e..412b5077 100644
 +        myAbs(iss, SEW, vs1, i, &data1);
 +        myAbs(iss, SEW, vs2, i, &data2);
 +        res = data2 << data1;
- 
++
 +        intToBin(SEW, abs(res), resBin);
 +        if(res < 0){
 +            twosComplement(SEW, resBin);
@@ -1394,14 +1404,14 @@ index 26cb748e..412b5077 100644
 -        iss->spatz.vlsu.Vlsu_io_access(iss, start_add,4,data,false);
 -        iss->spatz.vregfile.vregs[vd][VSTART+0] = data[0];
 -        iss->spatz.vregfile.vregs[vd][VSTART+1] = data[1];
--
++    uint8_t data[INTF_WIDTH];
+ 
 -        start_add += 2;
 -        align = 2;        
 -    }else if(start_add%4 == 3){
 -        iss->spatz.vlsu.Vlsu_io_access(iss, start_add,4,data,false);
 -        iss->spatz.vregfile.vregs[vd][VSTART+0] = data[0];
-+    uint8_t data[INTF_WIDTH];
- 
+-
 -        start_add += 1;
 -        align = 1;
 -    }else{
@@ -1620,14 +1630,14 @@ index 26cb748e..412b5077 100644
 -        // printf("data3 = %d\n",data[3]);
 -
 -        //printf("vd = %d\n",vd);
--
++    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
+ 
 -        //iss->spatz.vregfile.vregs[vd][i+0] = (vm || !(iss->spatz.vregfile.vregs[0][i+0]%2)) ? (data[1]*pow(2,8) + data[0]) : iss->spatz.vregfile.vregs[vd][i+0];
 -        //iss->spatz.vregfile.vregs[vd][i+1] = (vm || !(iss->spatz.vregfile.vregs[0][i+1]%2)) ? (data[3]*pow(2,8) + data[2]) : iss->spatz.vregfile.vregs[vd][i+1];
 -
 -        // iss->spatz.vregfile.vregs[vd][i+0] = (data[1]*pow(2,8) + data[0]);
 -        // iss->spatz.vregfile.vregs[vd][i+1] = (data[3]*pow(2,8) + data[2]);
-+    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
- 
+-
 -        iss->spatz.vregfile.vregs[vd][i+0] = data[0];
 -        iss->spatz.vregfile.vregs[vd][i+1] = data[1];
 -        iss->spatz.vregfile.vregs[vd][i+2] = data[2];
@@ -1722,10 +1732,10 @@ index 26cb748e..412b5077 100644
 -        // printf("data1  = %d\n",data[1 ]);
 -        // printf("data2  = %d\n",data[2 ]);
 -        // printf("data3  = %d\n",data[3 ]);
--
--        // printf("addr  = %lu\n",start_add);
 +    for (int i = VSTART+(INTF_WIDTH-align); i < VL; i+=INTF_WIDTH){
  
+-        // printf("addr  = %lu\n",start_add);
+-
 -        //if(!i){
 -            iss->spatz.vlsu.Vlsu_io_access(iss, start_add,4,data,true);
 -        //}else{
@@ -1806,8 +1816,7 @@ index 26cb748e..412b5077 100644
 -        data[2]  = iss->spatz.vregfile.vregs[vs3][i+2];
 -        data[3]  = iss->spatz.vregfile.vregs[vs3][i+3];
 -        // printf("i = %d\t,vd = %d\n",i,vs3);
-+    for (int i = VSTART+(INTF_WIDTH-align); i < VL*2; i+=INTF_WIDTH){
- 
+-
 -        // printf("STORE16 \n");
 -        // printf("data0  = %d\n",data[0]);
 -        // printf("data1  = %d\n",data[1]);
@@ -1815,7 +1824,8 @@ index 26cb748e..412b5077 100644
 -        // printf("data3  = %d\n",data[3]);
 -
 -        // printf("addr  = %lu\n",start_add);
--
++    for (int i = VSTART+(INTF_WIDTH-align); i < VL*2; i+=INTF_WIDTH){
+ 
 -        //if(!i){
 -            iss->spatz.vlsu.Vlsu_io_access(iss, start_add,4,data,true);
 -        //}else{
@@ -1887,8 +1897,7 @@ index 26cb748e..412b5077 100644
 -        // data[2] = (vm || !(iss->spatz.vregfile.vregs[0][i+0]%2)) ? iss->spatz.vregfile.vregs[vs3][i+0] : 0;
 -        // data[1] = (vm || !(iss->spatz.vregfile.vregs[0][i+1]%2)) ? iss->spatz.vregfile.vregs[vs3][i+1]/pow(2,8) : 0;
 -        // data[0] = (vm || !(iss->spatz.vregfile.vregs[0][i+1]%2)) ? iss->spatz.vregfile.vregs[vs3][i+1] : 0;
-+    for (int i = VSTART+(INTF_WIDTH-align); i < VL*4; i+=INTF_WIDTH){
- 
+-
 -        // if(!i){
 -        //     vlsu.Vlsu_io_access(iss, rs1,vlEN/8,data,true);
 -        // }else{
@@ -1899,7 +1908,8 @@ index 26cb748e..412b5077 100644
 -        data[1]  = iss->spatz.vregfile.vregs[vs3][i+1];
 -        data[2]  = iss->spatz.vregfile.vregs[vs3][i+2];
 -        data[3]  = iss->spatz.vregfile.vregs[vs3][i+3];
--
++    for (int i = VSTART+(INTF_WIDTH-align); i < VL*4; i+=INTF_WIDTH){
+ 
 -
 -        // printf("STORE32 \n");
 -        // printf("data0  = %d\n",data[0]);
@@ -2011,15 +2021,15 @@ index 26cb748e..412b5077 100644
 -        data[1]  = iss->spatz.vregfile.vregs[vs3][i+1];
 -        data[2]  = iss->spatz.vregfile.vregs[vs3][i+2];
 -        data[3]  = iss->spatz.vregfile.vregs[vs3][i+3];
-+    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
- 
+-
 -
 -        // printf("STORE64 \n");
 -        // printf("data0  = %d\n",data[0]);
 -        // printf("data1  = %d\n",data[1]);
 -        // printf("data2  = %d\n",data[2]);
 -        // printf("data3  = %d\n",data[3]);
--
++    for (int i = VSTART+(INTF_WIDTH-align); i < VL*8; i+=INTF_WIDTH){
+ 
 -        // printf("addr  = %lu\n",start_add);
 -
 -        //if(!i){
@@ -2084,6 +2094,12 @@ index 26cb748e..412b5077 100644
 -    while(i < VL*2){
 -        if(!((i/2)%8)){
 -            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][(i/2)/8],bin);
+-        }
+-        index = iss->spatz.vregfile.vregs[vs2][int(i/r) - VSTART];
+-        iss->spatz.vlsu.Vlsu_io_access(iss, (start_add+index),4,data,false);
+-        if(!(!(vm) && !bin[(i/2+0)%8])){
+-            iss->spatz.vregfile.vregs[vd][i+0] = data[0];
+-            iss->spatz.vregfile.vregs[vd][i+1] = data[1];
 +    for (int i=0; i < VL; i+=1){
 +        // read index
 +        index[0] = iss->spatz.vregfile.vregs[vs2][i];
@@ -2098,12 +2114,6 @@ index 26cb748e..412b5077 100644
 +        for (int j=0; j<sew_bytes; j++){
 +            iss->spatz.vregfile.vregs[vd][VSTART + i*sew_bytes + j] = data[offset+j];
          }
--        index = iss->spatz.vregfile.vregs[vs2][int(i/r) - VSTART];
--        iss->spatz.vlsu.Vlsu_io_access(iss, (start_add+index),4,data,false);
--        if(!(!(vm) && !bin[(i/2+0)%8])){
--            iss->spatz.vregfile.vregs[vd][i+0] = data[0];
--            iss->spatz.vregfile.vregs[vd][i+1] = data[1];
--        }
 -        i+=2;
      }
  }
@@ -2184,12 +2194,6 @@ index 26cb748e..412b5077 100644
 -            flag = 1;
 -            index = iss->spatz.vregfile.vregs[vs2][int(i/r) - VSTART];
 -            iss->spatz.vlsu.Vlsu_io_access(iss, (start_add+index),4,data,false);
--        }
--        if(!(!(vm) && !bin[(i/8+0)%8])){
--            iss->spatz.vregfile.vregs[vd][i+0] = data[0];
--            iss->spatz.vregfile.vregs[vd][i+1] = data[1];
--            iss->spatz.vregfile.vregs[vd][i+2] = data[2];
--            iss->spatz.vregfile.vregs[vd][i+3] = data[3];
 +        // index load 
 +        uint64_t addr = start_add + (sew_bytes * bytes_to_uint(index, 4));
 +        uint8_t offset = addr % INTF_WIDTH;
@@ -2198,10 +2202,16 @@ index 26cb748e..412b5077 100644
 +        for (int j=0; j<sew_bytes; j++){
 +            iss->spatz.vregfile.vregs[vd][VSTART + i*sew_bytes + j] = data[offset+j];
          }
+-        if(!(!(vm) && !bin[(i/8+0)%8])){
+-            iss->spatz.vregfile.vregs[vd][i+0] = data[0];
+-            iss->spatz.vregfile.vregs[vd][i+1] = data[1];
+-            iss->spatz.vregfile.vregs[vd][i+2] = data[2];
+-            iss->spatz.vregfile.vregs[vd][i+3] = data[3];
+-        }
 -        i+=4;
-     }
- }
- 
+-    }
+-}
+-
 -static inline void lib_VLUXEIV  (Iss *iss, iss_reg_t rs1, int vs2, int vd , bool vm, int EEW){
 -    float temp = float(SEW)/float(EEW);
 -    if(SEW == 8){
@@ -2212,9 +2222,9 @@ index 26cb748e..412b5077 100644
 -        lib_VLUXEI32V  (iss, rs1, vs2, vd , vm, temp);
 -    }else if(SEW == 64){
 -        lib_VLUXEI64V  (iss, rs1, vs2, vd , vm, temp);
--    }
--}
--
+     }
+ }
+ 
 -
 -static inline void lib_VSUXEI8V  (Iss *iss, iss_reg_t rs1, int vs2, int vd , bool vm, float r){
 +static inline void lib_VLUXEI64V  (Iss *iss, iss_reg_t rs1, int vs2, int vd , bool vm){
@@ -2535,7 +2545,7 @@ index 26cb748e..412b5077 100644
      return VL;
  }
  
-@@ -6943,9 +6895,125 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
+@@ -6943,9 +6895,145 @@ static inline iss_reg_t lib_VSETVL(Iss *iss, int idxRs1, int idxRd, int rs1, int
          }else{
              AVL = VL;
          }
@@ -2567,9 +2577,28 @@ index 26cb748e..412b5077 100644
 +
 +// index-mul.vf implementation
 +// currently support 2-bit indices for X:4 format
-+#define INDEX_BITS (2)
-+#define SP_N (2)
-+#define SP_M (4)
++#include <bit>  // for std::countr_zero
++static inline void lib_NMCONFIGV (Iss *iss, uint8_t imm3, uint8_t imm2, uint8_t imm1, bool vm){
++    // capture the previous values
++    uint8_t old_n, old_m;
++    old_n = iss->spatz.nm_config_n;
++    old_m = iss->spatz.nm_config_m;
++    // assign the index bit according to m (current;y consider M=2,4,8,16)
++    auto m = imm2;
++    if (((m & (m - 1)) == 0 && m >= 2 && m <= 16) && imm2>imm1) { // m={2,4,8,16} && m>n
++        // assign new n:m values
++        iss->spatz.nm_config_n = imm1;
++        iss->spatz.nm_config_m = imm2;
++        iss->spatz.nm_config_idx_bits = __builtin_ctz(static_cast<unsigned>(m));
++        if (imm2==8) iss->spatz.nm_config_idx_bits = 4; // enforce X:8 format has 4-bit index
++        printf("NM_CONFIG >>> N:M - %d:%d --> %d:%d (idx_bits=%d)\n", old_n, old_m, iss->spatz.nm_config_n, iss->spatz.nm_config_m, iss->spatz.nm_config_idx_bits);
++    } else if (imm2<=imm1){
++        printf("ERROR: Unsupported value M should larger than N, got M=%d, N=%d.\n", imm2, imm1);
++    } else {
++        printf("ERROR: Unsupported M value assigned. m = {2, 4, 8, 16}, got m=%d\n", imm2);
++    }
++}
++
 +static inline void lib_FWXMULVF  (Iss *iss, int vs2, int vs1, int64_t rs1, int vd, bool vm){
 +    bool bin[8];
 +    unsigned long int res, data1, data2, index;
@@ -2583,14 +2612,14 @@ index 26cb748e..412b5077 100644
 +            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
 +        }
 +        // 1. read index 
-+        myAbsINDEX(iss, INDEX_BITS, vs1, i, &index);
++        myAbsINDEX(iss, iss->spatz.nm_config_idx_bits, vs1, i, &index);
 +        // printf("index: %x\n", index);
 +        // 2. read vecotr FP element
 +        myAbsU(iss, SEW, vs2, i, &data2);
 +        EMCase(SEW, &m, &e);
 +        EMCase(SEW*2, &m2, &e2);
 +        // 3. N:M block info
-+        int block_idx = i / SP_N * SP_M;
++        int block_idx = i / iss->spatz.nm_config_n * iss->spatz.nm_config_m;
 +
 +        if(!mask(vm,bin)){
 +            int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
@@ -2609,6 +2638,7 @@ index 26cb748e..412b5077 100644
 +            restoreFFRoundingMode(old);
 +            intToBinU(SEW*2, res, resBin);
 +            writeToVReg(iss, SEW*2, vd, block_idx + index, resBin);
++            // printf("final index: %d\n", block_idx + index);
 +        }
 +    }
 +}
@@ -2625,9 +2655,9 @@ index 26cb748e..412b5077 100644
 +            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
 +        }
 +        // 0. N:M block info
-+        int block_idx = i / SP_N * SP_M;
++        int block_idx = i / iss->spatz.nm_config_n * iss->spatz.nm_config_m;
 +        // 1. read index 
-+        myAbsINDEX(iss, INDEX_BITS, vs1, i, &index);
++        myAbsINDEX(iss, iss->spatz.nm_config_idx_bits, vs1, i, &index);
 +        // 2. read vecotr FP element
 +        myAbsU(iss, SEW, vs2, i, &data2);
 +        // gather acc value
@@ -2663,7 +2693,7 @@ index 26cb748e..412b5077 100644
  #endif 
 \ No newline at end of file
 diff --git a/models/cpu/iss/include/spatz.hpp b/models/cpu/iss/include/spatz.hpp
-index 8b348cd0..2be6b1ec 100644
+index 8b348cd0..93155b84 100644
 --- a/models/cpu/iss/include/spatz.hpp
 +++ b/models/cpu/iss/include/spatz.hpp
 @@ -29,9 +29,9 @@ typedef uint8_t iss_Vel_t;
@@ -2695,7 +2725,7 @@ index 8b348cd0..2be6b1ec 100644
  
  private:
      Iss &iss;
-@@ -133,6 +134,17 @@ public:
+@@ -133,6 +134,23 @@ public:
  
      VRegfile vregfile;
      Vlsu vlsu;
@@ -2710,14 +2740,20 @@ index 8b348cd0..2be6b1ec 100644
 +    uint64_t unit_score_board [3]; //fpu, slide, vlsu
 +    uint64_t max_vlsu_latency;
 +    uint64_t timing_insn(iss_insn_t *insn, int uint_id, int vd, int vs1, int vs2, uint64_t latency, uint64_t timestamp);
++
++    // N:M format configuration e.g, {1:2, 1:4, 2:4, 1:8, 2:8, 4:8, 1:16}
++    uint8_t nm_config_n;  
++    uint8_t nm_config_m;
++    uint8_t nm_config_idx_bits;
++    float vreg_gather_eff;
  
  };
  
 diff --git a/models/cpu/iss/isa_gen/isa_rvv.py b/models/cpu/iss/isa_gen/isa_rvv.py
-index 3c39da9e..83572133 100644
+index 3c39da9e..d6e0dbff 100644
 --- a/models/cpu/iss/isa_gen/isa_rvv.py
 +++ b/models/cpu/iss/isa_gen/isa_rvv.py
-@@ -77,10 +77,22 @@ Format_OPVL = [ OutReg     (0, Range(7 , 5)),
+@@ -77,10 +77,30 @@ Format_OPVL = [ OutReg     (0, Range(7 , 5)),
                  InReg      (1, Range(20, 5)),
  ]
  
@@ -2731,6 +2767,14 @@ index 3c39da9e..83572133 100644
 +                 UnsignedImm(0, Range(25, 1)),
 +]
 +
++        # 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++# OPV   #   func6    |m|  imm3   |  imm2   |func3|  imm1   |     op      # 
++Format_OPVCONF = [ UnsignedImm(1, Range(7 , 5)), # imm1
++                   UnsignedImm(2, Range(15, 5)), # imm2
++                   UnsignedImm(3, Range(20, 5)), # imm3
++                   UnsignedImm(0, Range(25, 1)),
++]
++
  class Rv32v(IsaSubset):
  
      def __init__(self):
@@ -2740,7 +2784,7 @@ index 3c39da9e..83572133 100644
              Instr('vadd.vv'       ,   Format_OPV  ,    '000000 - ----- ----- 000 ----- 1010111'),#inst[25] = VM , VM = 0 mask enable
              Instr('vadd.vi'       ,   Format_OPIVI,    '000000 - ----- ----- 011 ----- 1010111'),
              Instr('vadd.vx'       ,   Format_OPV  ,    '000000 - ----- ----- 100 ----- 1010111'),
-@@ -201,84 +213,92 @@ class Rv32v(IsaSubset):
+@@ -201,84 +221,92 @@ class Rv32v(IsaSubset):
  
  
  
@@ -2886,7 +2930,7 @@ index 3c39da9e..83572133 100644
  
              Instr('vfcvt.xu.f.v'     ,   Format_OPV  ,    '010010 - ----- 00000 001 ----- 1010111', tags=['fp_op', 'nseq']),
  
-@@ -374,7 +394,13 @@ class Rv32v(IsaSubset):
+@@ -374,7 +402,14 @@ class Rv32v(IsaSubset):
              Instr('vs2r.v'       ,   Format_OPV  ,    '001 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
              Instr('vs4r.v'       ,   Format_OPV  ,    '011 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
              Instr('vs8r.v'       ,   Format_OPV  ,    '111 0 001 01000 ----- 000 ----- 0100111'),# vd, (rs1), vm
@@ -2895,6 +2939,7 @@ index 3c39da9e..83572133 100644
 +            # bowwang   
 +            Instr('vid.v'      ,   Format_OPIVI  ,    '010100 - ----- ----- 010 ----- 1010111'),
 +            # Custom ISA for index-sparse
++            Instr('nmconfig.v',   Format_OPVCONF ,  '100000 - ----- ----- 000 ----- 1010110'),
 +            Instr('vfwxmacc.vf',   Format_OPVFX ,    '110001 - ----- ----- --- ----- 1010110'),
 +            Instr('vfwxmul.vf' ,   Format_OPVFX ,    '110011 - ----- ----- --- ----- 1010110'),
 +            
@@ -2970,10 +3015,10 @@ index c7b46b87..d4cb9adb 100644
      // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
      this->event = this->top.event_new((vp::Block *)this, handle_event);
 diff --git a/models/cpu/iss/src/spatz.cpp b/models/cpu/iss/src/spatz.cpp
-index e4cb6c51..1cd8f155 100644
+index e4cb6c51..4db4b1a3 100644
 --- a/models/cpu/iss/src/spatz.cpp
 +++ b/models/cpu/iss/src/spatz.cpp
-@@ -8,8 +8,18 @@
+@@ -8,8 +8,23 @@
  
  
  Spatz::Spatz(Iss &iss)
@@ -2990,10 +3035,15 @@ index e4cb6c51..1cd8f155 100644
 +    {
 +        this->unit_score_board[i] = 0;
 +    }
++
++    nm_config_n = 0;
++    nm_config_m = 0;
++    nm_config_idx_bits = 0;
++    vreg_gather_eff = CONFIG_GVSOC_ISS_SPATZ_VREG_GATHER_EFF;
  }
  
  void Spatz::build()
-@@ -25,6 +35,64 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
+@@ -25,6 +40,64 @@ VRegfile::VRegfile(Iss &iss) : iss(iss){
      VRegfile::reset(true);
  }
  
@@ -3058,7 +3108,7 @@ index e4cb6c51..1cd8f155 100644
  
  
  void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
-@@ -34,17 +102,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+@@ -34,17 +107,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
  
  Vlsu::Vlsu(Iss &iss) : iss(iss)
  {
@@ -3079,7 +3129,7 @@ index e4cb6c51..1cd8f155 100644
  }
  inline void VRegfile::reset(bool active){
      if (active){
-@@ -56,9 +124,9 @@ inline void VRegfile::reset(bool active){
+@@ -56,9 +129,9 @@ inline void VRegfile::reset(bool active){
      }
  }
  

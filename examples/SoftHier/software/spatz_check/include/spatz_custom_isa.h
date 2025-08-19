@@ -74,6 +74,16 @@ void test_spatz_isa(){
         }
         uint8_t s_fp8[1] =  {0xB5,};
 
+        // config n:m format (nmconfig.v N:M=2:4)
+        asm volatile(
+            ".word  (0b100000  << 26) | \
+                    (0b1       << 25) | \
+                    (0b00000   << 20) | \
+                    (0b00100   << 15) | \
+                    (0b000     << 12) | \
+                    (0b00010   <<  7) | \
+                    (0b1010110 <<  0)   \n");
+
         // vfwxmul.vf
         printf("[ins] vfwxmul.vf \n");
         do{

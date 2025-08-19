@@ -1477,11 +1477,46 @@ index 673529f..080f26f 100644
  
  #include <vp/vp.hpp>
  #include <vp/itf/io.hpp>
+diff --git a/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson b/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
+index e3a0c48..1e66943 100644
+--- a/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
++++ b/pulp/snitch/snitch_cluster/snitch_cluster_peripheral_reg.hjson
+@@ -411,6 +411,30 @@
+             name: "ICACHE_PREFETCH_ENABLE",
+             desc: "Enable instruction prefetching."
+         }]
++    },
++    {
++        name: "NM_CONFIG",
++        desc: "Structured-sparsity format configuration register",
++        swaccess: "rw",
++        hwaccess: "hrw",
++        resval: "0",
++        fields: [
++            {
++                bits: "3:0",
++                name: "Format_N",
++                desc: "N value in N:M format (1, 2, 3, 4, 8)"
++            },
++            {
++                bits: "7:4",
++                name: "Format_M",
++                desc: "M value in N:M format (2, 4, 8, 16)"
++            },
++            {
++                bits: "31:8",
++                name: "RESERVED",
++                desc: "Reserved bits"
++            }
++        ]
+     }
+     ]
+ }
 diff --git a/pulp/snitch/snitch_core.py b/pulp/snitch/snitch_core.py
-index 0bda5e4..896bb54 100644
+index 0bda5e4..186525b 100644
 --- a/pulp/snitch/snitch_core.py
 +++ b/pulp/snitch/snitch_core.py
-@@ -86,20 +86,28 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+@@ -86,20 +86,29 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,
@@ -1495,6 +1530,7 @@ index 0bda5e4..896bb54 100644
 +            spatz_num_vlsu: int=4,
 +            spatz_num_fpu: int=4,
 +            spatz_vlsu_bw: int=32,
++            spatz_vreg_gather_eff: float=1.0,
              core_id: int=0,
              htif: bool=False):
  
@@ -1513,7 +1549,7 @@ index 0bda5e4..896bb54 100644
              add_latencies(isa_instance)
              isa_instances[isa] = isa_instance
  
-@@ -146,17 +154,24 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
+@@ -146,17 +155,25 @@ class Snitch(cpu.iss.riscv.RiscvCommon):
              self.add_sources([
                  "cpu/iss/src/spatz.cpp",
              ])
@@ -1521,6 +1557,7 @@ index 0bda5e4..896bb54 100644
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU={spatz_num_vlsu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_FPU={spatz_num_fpu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU_BW={spatz_vlsu_bw}'])
++            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VREG_GATHER_EFF={spatz_vreg_gather_eff}'])
  
      def o_BARRIER_REQ(self, itf: gvsoc.systree.SlaveItf):
          self.itf_bind('barrier_req', itf, signature='wire<bool>')
@@ -1539,7 +1576,7 @@ index 0bda5e4..896bb54 100644
              misa: int=None,
              binaries: list=[],
              fetch_enable: bool=False,
-@@ -197,19 +212,27 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+@@ -197,19 +214,28 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,
@@ -1553,6 +1590,7 @@ index 0bda5e4..896bb54 100644
 +            spatz_num_vlsu: int=4,
 +            spatz_num_fpu: int=4,
 +            spatz_vlsu_bw: int=32,
++            spatz_vreg_gather_eff: float=1.0,
              core_id: int=0,
              timed: bool=False,
              htif: bool=False):
@@ -1571,7 +1609,7 @@ index 0bda5e4..896bb54 100644
  
          add_latencies(isa_instance)
  
-@@ -254,6 +277,10 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
+@@ -254,6 +280,11 @@ class Snitch_fp_ss(cpu.iss.riscv.RiscvCommon):
              self.add_sources([
                  "cpu/iss/src/spatz.cpp",
              ])
@@ -1579,10 +1617,11 @@ index 0bda5e4..896bb54 100644
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU={spatz_num_vlsu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_FPU={spatz_num_fpu}'])
 +            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VLSU_BW={spatz_vlsu_bw}'])
++            self.add_c_flags([f'-DCONFIG_GVSOC_ISS_SPATZ_VREG_GATHER_EFF={spatz_vreg_gather_eff}'])
  
      def o_BARRIER_REQ(self, itf: gvsoc.systree.SlaveItf):
          self.itf_bind('barrier_req', itf, signature='wire<bool>')
-@@ -266,7 +293,7 @@ class Spatz(cpu.iss.riscv.RiscvCommon):
+@@ -266,7 +297,7 @@ class Spatz(cpu.iss.riscv.RiscvCommon):
      def __init__(self,
              parent,
              name,

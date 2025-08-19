@@ -11,7 +11,7 @@ int main()
     /*  Program Execution Region -- Start */
     /**************************************/
 
-    hello_world_all_core();
+    hello_world_all_cluster();
 
     /**************************************/
     /*  Program Execution Region -- Stop  */
