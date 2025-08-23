@@ -13,3 +13,9 @@ add_dramsyslib_patches/build_dynlib_from_github_dramsys5/cmake*
 third_party/
 *trace_file.txt
 *tx_uart.log
+tests/ara-rtl/
+tests/chimera-sdk/
+tests/junit-reports/
+tests/pulp-sdk/
+tests/snitch/
+tests/spatz-rtl/

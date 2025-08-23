@@ -13,7 +13,8 @@ TEST_TARGETS ?= \
     occamy \
     spatz \
     ara \
-    snitch_spatz
+    snitch_spatz \
+    snitch_testbench
 
 PLPTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
 PLPTEST_CMD = plptest $(PLPTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit

@@ -21,6 +21,8 @@ install(
 add_subdirectory(core)
 add_subdirectory(gapy)
 add_subdirectory(plptest)
+add_subdirectory(gvrun)
+add_subdirectory(pulpos)
 
 if(IS_DIRECTORY gui)
 add_subdirectory(gui)

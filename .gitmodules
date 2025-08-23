@@ -7,3 +7,9 @@
 [submodule "plptest"]
 	path = plptest
 	url =  https://github.com/gvsoc/plptest.git
+[submodule "pulpos"]
+	path = pulpos
+	url = git@github.com:gvsoc/pulpos.git
+[submodule "gvrun"]
+	path = gvrun
+	url = git@github.com:gvsoc/gvrun.git

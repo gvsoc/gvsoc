@@ -1,6 +1,6 @@
 include test.mk
 
-CMAKE_FLAGS ?= -j
+CMAKE_FLAGS ?= -j 16
 CMAKE ?= cmake
 
 TARGETS ?= rv64 \
@@ -16,7 +16,8 @@ TARGETS ?= rv64 \
     spatz \
     snitch:core_type=fast \
     pulp.snitch.snitch_cluster_single \
-    chimera
+    chimera \
+    snitch_testbench
 
 BUILDDIR ?= build
 INSTALLDIR ?= install
@@ -36,11 +37,18 @@ else
 BUILD_TYPE = Release
 endif
 
-build:
+gvrun.build:
+	$(CMAKE) -S gvrun -B build/gvrun -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR)
+
+	cmake --build build/gvrun $(CMAKE_FLAGS)
+	cmake --install build/gvrun
+
+build: gvrun.build
 	# Change directory to curdir to avoid issue with symbolic links
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
-		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
+		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/gvrun/python;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
