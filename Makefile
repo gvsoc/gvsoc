@@ -38,11 +38,11 @@ BUILD_TYPE = Release
 endif
 
 gvrun.build:
-	$(CMAKE) -S gvrun -B build/gvrun -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+	$(CMAKE) -S gvrun -B $(BUILDDIR)/gvrun -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR)
 
-	cmake --build build/gvrun $(CMAKE_FLAGS)
-	cmake --install build/gvrun
+	cmake --build $(BUILDDIR)/gvrun $(CMAKE_FLAGS)
+	cmake --install $(BUILDDIR)/gvrun
 
 build: gvrun.build
 	# Change directory to curdir to avoid issue with symbolic links
