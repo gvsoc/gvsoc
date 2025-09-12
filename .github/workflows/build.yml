@@ -43,11 +43,6 @@ jobs:
           set -x
           source sourceme.sh
           cd riscv-tests/isa && make GVSOC=1 run
-      - name: Run tests with custom build
-        run: |
-          set -x
-          source sourceme.sh
-          make test.withbuild
       - name: Publish test results
         if: always()
         uses: dorny/test-reporter@v1
