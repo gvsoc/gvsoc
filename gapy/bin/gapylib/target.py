@@ -396,6 +396,10 @@ class Target():
                         arg = int(arg, 0)
                     else:
                         arg = int(arg)
+                elif descriptor.cast == bool:
+                    if isinstance(arg, str):
+                        arg = arg.strip().lower() in ("true", "1", "yes", "y")
+
 
             descriptor.value = arg
 
