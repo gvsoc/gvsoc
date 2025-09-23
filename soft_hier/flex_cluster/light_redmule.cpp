@@ -1264,12 +1264,11 @@ float fp16_to_float(fp16 value) {
 }
 
 // Fused multiply-add for FP16
-fp16 fp16_fma(fp16 a, fp16 b, fp16 c) {
+float fp16_fma(fp16 a, fp16 b, float c) {
     float fa = fp16_to_float(a);
     float fb = fp16_to_float(b);
-    float fc = fp16_to_float(c);
-    float result = (fa * fb) + fc;
-    return float_to_fp16(result);
+    float result = (fa * fb) + c;
+    return result;
 }
 
 void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
@@ -1277,11 +1276,12 @@ void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16
     {
         for (int j = 0; j < k_size; ++j)
         {
-            z[i * k_size + j] = y[i * k_size + j];
+            float acc = fp16_to_float(y[i * k_size + j]);
             for (int k = 0; k < n_size; ++k)
             {
-                z[i * k_size + j] = fp16_fma(x[i * n_size + k], w[k * k_size + j], z[i * k_size + j]);
+                acc = fp16_fma(x[i * n_size + k], w[k * k_size + j], acc);
             }
+            z[i * k_size + j] = float_to_fp16(acc);
         }
     }
 }
@@ -1372,13 +1372,11 @@ fp8e4m3 float_to_fp8e4m3(float value) {
 }
 
 // Fused Multiply-Add for FP8
-fp8e4m3 fp8e4m3_fma(fp8e4m3 a, fp8e4m3 b, fp8e4m3 c) {
+float fp8e4m3_fma(fp8e4m3 a, fp8e4m3 b, float c) {
     float fa = fp8e4m3_to_float(a);
     float fb = fp8e4m3_to_float(b);
-    float fc = fp8e4m3_to_float(c);
-
-    float result = fa * fb + fc;
-    return float_to_fp8e4m3(result);
+    float result = fa * fb + c;
+    return result;
 }
 
 void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size){
@@ -1386,11 +1384,12 @@ void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t
     {
         for (int j = 0; j < k_size; ++j)
         {
-            z[i * k_size + j] = y[i * k_size + j];
+            float acc = fp8e4m3_to_float(y[i * k_size + j]);
             for (int k = 0; k < n_size; ++k)
             {
-                z[i * k_size + j] = fp8e4m3_fma(x[i * n_size + k], w[k * k_size + j], z[i * k_size + j]);
+                acc = fp8e4m3_fma(x[i * n_size + k], w[k * k_size + j], acc);
             }
+            z[i * k_size + j] = float_to_fp8e4m3(acc);
         }
     }
 }
