@@ -16,8 +16,8 @@ TEST_TARGETS ?= \
     snitch_spatz \
     snitch_testbench
 
-PLPTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
-PLPTEST_CMD = plptest $(PLPTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit
+GVTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
+GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit
 
 
 
@@ -53,7 +53,7 @@ test.checkout.pulp-sdk:
 	fi
 	cd "tests/pulp-sdk" && \
 	git fetch --all && \
-	git checkout f4ff63f8bdf8a2a1e5b1e71e6604cf8ba88609b8
+	git checkout 14474647174d124fe60bee3874d509758925b61f
 
 test.build.pulp-sdk: test.checkout.pulp-sdk
 
@@ -153,9 +153,9 @@ test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.ch
 test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara
 
 test.run:
-	$(PLPTEST_CMD)
+	$(GVTEST_CMD)
 
 test: test.build
-	$(PLPTEST_CMD)
+	$(GVTEST_CMD)
 
 .PHONY: test
