@@ -20,7 +20,7 @@ jobs:
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
-          sudo pip3 install -r plptest/requirements.txt
+          sudo pip3 install -r gvtest/requirements.txt
 
       - name: build all targets
         run: |

@@ -4,9 +4,9 @@
 [submodule "pulp"]
 	path = pulp
 	url = https://github.com/gvsoc/gvsoc-pulp.git
-[submodule "plptest"]
-	path = plptest
-	url =  https://github.com/gvsoc/plptest.git
+[submodule "gvtest"]
+	path = gvtest
+	url =  https://github.com/gvsoc/gvtest.git
 [submodule "pulpos"]
 	path = pulpos
 	url = https://github.com/gvsoc/pulpos.git

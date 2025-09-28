@@ -20,7 +20,7 @@ install(
 
 add_subdirectory(core)
 add_subdirectory(gapy)
-add_subdirectory(plptest)
+add_subdirectory(gvtest)
 add_subdirectory(gvrun)
 add_subdirectory(pulpos)
 
