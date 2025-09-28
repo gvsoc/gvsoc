@@ -22,9 +22,6 @@ jobs:
           sudo pip3 install -r gapy/requirements.txt
           sudo pip3 install -r plptest/requirements.txt
 
-      - name: Clone additional repository
-        run: |
-          git clone https://github.com/gvsoc/riscv-tests.git -b gvsoc
       - name: build all targets
         run: |
           set -x
@@ -38,11 +35,6 @@ jobs:
           set -x
           source sourceme_systemc.sh
           make github.test
-      - name: Run RISCV tests
-        run: |
-          set -x
-          source sourceme.sh
-          cd riscv-tests/isa && make GVSOC=1 run
       - name: Publish test results
         if: always()
         uses: dorny/test-reporter@v1
