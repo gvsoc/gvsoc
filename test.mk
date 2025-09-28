@@ -22,6 +22,25 @@ PLPTEST_CMD = plptest $(PLPTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table
 
 
 #
+# Rscv tests
+#
+
+test.clean.riscv-tests:
+	rm -rf tests/riscv-tests
+
+test.checkout.riscv-tests:
+	@if [ ! -d "tests/riscv-tests" ]; then \
+		git clone "git@github.com:gvsoc/riscv-tests.git" "tests/riscv-tests"; \
+	fi
+	cd "tests/riscv-tests" && \
+	git fetch --all && \
+	git checkout 934ec4f4bb14f83da32cd83dcc00afa055e8717f
+
+test.build.riscv-tests: test.checkout.riscv-tests
+
+
+
+#
 # PULP-SDK
 #
 
@@ -127,11 +146,11 @@ test.build.ara: test.checkout.ara
 
 
 
-test.clean: test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara
+test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara
 
-test.checkout: test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara
+test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara
 
-test.build: test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara
+test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara
 
 test.run:
 	$(PLPTEST_CMD)
