@@ -22,6 +22,7 @@ import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters
 from pulp.chips.flex_cluster.light_redmule import LightRedmule
 from pulp.chips.flex_cluster.hwpe_interleaver import HWPEInterleaver
+from pulp.chips.flex_cluster.transpose_engine import TransposeEngine
 from pulp.chips.flex_cluster.util_dumpper import UtilDumpper
 from pulp.snitch.snitch_cluster.dma_interleaver import DmaInterleaver
 from pulp.snitch.zero_mem import ZeroMem
@@ -256,9 +257,20 @@ class ClusterUnit(gvsoc.systree.Component):
         #data dumpper
         data_dumpper = UtilDumpper(self, 'data_dumpper', arch.cluster_id)
         data_dumpper_ctrl_base = arch.reg_area.base + arch.reg_area.size
-        data_dumpper_ctrl_size = 20
+        data_dumpper_ctrl_size = 64
         data_dumpper_input_base = arch.tcdm.area.base + arch.tcdm.area.size
         data_dumpper_input_size = arch.tcdm.area.size
+        ctrl_base_update = arch.reg_area.base + arch.reg_area.size + data_dumpper_ctrl_size
+
+
+        #Transpose Engine
+        transpose_engine = TransposeEngine(self, f'transpose_engine',
+                                    tcdm_bank_width     = arch.tcdm.bank_width,
+                                    tcdm_bank_number    = arch.tcdm.nb_tcdm_banks,
+                                    buffer_dim          = arch.tcdm.nb_tcdm_banks * arch.tcdm.bank_width)
+        transpose_engine_ctrl_base = ctrl_base_update
+        transpose_engine_ctrl_size = 64
+        ctrl_base_update += 64
 
         # Cluster DMA
         if arch.multi_idma_enable:
@@ -310,6 +322,9 @@ class ClusterUnit(gvsoc.systree.Component):
         #binding to data dumpper
         narrow_axi.o_MAP(data_dumpper.i_CTRL(), base=data_dumpper_ctrl_base, size=data_dumpper_ctrl_size, rm_base=True)
 
+        #binding to transpose engine
+        narrow_axi.o_MAP(transpose_engine.i_INPUT(), base=transpose_engine_ctrl_base, size=transpose_engine_ctrl_size, rm_base=True)
+
         #binding to redmule
         narrow_axi.o_MAP(redmule.i_INPUT(), base=arch.redmule_area.base, size=arch.redmule_area.size, rm_base=True)
 
@@ -323,6 +338,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
         #RedMule to TCDM
         redmule.o_TCDM(tcdm.i_HWPE_INPUT())
+
+        #Transpose Engine to TCDM
+        transpose_engine.o_TCDM(tcdm.i_HWPE_INPUT())
 
         # Wire router for DMA and instruction caches
         self.o_WIDE_INPUT(wide_axi_goto_tcdm.i_INPUT())
