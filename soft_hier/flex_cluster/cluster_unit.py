@@ -207,7 +207,7 @@ class ClusterUnit(gvsoc.systree.Component):
         instr_mem = memory.Memory(self, 'instr_mem', size=arch.insn_area.size, atomics=True, width_log2=-1)
 
         #Instruction router
-        instr_router = router.Router(self, 'instr_router', bandwidth=0x20)
+        instr_router = router.Router(self, 'instr_router', bandwidth=8*arch.nb_core)
 
         # Main router
         wide_axi_goto_tcdm = router.Router(self, 'wide_axi_goto_tcdm')
