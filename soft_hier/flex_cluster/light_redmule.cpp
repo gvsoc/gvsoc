@@ -49,6 +49,7 @@ typedef union {
 } FloatBits;
 
 typedef uint8_t  fp8e4m3;
+typedef uint8_t  fp8e5m2;
 typedef uint16_t fp16;
 
 enum redmule_state {
@@ -79,6 +80,7 @@ void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16
 void matmul_uint8(uint8_t * z, uint8_t * y, uint8_t * x, uint8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_int8(int8_t * z, int8_t * y, int8_t * x, int8_t * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
+void matmul_fp8e5m2(fp8e5m2 * z, fp8e5m2 * y, fp8e5m2 * x, fp8e5m2 * w, uint16_t m_size, uint16_t n_size, uint16_t k_size);
 
 /*****************************************************
 *                   Class Definition                 *
@@ -504,11 +506,11 @@ void LightRedmule::process_compute(){
     }
     if (this->compute_able == 7)
     {
-        //UINT8
-        matmul_fp8e4m3(     (fp8e4m3 *)this->z_buffer_compute,
-                        (fp8e4m3 *)this->z_buffer_compute,
-                        (fp8e4m3 *)this->x_buffer,
-                        (fp8e4m3 *)this->w_buffer,
+        //FP8
+        matmul_fp8e5m2( (fp8e5m2 *)this->z_buffer_compute,
+                        (fp8e5m2 *)this->z_buffer_compute,
+                        (fp8e5m2 *)this->x_buffer,
+                        (fp8e5m2 *)this->w_buffer,
                         (uint16_t)buffer_h,
                         (uint16_t)buffer_n,
                         (uint16_t)buffer_w);
@@ -1390,6 +1392,84 @@ void matmul_fp8e4m3(fp8e4m3 * z, fp8e4m3 * y, fp8e4m3 * x, fp8e4m3 * w, uint16_t
                 acc = fp8e4m3_fma(x[i * n_size + k], w[k * k_size + j], acc);
             }
             z[i * k_size + j] = float_to_fp8e4m3(acc);
+        }
+    }
+}
+
+
+// Constants for FP8-E5M2 format
+#define FP8E5M2_EXP_MASK  0x7C  // 0111 1100
+#define FP8E5M2_FRAC_MASK 0x03  // 0000 0011
+#define FP8E5M2_SIGN_MASK 0x80  // 1000 0000
+#define FP8E5M2_BIAS      15
+
+// Convert FP8 (E5M2) to float
+float fp8e5m2_to_float(fp8e5m2 value) {
+    uint8_t sign = (value & FP8E5M2_SIGN_MASK) >> 7;
+    uint8_t exponent = (value & FP8E5M2_EXP_MASK) >> 2;
+    uint8_t fraction = value & FP8E5M2_FRAC_MASK;
+
+    if (exponent == 0) {
+        // Subnormal number
+        if (fraction == 0) return sign ? -0.0f : 0.0f;
+        return (sign ? -1.0f : 1.0f) * (fraction / 4.0f) * powf(2, -14);
+    } else if (exponent == 31) {
+        // Infinity or NaN
+        return fraction ? NAN : (sign ? -INFINITY : INFINITY);
+    }
+
+    // Normalized number
+    float mantissa = 1.0f + (fraction / 4.0f);
+    float result = mantissa * powf(2, exponent - FP8E5M2_BIAS);
+    return sign ? -result : result;
+}
+
+// Convert float to FP8 (E5M2)
+fp8e5m2 float_to_fp8e5m2(float value) {
+    if (isnan(value)) return 0x7F;  // NaN representation
+    if (isinf(value)) return value < 0 ? 0xFC : 0x7C;  // +/-Inf
+
+    uint8_t sign = (value < 0) ? 0x80 : 0x00;
+    value = fabsf(value);
+
+    if (value == 0.0f) return 0x00;
+
+    int exponent;
+    float mantissa = frexpf(value, &exponent);  // value = mantissa * 2^exponent, mantissa in [0.5, 1.0)
+
+    exponent += FP8E5M2_BIAS - 1;
+
+    if (exponent < 1) {
+        // Subnormal
+        int frac = (int)roundf(value / powf(2, -14) * 4.0f);
+        return sign | (frac & FP8E5M2_FRAC_MASK);
+    } else if (exponent > 30) {
+        // Overflow → Inf
+        return sign | 0x7C;
+    }
+
+    // Normalized
+    uint8_t frac = (uint8_t)roundf((mantissa - 0.5f) * 8.0f);
+    return sign | ((exponent << 2) & FP8E5M2_EXP_MASK) | (frac & FP8E5M2_FRAC_MASK);
+}
+
+// Fused Multiply-Add for FP8-E5M2
+float fp8e5m2_fma(fp8e5m2 a, fp8e5m2 b, float c) {
+    float fa = fp8e5m2_to_float(a);
+    float fb = fp8e5m2_to_float(b);
+    float result = fa * fb + c;
+    return result;
+}
+
+// Matrix multiplication: z = x * w + y (with z, y, x, w in FP8-E5M2)
+void matmul_fp8e5m2(fp8e5m2 *z, fp8e5m2 *y, fp8e5m2 *x, fp8e5m2 *w, uint16_t m_size, uint16_t n_size, uint16_t k_size) {
+    for (int i = 0; i < m_size; ++i) {
+        for (int j = 0; j < k_size; ++j) {
+            float acc = fp8e5m2_to_float(y[i * k_size + j]);
+            for (int k = 0; k < n_size; ++k) {
+                acc = fp8e5m2_fma(x[i * n_size + k], w[k * k_size + j], acc);
+            }
+            z[i * k_size + j] = float_to_fp8e5m2(acc);
         }
     }
 }
