@@ -418,7 +418,7 @@ index 4124c25..08e15ad 100644
  
      // Just enqueue it and trigger the FSM which will check if it must be processed now
 diff --git a/pulp/floonoc/floonoc_router.cpp b/pulp/floonoc/floonoc_router.cpp
-index 50cb4ac..8cb5118 100644
+index 50cb4ac..ea9756f 100644
 --- a/pulp/floonoc/floonoc_router.cpp
 +++ b/pulp/floonoc/floonoc_router.cpp
 @@ -21,6 +21,7 @@
@@ -762,9 +762,9 @@ index 50cb4ac..8cb5118 100644
 -        next_x = x_diff < 0 ? this->x - 1 : this->x + 1;
 +        eff_dest_x = 1;
 +    } else
-+    if (dest_x == (this->noc->dim_x + 1) && dest_y != this->y)
++    if (dest_x == (this->noc->dim_x - 1) && dest_y != this->y)
 +    {
-+        eff_dest_x = this->noc->dim_x;
++        eff_dest_x = this->noc->dim_x - 2;
 +    }
 +
 +    if (eff_dest_x == this->x && dest_y == this->y)
