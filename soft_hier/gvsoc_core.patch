@@ -1,3 +1,15 @@
+diff --git a/engine/src/time/time_engine.cpp b/engine/src/time/time_engine.cpp
+index 7b40a98f..e73a2c92 100644
+--- a/engine/src/time/time_engine.cpp
++++ b/engine/src/time/time_engine.cpp
+@@ -302,6 +302,7 @@ bool vp::TimeEngine::enqueue(vp::Block *client, int64_t full_time)
+ {
+     bool update = false;
+ 
++    full_time = (full_time < get_time())? get_time(): full_time;
+     vp_assert(full_time >= get_time(), NULL, "Time must be higher than current time\n");
+ 
+     if (client->time.is_running())
 diff --git a/models/cpu/iss/flexfloat/flexfloat.c b/models/cpu/iss/flexfloat/flexfloat.c
 index c26426a1..1e10e63a 100644
 --- a/models/cpu/iss/flexfloat/flexfloat.c
