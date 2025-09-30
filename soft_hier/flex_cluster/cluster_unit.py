@@ -300,7 +300,8 @@ class ClusterUnit(gvsoc.systree.Component):
 
         #Binary loader
         loader.o_OUT(instr_router.i_INPUT())
-        loader.o_START(self.i_FETCHEN())
+        loader.o_START(cluster_registers.i_INST_PREHEAT_DONE())
+        self.o_HBM_PRELOAD_DONE(cluster_registers.i_HBM_PRELOAD_DONE())
 
         #Instruction router
         instr_router.o_MAP(narrow_axi.i_INPUT())
@@ -362,7 +363,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cores
         for core_id in range(0, arch.nb_core):
-            self.__o_FETCHEN( cores[core_id].i_FETCHEN() )
+            cluster_registers.o_FETCH_START( cores[core_id].i_FETCHEN() )
 
         for core_id in range(0, arch.nb_core):
             cores[core_id].o_BARRIER_REQ(cluster_registers.i_BARRIER_ACK(core_id))
@@ -383,7 +384,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
         for core_id in range(0, arch.nb_core):
             fp_cores[core_id].o_DATA( cores_ico[core_id].i_INPUT() )
-            self.__o_FETCHEN( fp_cores[core_id].i_FETCHEN() )
+            cluster_registers.o_FETCH_START( fp_cores[core_id].i_FETCHEN() )
 
             # SSR in fp subsystem datem mover <-> memory port
             self.bind(fp_cores[core_id], 'ssr_dm0', cores_ico[core_id], 'input')
@@ -429,12 +430,6 @@ class ClusterUnit(gvsoc.systree.Component):
             idma.o_AXI(wide_axi_from_idma.i_INPUT())
             pass
 
-    def i_FETCHEN(self) -> gvsoc.systree.SlaveItf:
-        return gvsoc.systree.SlaveItf(self, 'fetchen', signature='wire<bool>')
-
-    def __o_FETCHEN(self, itf: gvsoc.systree.SlaveItf):
-        self.itf_bind('fetchen', itf, signature='wire<bool>', composite_bind=True)
-
     def i_WIDE_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, 'wide_input', signature='io')
 
@@ -470,3 +465,9 @@ class ClusterUnit(gvsoc.systree.Component):
 
     def o_SYNC_INPUT(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('sync_input', itf, signature='io', composite_bind=True)
+
+    def i_HBM_PRELOAD_DONE(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'hbm_preload_done', signature='wire<bool>')
+
+    def o_HBM_PRELOAD_DONE(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind('hbm_preload_done', itf, signature='wire<bool>', composite_bind=True)

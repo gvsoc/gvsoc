@@ -236,6 +236,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #Clusters
         for cluster_id in range(num_clusters):
             cluster_list[cluster_id].o_NARROW_SOC(virtual_interco.i_INPUT())
+            csr.o_HBM_PRELOAD_DONE_TO_CLUSTER(cluster_list[cluster_id].i_HBM_PRELOAD_DONE(),cluster_id)
             pass
 
         #Data NoC + Sync NoC

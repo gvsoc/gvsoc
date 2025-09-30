@@ -45,6 +45,9 @@ private:
     static vp::IoReqStatus global_barrier_sync(vp::Block *__this, vp::IoReq *req);
     static void grant(vp::Block *__this, vp::IoReq *req);
     static void response(vp::Block *__this, vp::IoReq *req);
+    static void hbm_preload_done_handler(vp::Block *__this, bool value);
+    static void inst_preheat_done_handler(vp::Block *__this, bool value);
+    void fetch_start_check();
     void cl_clint_set_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
     void cl_clint_clear_req(uint64_t reg_offset, int size, uint8_t *value, bool is_write);
     void nm_config_req(uint64_t offset, int size, uint8_t *value, bool is_write);
@@ -70,6 +73,13 @@ private:
     vp::IoReq*   global_barrier_master_req;
     uint32_t     global_barrier_addr;
     uint8_t *    global_barrier_buffer;
+
+    vp::WireSlave<bool> hbm_preload_done_itf;
+    vp::WireSlave<bool> inst_preheat_done_itf;
+    vp::WireMaster<bool> fetch_start_itf;
+    uint32_t hbm_preload_done;
+    uint32_t inst_preheat_done;
+    uint32_t fetch_started;
 
     std::vector<vp::WireMaster<bool>> external_irq_itf;
 
@@ -124,6 +134,15 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
     }
 
     this->new_master_port("barrier_ack", &this->barrier_ack_itf);
+
+    this->new_slave_port("hbm_preload_done", &this->hbm_preload_done_itf);
+    this->new_slave_port("inst_preheat_done", &this->inst_preheat_done_itf);
+    this->new_master_port("fetch_start", &this->fetch_start_itf);
+    this->hbm_preload_done_itf.set_sync_meth(&ClusterRegisters::hbm_preload_done_handler);
+    this->inst_preheat_done_itf.set_sync_meth(&ClusterRegisters::inst_preheat_done_handler);
+    this->hbm_preload_done = 0;
+    this->inst_preheat_done = 0;
+    this->fetch_started = 0;
 
     this->regmap.build(this, &this->trace, "regmap");
     this->regmap.cl_clint_set.register_callback(std::bind(&ClusterRegisters::cl_clint_set_req, this, _1, _2, _3, _4));
@@ -225,6 +244,33 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
     // _this->regmap.access(offset, size, data, is_write);
 
     return vp::IO_REQ_OK;
+}
+
+void ClusterRegisters::hbm_preload_done_handler(vp::Block *__this, bool value)
+{
+    ClusterRegisters *_this = (ClusterRegisters *)__this;
+    _this->hbm_preload_done = 1;
+    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "HBM Preloading Done\n");
+    _this->fetch_start_check();
+}
+
+void ClusterRegisters::inst_preheat_done_handler(vp::Block *__this, bool value)
+{
+    ClusterRegisters *_this = (ClusterRegisters *)__this;
+    _this->inst_preheat_done = 1;
+    _this->trace.msg(vp::Trace::LEVEL_DEBUG, "Instruction Preheating Done\n");
+    _this->fetch_start_check();
+}
+
+void ClusterRegisters::fetch_start_check()
+{
+    if (this->hbm_preload_done && this->inst_preheat_done)
+    {
+        if (this->fetch_started == 0)
+        {
+            this->fetch_start_itf.sync(1);
+        }
+    }
 }
 
 vp::IoReqStatus ClusterRegisters::global_barrier_sync(vp::Block *__this, vp::IoReq *req)

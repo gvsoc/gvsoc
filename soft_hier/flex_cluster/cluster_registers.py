@@ -60,3 +60,12 @@ class ClusterRegisters(gvsoc.systree.Component):
 
     def o_GLOBAL_BARRIER_MASTER(self, itf: gvsoc.systree.SlaveItf):
         self.itf_bind('global_barrier_master', itf, signature='io')
+
+    def i_HBM_PRELOAD_DONE(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'hbm_preload_done', signature='wire<bool>')
+
+    def i_INST_PREHEAT_DONE(self) -> gvsoc.systree.SlaveItf:
+        return gvsoc.systree.SlaveItf(self, 'inst_preheat_done', signature='wire<bool>')
+
+    def o_FETCH_START(self, itf: gvsoc.systree.SlaveItf):
+        self.itf_bind(f'fetch_start', itf, signature='wire<bool>')
