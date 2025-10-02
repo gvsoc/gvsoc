@@ -276,8 +276,8 @@ void flatcoll_run(FlatAttentionInfo* info){
                             info->L1_e,
                             info->L1_l);
 
-                        //Compute O = O/e
-                        flat_attention_vector_M_div_V(
+                        //Compute O = O*e
+                        flat_attention_vector_M_mul_V(
                             info->d,
                             info->Br_s,
                             info->L1_O,
@@ -687,7 +687,7 @@ void flatasync_run(FlatAttentionInfo* info){
          *          |                       | <n-1> Redsum+Bcast l  |                    |
          *          |                       |--------------------------------------------|
          *          |                       |                       | <n-1> l=e*lr+l     |
-         *          |                       |                       | <n-1> O = O/e      |
+         *          |                       |                       | <n-1> O = O*e      |
          *          |                       |                       | <n-1> l => lr      |
          ********************************************************************************/
 
@@ -809,10 +809,10 @@ void flatasync_run(FlatAttentionInfo* info){
         }
 
         if (flex_is_first_core()){
-            //Set B:  <n-1> O = O/e
+            //Set B:  <n-1> O = O*e
             if (_valid && (_iter_j != 0))
             {
-                flat_attention_vector_M_div_V(
+                flat_attention_vector_M_mul_V(
                     info->d,
                     info->Br_s,
                     info->DB_L1_O,
@@ -1128,7 +1128,7 @@ void flatasync_run(FlatAttentionInfo* info){
             //Set A:  < n > O = O/e
             if (valid && (iter_j != 0))
             {
-                flat_attention_vector_M_div_V(
+                flat_attention_vector_M_mul_V(
                     info->d,
                     info->Br_s,
                     info->L1_O,

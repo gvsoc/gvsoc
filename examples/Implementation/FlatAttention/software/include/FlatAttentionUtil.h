@@ -458,6 +458,22 @@ void flat_attention_vector_M_div_V(uint32_t num_cols, uint32_t num_rows, uint32_
     }
 }
 
+void flat_attention_vector_M_mul_V(uint32_t num_cols, uint32_t num_rows, uint32_t M_src, uint32_t V_src){
+    uint32_t vl;
+    asm volatile("vsetvli %0, %1, e16, m8, ta, ma" : "=r"(vl) : "r"(num_cols));
+    for (int i = 0; i < (num_rows/16); ++i)
+    {
+        REPEAT_16(\
+            asm volatile("fld fa5, (%0)" ::"r"(V_src));\
+            asm volatile("vle16.v v8,  (%0)" ::"r"(M_src));\
+            asm volatile("vfmul.vf v8, v8, fa5");\
+            asm volatile("vse16.v v8,  (%0)" ::"r"(M_src));\
+            M_src += num_cols * 2;\
+            V_src += 2;\
+        )
+    }
+}
+
 
 
 #endif
