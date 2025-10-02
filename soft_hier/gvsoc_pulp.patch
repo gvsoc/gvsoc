@@ -1,5 +1,5 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..5146e08 100644
+index 668a863..ef7346b 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
 @@ -36,6 +36,16 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
@@ -56,7 +56,7 @@ index 668a863..5146e08 100644
  }
  
  
-@@ -196,3 +221,115 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+@@ -196,3 +221,199 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
  {
      return new FlooNoc(config);
  }
@@ -106,6 +106,90 @@ index 668a863..5146e08 100644
 +    return floatBits.f;
 +}
 +
++typedef uint8_t fp8e5m2;
++
++// Convert float -> FP8 E5M2
++fp8e5m2 float_to_fp8e5m2(float value) {
++    FloatBits fb;
++    fb.f = value;
++
++    uint8_t sign = (uint8_t)(fb.parts.sign << 7);
++
++    // Handle special float cases first
++    if (fb.parts.exponent == 0xFF) {                 // Inf / NaN in float32
++        if (fb.parts.mantissa == 0) {
++            return sign | 0x7C;                      // FP8 infinity (exp=31, frac=0)
++        } else {
++            return sign | 0x7D;                      // FP8 NaN (exp=31, frac!=0) – payload minimal
++        }
++    }
++
++    // Convert unbiased exponent to FP8's biased exponent
++    // float32 bias = 127, FP8(E5) bias = 15
++    int32_t e = (int32_t)fb.parts.exponent - 127 + 15;
++
++    // Reduce mantissa from 23 bits to 2 bits (truncate, to match your FP16 style)
++    uint32_t mantissa2 = fb.parts.mantissa >> 21;    // keep top 2 bits
++
++    if (e <= 0) {
++        // Subnormal or underflow to zero in FP8
++        if (e < -2) {
++            // Too small: underflows to signed zero
++            return sign;
++        }
++        // Build a subnormal significand. Bring back the hidden 1 and shift it right.
++        // Then trim down to 2 fraction bits.
++        uint32_t sig = (fb.parts.mantissa | 0x800000u);        // implicit leading 1
++        // Shift right by (1 - e) to form subnormal magnitude, then to 2-bit fraction
++        // First align to subnormal: shift by (1 - e)
++        sig >>= (1 - e);
++        // Now reduce to 2 fraction bits
++        uint8_t subfrac = (uint8_t)(sig >> 21);                // take top 2 bits
++        // Note: no rounding (truncate) to mirror your FP16 approach
++        return sign | subfrac;
++    } else if (e >= 0x1F) {
++        // Overflow: represent as infinity
++        return sign | 0x7C;                                    // exp=31, frac=0
++    }
++
++    // Normal number
++    return sign | (uint8_t)(e << 2) | (uint8_t)mantissa2;
++}
++
++// Convert FP8 E5M2 -> float
++float fp8e5m2_to_float(fp8e5m2 v) {
++    FloatBits fb;
++
++    uint32_t sign = (v >> 7) & 0x1;
++    uint32_t exp5 = (v >> 2) & 0x1F;
++    uint32_t frac2 = v & 0x3;
++
++    fb.parts.sign = sign;
++
++    if (exp5 == 0) {
++        // Zero or subnormal: map to float's subnormal domain (exponent = 0)
++        fb.parts.exponent = 0;
++        fb.parts.mantissa = frac2 << 21;             // place 2-bit fraction in top of 23-bit field
++        return fb.f;
++    } else if (exp5 == 0x1F) {
++        // Inf or NaN
++        fb.parts.exponent = 0xFF;
++        if (frac2 == 0) {
++            fb.parts.mantissa = 0;                   // infinity
++        } else {
++            // NaN: give it a quiet NaN payload
++            fb.parts.mantissa = 0x400000u;           // set a high mantissa bit
++        }
++        return fb.f;
++    } else {
++        // Normal
++        // float exponent = exp5 + 127 - 15
++        fb.parts.exponent = (uint32_t)(exp5 + 127 - 15);
++        fb.parts.mantissa = frac2 << 21;             // align 2-bit mantissa to float's 23-bit field
++        return fb.f;
++    }
++}
++
 +void process_collective_operations(vp::IoReq *parent, vp::IoReq *req)
 +{
 +    int collective_type = parent->get_int(FlooNoc::REQ_COLL_TYPE);
@@ -124,13 +208,13 @@ index 668a863..5146e08 100644
 +            dst[i] = dst[i] + src[i];
 +        }
 +    } else if (collective_type == 3){
-+        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD INT16]\n");
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP8]\n");
 +        //Execute reduction
-+        int16_t * dst = (int16_t *) parent->get_data();
-+        int16_t * src = (int16_t *) req->get_data();
-+        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
++        fp8e5m2 * dst = (fp8e5m2 *) parent->get_data();
++        fp8e5m2 * src = (fp8e5m2 *) req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(fp8e5m2)); ++i)
 +        {
-+            dst[i] = dst[i] + src[i];
++            dst[i] = float_to_fp8e5m2(fp8e5m2_to_float(dst[i]) + fp8e5m2_to_float(src[i]));
 +        }
 +    } else if (collective_type == 4){
 +        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP16]\n");
@@ -151,13 +235,13 @@ index 668a863..5146e08 100644
 +            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
 +        }
 +    } else if (collective_type == 6){
-+        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX INT16]\n");
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP8]\n");
 +        //Execute reduction
-+        int16_t * dst = (int16_t *) parent->get_data();
-+        int16_t * src = (int16_t *) req->get_data();
-+        for (int i = 0; i < (req->get_size()/sizeof(int16_t)); ++i)
++        fp8e5m2 * dst = (fp8e5m2 *) parent->get_data();
++        fp8e5m2 * src = (fp8e5m2 *) req->get_data();
++        for (int i = 0; i < (req->get_size()/sizeof(fp8e5m2)); ++i)
 +        {
-+            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
++            dst[i] = float_to_fp8e5m2(fp8e5m2_to_float(dst[i]) > fp8e5m2_to_float(src[i]) ? fp8e5m2_to_float(dst[i]) : fp8e5m2_to_float(src[i]));
 +        }
 +    } else if (collective_type == 7){
 +        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP16]\n");
