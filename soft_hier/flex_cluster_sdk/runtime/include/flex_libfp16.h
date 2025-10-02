@@ -64,6 +64,27 @@ void matmul_fp16(fp16 * z, fp16 * y, fp16 * x, fp16 * w, uint16_t m_size, uint16
     }
 }
 
+inline fp16 asm_fp16_sqrt(fp16 a) {
+    float fa = fp16_to_float(a);
+    float fb;
+    asm volatile (
+        "fsqrt.s %0, %1, rne\n"
+        : "=f"(fb)        // output in FP register
+        : "f"(fa)              // input in FP register
+    );
+    return float_to_fp16(fb);
+}
+
+inline fp16 asm_fp16_sqrt_fp32(float fa) {
+    float fb;
+    asm volatile (
+        "fsqrt.s %0, %1, rne\n"
+        : "=f"(fb)        // output in FP register
+        : "f"(fa)              // input in FP register
+    );
+    return float_to_fp16(fb);
+}
+
 
 inline void asm_fp16_div(const fp16 *a, const fp16 *b, fp16 *c) {
     // Load the half-precision values from memory into local variables

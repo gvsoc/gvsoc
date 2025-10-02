@@ -30,9 +30,10 @@ union FloatBits {
 /*
   Format transform
 */
+typedef uint8_t fp8_e5m2;
 
 // Decode fp8 E5M2 into float32
-float fp8_e5m2_to_f32(uint8_t val) {
+float fp8_e5m2_to_f32(fp8_e5m2 val) {
     if (val == 0x00) return 0.0f;
 
     uint8_t sign = (val >> 7) & 0x1;
@@ -55,6 +56,61 @@ float fp8_e5m2_to_f32(uint8_t val) {
 
     float result = mant * scale;
     return sign ? -result : result;
+}
+
+fp8_e5m2 f32_to_fp8_e5m2(float x) {
+    // Zero shortcut (treat -0.0 the same as +0.0)
+    if (x == 0.0f) return 0x00;
+
+    // Sign and absolute value
+    uint8_t sign = 0;
+    if (x < 0.0f) {
+        sign = 1;
+        x = -x;
+    }
+
+    // Minimum normal for E5M2 with bias 15 is 1.0 * 2^-14
+    float min_norm = 1.0f;
+    for (int i = 0; i < 14; ++i) min_norm *= 0.5f;
+
+    // Underflow: flush tiny values to zero (no subnormals handled)
+    if (x < min_norm) return 0x00;
+
+    // Normalize x to mantissa in [1, 2) and get unbiased exponent
+    int exp_val = 0;
+    float mant = x;
+
+    if (mant >= 2.0f) {
+        while (mant >= 2.0f) { mant *= 0.5f; exp_val++; }
+    } else if (mant < 1.0f) {
+        while (mant < 1.0f) { mant *= 2.0f; exp_val--; }
+    }
+
+    // Quantize mantissa: mant = 1 + frac/4  =>  frac in {0,1,2,3}
+    float frac_f = (mant - 1.0f) * 4.0f;
+    int frac = (int)(frac_f + 0.5f);  // round to nearest
+
+    // Handle rounding overflow of fraction (e.g., 1.999 -> frac==4)
+    if (frac > 3) {
+        frac = 0;
+        exp_val += 1;
+    }
+
+    // Bias = 15
+    int exp_biased = exp_val + 15;
+
+    // Underflow after rounding -> flush to zero
+    if (exp_biased <= 0) return 0x00;
+
+    // Overflow -> saturate to max finite (exp=31, frac=3)
+    if (exp_biased > 31) {
+        exp_biased = 31;
+        frac = 3;
+    }
+
+    // Pack bits: [sign][5-bit exp][2-bit frac]
+    uint8_t val = (uint8_t)((sign << 7) | ((exp_biased & 0x1F) << 2) | (frac & 0x03));
+    return val;
 }
 
 // Decode fp16 (IEEE 754, E5M10) into float32
@@ -94,6 +150,27 @@ float fp16_to_f32(uint16_t val) {
 
     float result = mant * scale;
     return sign ? -result : result;
+}
+
+inline fp8_e5m2 asm_fp8_e5m2_sqrt(fp8_e5m2 a) {
+    float fa = fp8_e5m2_to_f32(a);
+    float fb;
+    asm volatile (
+        "fsqrt.s %0, %1, rne\n"
+        : "=f"(fb)        // output in FP register
+        : "f"(fa)              // input in FP register
+    );
+    return f32_to_fp8_e5m2(fb);
+}
+
+inline fp8_e5m2 asm_fp8_e5m2_sqrt_fp32(float fa) {
+    float fb;
+    asm volatile (
+        "fsqrt.s %0, %1, rne\n"
+        : "=f"(fb)        // output in FP register
+        : "f"(fa)              // input in FP register
+    );
+    return f32_to_fp8_e5m2(fb);
 }
 
 /*
