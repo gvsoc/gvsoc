@@ -95,9 +95,9 @@ def make_preload_elf(output_file_path, np_arrays, start_addresses=None):
         f.write(link_ld_code)
 
     # Step 3: Compile the ELF file
-    os.system("riscv32-unknown-elf-gcc -c array.c -o array.o")
-    os.system(f"riscv32-unknown-elf-ld -T link.ld array.o -o {output_file_path}")
-    os.system(f"riscv32-unknown-elf-strip --remove-section=.comment --remove-section=.Pulp_Chip.Info {output_file_path}")
+    os.system("riscv64-unknown-elf-gcc -c array.c -o array.o")
+    os.system(f"riscv64-unknown-elf-ld -T link.ld array.o -o {output_file_path}")
+    os.system(f"riscv64-unknown-elf-strip --remove-section=.comment --remove-section=.Pulp_Chip.Info {output_file_path}")
 
     # Step 4: Cleanup
     os.remove("array.c")
