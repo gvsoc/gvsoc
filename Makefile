@@ -52,7 +52,7 @@ SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
 update:
 	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
-	cd core && git add models/cpu && git diff --cached > ../soft_hier/gvsoc_core.patch
+	cd core && git add models/cpu engine && git diff --cached > ../soft_hier/gvsoc_core.patch
 
 drmasys_apply_patch:
 	git submodule update --init --recursive
@@ -193,6 +193,9 @@ ifdef pld
 endif
 run:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=/chip/cluster_0/redmule
+
+runq:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg)
 
 runv:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=spatz --trace=cluster_registers | tee sw_build/analyze_trace.txt
