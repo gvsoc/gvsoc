@@ -31,7 +31,7 @@ jobs:
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
-          sudo pip3 install -r requirements.txt
+          sudo pip3 install -r requirements_ci.txt
       - name: build all targets
         run: |
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100

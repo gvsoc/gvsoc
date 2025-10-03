@@ -18,5 +18,4 @@ six>=1.16.0
 argparse>=1.4
 dataclasses
 jsonref
-torch
 tdqm
