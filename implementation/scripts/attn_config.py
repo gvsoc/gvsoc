@@ -45,29 +45,45 @@ with open(input_file, 'r') as file:
 with open(C_header_file, 'w') as file:
     file.write('#ifndef _ATTN_CONFIG_H_\n')
     file.write('#define _ATTN_CONFIG_H_\n\n')
+    flatten_numer = '0'
+    dtype = 'fp16'
     
     for attr_name, attr_value in attributes.items():
         # Convert attribute name to uppercase and prefix with 'ARCH_'
         define_name = f'ATTN_{attr_name.upper()}'
         if define_name == 'ATTN_DTYPE':
-            if attr_value == "'fp16'":
-                file.write(f'#define ATTN_FP16\n')
-                file.write(f'#define DATA_TYPE_WIDTH             16\n')
-                file.write(f'#define DATA_TYPE_BYTE              2\n')
-                file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_FP_16\n')
-                file.write(f'typedef uint16_t                    attn_data_t;\n')
-                file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_FP_16\n')
-                file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_FP_16\n')
-            elif attr_value == "'fp8'":
-                file.write(f'#define ATTN_FP8\n')
-                file.write(f'#define DATA_TYPE_WIDTH             8\n')
-                file.write(f'#define DATA_TYPE_BYTE              1\n')
-                file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_FP_8\n')
-                file.write(f'typedef uint8_t                     attn_data_t;\n')
-                file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_FP_8\n')
-                file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_FP_8\n')
+            dtype = attr_value
             continue
+        if define_name == 'ATTN_FLATTEN_NUMER':
+            flatten_numer = attr_value
         file.write(f'#define {define_name} ((uint64_t){attr_value})\n')
+
+    if dtype == "'fp16'":
+        file.write(f'#define ATTN_FP16\n')
+        file.write(f'#define DATA_TYPE_WIDTH             16\n')
+        file.write(f'#define DATA_TYPE_BYTE              2\n')
+        file.write(f'typedef uint16_t                    attn_data_t;\n')
+        if flatten_numer == '1':
+            file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_FP_16\n')
+            file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_FP_16\n')
+            file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_FP_16\n')
+        else:
+            file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_NONE_16\n')
+            file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_NONE\n')
+            file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_NONE\n')
+    elif dtype == "'fp8'":
+        file.write(f'#define ATTN_FP8\n')
+        file.write(f'#define DATA_TYPE_WIDTH             8\n')
+        file.write(f'#define DATA_TYPE_BYTE              1\n')
+        file.write(f'typedef uint8_t                     attn_data_t;\n')
+        if flatten_numer == '1':
+            file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_FP_8\n')
+            file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_FP_8\n')
+            file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_FP_8\n')
+        else:
+            file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_UINT_8\n')
+            file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_NONE\n')
+            file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_NONE\n')
     
     file.write('#define STR(x) #x\n')
     file.write('#define XSTR(x) STR(x)\n')

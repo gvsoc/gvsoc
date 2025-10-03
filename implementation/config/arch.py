@@ -42,13 +42,13 @@ class FlexClusterArch:
         self.cluster_reg_size        = 0x00000200
 
         #Spatz Vector Unit
-        self.spatz_attaced_core_list = [0,1,2,3]
-        self.spatz_num_vlsu_port     = 32
-        self.spatz_num_function_unit = 16
+        self.spatz_attaced_core_list = [0, 1, 2, 3]
+        self.spatz_num_vlsu_port     = 8
+        self.spatz_num_function_unit = 4
 
         #RedMule
         self.redmule_ce_height       = 32
-        self.redmule_ce_width        = 32
+        self.redmule_ce_width        = 16
         self.redmule_ce_pipe         = 1
         self.redmule_elem_size       = 2
         self.redmule_queue_depth     = 1

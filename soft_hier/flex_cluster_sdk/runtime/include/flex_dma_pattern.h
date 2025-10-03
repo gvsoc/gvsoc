@@ -21,10 +21,10 @@
 #define DMREP_FUNCT7 0b0000111
 
 typedef enum {
-    COLLECTIVE_REDADD_UINT_16,
+    COLLECTIVE_REDADD_NONE,
     COLLECTIVE_REDADD_FP_8,
     COLLECTIVE_REDADD_FP_16,
-    COLLECTIVE_REDMAX_UINT_16,
+    COLLECTIVE_REDMAX_NONE,
     COLLECTIVE_REDMAX_FP_8,
     COLLECTIVE_REDMAX_FP_16
 } collective_compute_format_t;
@@ -169,7 +169,7 @@ inline uint32_t bare_dma_start_1d_reduction(uint64_t dst, uint64_t src,
 
     // dmcpyi a0, a4, 0b00
     register uint32_t reg_txid asm("a0");  // 10
-    if (fmt == COLLECTIVE_REDADD_UINT_16)
+    if (fmt == COLLECTIVE_REDADD_NONE)
     {
         asm volatile(".word %1\n"
                      : "=r"(reg_txid)
@@ -188,7 +188,7 @@ inline uint32_t bare_dma_start_1d_reduction(uint64_t dst, uint64_t src,
                      : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00100, 14, XDMA_FUNCT3,
                                          10, OP_CUSTOM1)),
                        "r"(reg_size));
-    } else if (fmt == COLLECTIVE_REDMAX_UINT_16){
+    } else if (fmt == COLLECTIVE_REDMAX_NONE){
         asm volatile(".word %1\n"
                      : "=r"(reg_txid)
                      : "i"(R_TYPE_ENCODE(DMCPYC_FUNCT7, 0b00101, 14, XDMA_FUNCT3,

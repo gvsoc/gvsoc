@@ -65,7 +65,7 @@ def gen_attention_preload_numpy_arrays(b, h, d, sq, skv, dt):
     def rand_fptype(shape, device):
         # sample in a safe range to reduce saturation when casting to fptype
         # normal(0, 0.5) tends to survive e5m2 rounding reasonably well
-        x = torch.randn(shape, device=device, dtype=torch.float16) * 0.5
+        x = torch.randn(shape, device=device, dtype=torch.float32) * 0.1 + 0.0625
         return x.to(fptype)
 
     # per-head Q,K,V in fptype
@@ -192,9 +192,16 @@ if __name__ == '__main__':
     print(f"V_addr = {V_addr: #x}")
 
     #generate preload elf
-    pld.make_preload_elf(args.elf_path, 
-        [Q_np,    K_np,   V_np,   O_empty, O_golden],
-        [Q_addr,  K_addr, V_addr, O_eaddr, O_gaddr])
+    if attn.flatten_numer == 1:
+        pld.make_preload_elf(args.elf_path, 
+            [Q_np,    K_np,   V_np,   O_empty, O_golden],
+            [Q_addr,  K_addr, V_addr, O_eaddr, O_gaddr])
+    else:
+        dumnp = np.array([1,1,1,1,1])
+        pld.make_preload_elf(args.elf_path, 
+            [dumnp,   dumnp,  dumnp,  dumnp,   dumnp],
+            [Q_addr,  K_addr, V_addr, O_eaddr, O_gaddr])
+        pass
 
     #generate preload header file
     with open(args.header_path, 'w') as file:

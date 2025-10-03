@@ -26,8 +26,8 @@ class FlatAttetion:
         self.q_sequence_length       = 512
         self.speculative_length      = 1
         self.head_dimemsion          = 128
-        self.num_head                = 1
-        self.num_head_group          = 1
+        self.num_head                = 32
+        self.num_head_group          = 32
         self.batch_size              = 1
 
         #Flatten Settings
@@ -39,7 +39,7 @@ class FlatAttetion:
         self.flatten_shape_x         = 512
         self.flatten_shape_y         = 512
         ## [Async]: Whether to enable asynchronous execution
-        self.flatten_async           = 0
+        self.flatten_async           = 1
         ## [Numer]: Whether to check numerical correctness
         self.flatten_numer           = 1
-
+        self.flatten_numer_chunk     = 8192

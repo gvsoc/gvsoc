@@ -1,5 +1,5 @@
 diff --git a/pulp/floonoc/floonoc.cpp b/pulp/floonoc/floonoc.cpp
-index 668a863..ef7346b 100644
+index 668a863..6a00367 100644
 --- a/pulp/floonoc/floonoc.cpp
 +++ b/pulp/floonoc/floonoc.cpp
 @@ -36,6 +36,16 @@ FlooNoc::FlooNoc(vp::ComponentConf &config)
@@ -56,7 +56,7 @@ index 668a863..ef7346b 100644
  }
  
  
-@@ -196,3 +221,199 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
+@@ -196,3 +221,189 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
  {
      return new FlooNoc(config);
  }
@@ -199,14 +199,9 @@ index 668a863..ef7346b 100644
 +        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[BroadCast]\n");
 +
 +    } else if (collective_type == 2){
-+        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD UINT16]\n");
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD NONE]\n");
 +        //Execute reduction
-+        uint16_t * dst = (uint16_t *) parent->get_data();
-+        uint16_t * src = (uint16_t *) req->get_data();
-+        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
-+        {
-+            dst[i] = dst[i] + src[i];
-+        }
++        //Do nothing 
 +    } else if (collective_type == 3){
 +        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction ADD FP8]\n");
 +        //Execute reduction
@@ -226,14 +221,9 @@ index 668a863..ef7346b 100644
 +            dst[i] = float_to_fp16(fp16_to_float(dst[i]) + fp16_to_float(src[i]));
 +        }
 +    } else if (collective_type == 5){
-+        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX UINT16]\n");
++        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX NONE]\n");
 +        //Execute reduction
-+        uint16_t * dst = (uint16_t *) parent->get_data();
-+        uint16_t * src = (uint16_t *) req->get_data();
-+        for (int i = 0; i < (req->get_size()/sizeof(uint16_t)); ++i)
-+        {
-+            dst[i] = dst[i] > src[i] ? dst[i] : src[i];
-+        }
++        //Do nothing
 +    } else if (collective_type == 6){
 +        // this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Reduction MAX FP8]\n");
 +        //Execute reduction

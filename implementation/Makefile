@@ -11,7 +11,6 @@ ifdef attn
 	ATTN_FILE = $(realpath $(attn))
 endif
 
-OBJDUMPER := riscv64-unknown-elf-objdump
 
 hw:
 	@echo "Compiling SoftHier HW & SW for attention ..."
@@ -32,7 +31,6 @@ attn-pld:
 			${CUR_DIR}/sw/FlatAttention/include/preload.h \
 			${ARCH_FILE} \
 			${ATTN_FILE}
-	${OBJDUMPER} -D ${CUR_DIR}/sw/FlatAttention/preload.elf > ${CUR_DIR}/sw/FlatAttention/preload.dump
 
 attn-hs:
 	@echo "Compiling SoftHier HW & SW for attention ..."
@@ -47,6 +45,10 @@ attn-run: attn-pre
 attn-run%: attn-pre
 	@echo "SoftHier simulation for attention ..."
 	pld=${CUR_DIR}/sw/FlatAttention/preload.elf make -C ${SH_DIR} run$*
+
+attn-num:
+	@echo "Numerical check for attnetion ..."
+	python3 ${CUR_DIR}/scripts/attn_numerical_check.py ${SH_DIR}/dump_0 ${ATTN_FILE}
 
 attn-clean:
 	@echo "clean up intermidiate files generated for attention ..."
