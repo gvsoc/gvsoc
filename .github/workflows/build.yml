@@ -37,7 +37,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
           gcc --version
-          source sourceme.sh
+          source sourceme_ci.sh
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open
@@ -45,13 +45,13 @@ jobs:
           make TARGETS=pulp.chips.flex_cluster.flex_cluster all
       - name: Run examples
         run: |
-          source sourceme.sh
+          source sourceme_ci.sh
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
           ./install/bin/gvsoc --target=pulp-open-ddr --binary soft_hier/dma_dram_test.bin image flash run
       - name: Run SoftHier ReadMe
         run: |
-          source sourceme.sh
+          source sourceme_ci.sh
           cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
           cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/test make hs run
           python examples/SoftHier/software/spatz_check/util/spatz_datagen.py -M 64
@@ -62,7 +62,7 @@ jobs:
           cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py app=examples/SoftHier/assembled/HBM_preload_example/software pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf make hs runv
       - name: Run SoftHier Tutorial
         run: |
-          source sourceme.sh
+          source sourceme_ci.sh
           make -C tutorial/0_softhier_architecture_introduction/ all
           make -C tutorial/1_HBM_accesses/ hbm_pld
           make -C tutorial/1_HBM_accesses/ hbm_l1
@@ -70,7 +70,7 @@ jobs:
           make -C tutorial/1_HBM_accesses/ hbm_dump
       - name: SoftHier Scale Check
         run: |
-          source sourceme.sh
+          source sourceme_ci.sh
           cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/scale_check make hs run
           cfg=examples/SoftHier/config/arch_test_16x16.py app=examples/SoftHier/software/scale_check make hs run
           cfg=examples/SoftHier/config/arch_test_32x32.py app=examples/SoftHier/software/scale_check make hs run
