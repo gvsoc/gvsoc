@@ -161,3 +161,53 @@ norm-num:
 norm-clean:
 	@echo "clean up intermidiate files generated for Normolization ..."
 	rm -f ${CUR_DIR}/sw/RMSNorm/include/norm.h ${CUR_DIR}/sw/RMSNorm/preload.elf ${CUR_DIR}/sw/RMSNorm/preload.dump ${CUR_DIR}/sw/RMSNorm/include/preload.h ${SH_DIR}/dump_*
+
+
+
+#############
+#   RoPE    #
+#############
+
+ROPE_FILE ?= ${CUR_DIR}/config/rope.py
+ifdef rope
+	ROPE_FILE = $(realpath $(rope))
+endif
+
+rope-cfg:
+	@echo "Generating configuration files for RoPE ..."
+	python3 ${CUR_DIR}/scripts/rope_config.py ${ROPE_FILE} ${CUR_DIR}/sw/RoPE/include/rope.h
+
+rope-pld:
+	@echo "Generating preload files for RoPE ..."
+	python3 ${CUR_DIR}/scripts/rope_preload.py \
+			${CUR_DIR}/sw/RoPE/preload.elf \
+			${CUR_DIR}/sw/RoPE/include/preload.h \
+			${ARCH_FILE} \
+			${ROPE_FILE}
+
+rope-hs:
+	@echo "Compiling SoftHier HW & SW for RoPE ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/RoPE make -C ${SH_DIR} hs
+
+rope-sw:
+	@echo "Compiling SoftHier HW & SW for RoPE ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/RoPE make -C ${SH_DIR} sw
+
+rope-pre: rope-clean rope-cfg rope-pld rope-hs
+
+rope-run: rope-pre
+	@echo "SoftHier simulation for RoPE ..."
+	pld=${CUR_DIR}/sw/RoPE/preload.elf make -C ${SH_DIR} run
+
+rope-run%: rope-pre
+	@echo "SoftHier simulation for RoPE ..."
+	pld=${CUR_DIR}/sw/RoPE/preload.elf make -C ${SH_DIR} run$*
+
+rope-num:
+	@echo "Numerical check for RoPE ..."
+	python3 ${CUR_DIR}/scripts/rope_numerical_check.py ${SH_DIR}/dump_0 ${ROPE_FILE}
+
+rope-clean:
+	@echo "clean up intermidiate files generated for RoPE ..."
+	rm -f ${CUR_DIR}/sw/RoPE/include/rope.h ${CUR_DIR}/sw/RoPE/preload.elf ${CUR_DIR}/sw/RoPE/preload.dump ${CUR_DIR}/sw/RoPE/include/preload.h ${SH_DIR}/dump_*
+

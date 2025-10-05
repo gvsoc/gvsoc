@@ -1,6 +1,7 @@
 **/attn.h
 **/gemm.h
 **/norm.h
+**/rope.h
 **/preload.elf
 **/preload.dump
 **/preload.h
