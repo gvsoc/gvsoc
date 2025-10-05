@@ -108,7 +108,7 @@ int flat_attention(
         {
             //1. Calculate the whole size of the output
             uint64_t output_size = q_sequence_length * speculative_length * (num_head / num_head_group) * head_dimemsion * batch_size * DATA_TYPE_BYTE;
-            uint64_t num_output_chunk = (output_size + ATTN_FLATTEN_NUMER_CHUNK) / ATTN_FLATTEN_NUMER_CHUNK;
+            uint64_t num_output_chunk = (output_size + ATTN_FLATTEN_NUMER_CHUNK - 1) / ATTN_FLATTEN_NUMER_CHUNK;
 
             //2. iterate over chunks
             flex_dump_open();

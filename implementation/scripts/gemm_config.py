@@ -38,9 +38,9 @@ def import_module_from_path(module_path):
     globals().update(vars(module))
     return module
 
-parser = argparse.ArgumentParser(description="Generate C header files from a ATTN configuration file.")
-parser.add_argument("input_file",  nargs="?", help="Path to ATTN configuration python file")
-parser.add_argument("output_file", nargs="?", help="Path to ATTN configuration C header file")
+parser = argparse.ArgumentParser(description="Generate C header files from a GEMM configuration file.")
+parser.add_argument("input_file",  nargs="?", help="Path to GEMM configuration python file")
+parser.add_argument("output_file", nargs="?", help="Path to GEMM configuration C header file")
 args = parser.parse_args()
 input_file = args.input_file
 
@@ -64,5 +64,5 @@ for module_path in [input_file]:
         print(f"Failed to import {absolute_path}: {e}")
 
 # Generate the C header file
-attn = FlatAttetion()
-kc.generate_config_C_header("ATTN", attn, C_header_file, attn.dtype, attn.flatten_numer)
+gemm = SummaGEMM()
+kc.generate_config_C_header("GEMM", gemm, C_header_file, gemm.dtype, gemm.summa_numer)

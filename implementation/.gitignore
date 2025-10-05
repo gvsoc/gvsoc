@@ -1,4 +1,5 @@
 **/attn.h
+**/gemm.h
 **/preload.elf
 **/preload.dump
 **/preload.h

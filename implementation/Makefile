@@ -6,10 +6,7 @@ ifdef arch
 	ARCH_FILE = $(realpath $(arch))
 endif
 
-ATTN_FILE ?= ${CUR_DIR}/config/attn.py
-ifdef attn
-	ATTN_FILE = $(realpath $(attn))
-endif
+export PYTHONPATH := ${CUR_DIR}/script:$(PYTHONPATH)
 
 
 hw:
@@ -19,6 +16,15 @@ hw:
 pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
+
+#####################
+# 	FlatAttention	#
+#####################
+
+ATTN_FILE ?= ${CUR_DIR}/config/attn.py
+ifdef attn
+	ATTN_FILE = $(realpath $(attn))
+endif
 
 attn-cfg:
 	@echo "Generating configuration files for attention ..."
@@ -35,6 +41,10 @@ attn-pld:
 attn-hs:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FlatAttention make -C ${SH_DIR} hs
+
+attn-sw:
+	@echo "Compiling SoftHier HW & SW for attention ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FlatAttention make -C ${SH_DIR} sw
 
 attn-pre: attn-clean attn-cfg attn-pld attn-hs
 
@@ -54,4 +64,52 @@ attn-clean:
 	@echo "clean up intermidiate files generated for attention ..."
 	rm -f ${CUR_DIR}/sw/FlatAttention/include/attn.h ${CUR_DIR}/sw/FlatAttention/preload.elf ${CUR_DIR}/sw/FlatAttention/preload.dump ${CUR_DIR}/sw/FlatAttention/include/preload.h ${SH_DIR}/dump_*
 
+
+
+#############
+# 	GEMM	#
+#############
+
+GEMM_FILE ?= ${CUR_DIR}/config/gemm.py
+ifdef gemm
+	GEMM_FILE = $(realpath $(gemm))
+endif
+
+gemm-cfg:
+	@echo "Generating configuration files for GEMM ..."
+	python3 ${CUR_DIR}/scripts/gemm_config.py ${GEMM_FILE} ${CUR_DIR}/sw/SummaGEMM/include/gemm.h
+
+gemm-pld:
+	@echo "Generating preload files for GEMM ..."
+	python3 ${CUR_DIR}/scripts/gemm_preload.py \
+			${CUR_DIR}/sw/SummaGEMM/preload.elf \
+			${CUR_DIR}/sw/SummaGEMM/include/preload.h \
+			${ARCH_FILE} \
+			${GEMM_FILE}
+
+gemm-hs:
+	@echo "Compiling SoftHier HW & SW for GEMM ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/SummaGEMM make -C ${SH_DIR} hs
+
+gemm-sw:
+	@echo "Compiling SoftHier HW & SW for GEMM ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/SummaGEMM make -C ${SH_DIR} sw
+
+gemm-pre: gemm-clean gemm-cfg gemm-pld gemm-hs
+
+gemm-clean:
+	@echo "clean up intermidiate files generated for GEMM ..."
+	rm -f ${CUR_DIR}/sw/SummaGEMM/include/gemm.h ${CUR_DIR}/sw/SummaGEMM/preload.elf ${CUR_DIR}/sw/SummaGEMM/preload.dump ${CUR_DIR}/sw/SummaGEMM/include/preload.h ${SH_DIR}/dump_*
+
+gemm-run: gemm-pre
+	@echo "SoftHier simulation for GEMM ..."
+	pld=${CUR_DIR}/sw/SummaGEMM/preload.elf make -C ${SH_DIR} run
+
+gemm-run%: gemm-pre
+	@echo "SoftHier simulation for GEMM ..."
+	pld=${CUR_DIR}/sw/SummaGEMM/preload.elf make -C ${SH_DIR} run$*
+
+gemm-num:
+	@echo "Numerical check for GEMM ..."
+	python3 ${CUR_DIR}/scripts/gemm_numerical_check.py ${SH_DIR}/dump_0 ${GEMM_FILE}
 

@@ -47,7 +47,7 @@ def import_module_from_path(module_path):
     globals().update(vars(module))
     return module
 
-def attn_check_results():
+def gemm_check_results():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Check numerical correctness for attention.")
     parser.add_argument("result_path", type=str, help="Path of result file")
@@ -77,12 +77,12 @@ def attn_check_results():
         except Exception as e:
             print(f"Failed to import {absolute_path}: {e}")
 
-    #Instanciate arch and attn configurations
-    attn = FlatAttetion()
+    #Instanciate arch and gemm configurations
+    gemm = SummaGEMM()
 
     #Check Results
-    num_util.check_results(args.result_path, attn.dtype)
+    num_util.check_results(args.result_path, gemm.dtype)
     pass
 
 if __name__ == "__main__":
-    attn_check_results()
+    gemm_check_results()
