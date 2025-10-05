@@ -322,7 +322,7 @@ void test_dma_collectives(){
     //do redcution
     if (flex_is_dm_core() && flex_get_cluster_id() == 0)
     {
-        flex_dma_async_reduction(0, 0, 64, COLLECTIVE_REDADD_INT_16, 0b00, 0b11);
+        flex_dma_async_reduction(0, 0, 64, COLLECTIVE_REDADD_NONE, 0b00, 0b11);
         flex_dma_async_wait_all();
     }
     flex_global_barrier_xy();//Global barrier
