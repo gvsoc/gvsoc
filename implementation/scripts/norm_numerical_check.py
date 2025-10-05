@@ -47,9 +47,9 @@ def import_module_from_path(module_path):
     globals().update(vars(module))
     return module
 
-def gemm_check_results():
+def norm_check_results():
     # Set up argument parser
-    parser = argparse.ArgumentParser(description="Check numerical correctness for GEMM.")
+    parser = argparse.ArgumentParser(description="Check numerical correctness for RMSNorm.")
     parser.add_argument("result_path", type=str, help="Path of result file")
     parser.add_argument(
         "module_paths",
@@ -77,12 +77,12 @@ def gemm_check_results():
         except Exception as e:
             print(f"Failed to import {absolute_path}: {e}")
 
-    #Instanciate arch and gemm configurations
-    gemm = SummaGEMM()
+    #Instanciate arch and norm configurations
+    norm = RMSNorm()
 
     #Check Results
-    num_util.check_results(args.result_path, gemm.dtype)
+    num_util.check_results(args.result_path, norm.dtype)
     pass
 
 if __name__ == "__main__":
-    gemm_check_results()
+    norm_check_results()

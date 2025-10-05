@@ -25,7 +25,7 @@ class SummaGEMM:
 
     def __init__(self):
 
-        #Attention parameters
+        #GEMM parameters
         self.dtype                   = 'fp16'
         self.m_size                  = 1024
         self.n_size                  = 1024

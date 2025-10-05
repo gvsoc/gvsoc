@@ -18,7 +18,7 @@ pfto:
 	make -C ${SH_DIR} pfto
 
 #####################
-# 	FlatAttention	#
+#   FlatAttention   #
 #####################
 
 ATTN_FILE ?= ${CUR_DIR}/config/attn.py
@@ -67,7 +67,7 @@ attn-clean:
 
 
 #############
-# 	GEMM	#
+#   GEMM    #
 #############
 
 GEMM_FILE ?= ${CUR_DIR}/config/gemm.py
@@ -97,10 +97,6 @@ gemm-sw:
 
 gemm-pre: gemm-clean gemm-cfg gemm-pld gemm-hs
 
-gemm-clean:
-	@echo "clean up intermidiate files generated for GEMM ..."
-	rm -f ${CUR_DIR}/sw/SummaGEMM/include/gemm.h ${CUR_DIR}/sw/SummaGEMM/preload.elf ${CUR_DIR}/sw/SummaGEMM/preload.dump ${CUR_DIR}/sw/SummaGEMM/include/preload.h ${SH_DIR}/dump_*
-
 gemm-run: gemm-pre
 	@echo "SoftHier simulation for GEMM ..."
 	pld=${CUR_DIR}/sw/SummaGEMM/preload.elf make -C ${SH_DIR} run
@@ -113,3 +109,55 @@ gemm-num:
 	@echo "Numerical check for GEMM ..."
 	python3 ${CUR_DIR}/scripts/gemm_numerical_check.py ${SH_DIR}/dump_0 ${GEMM_FILE}
 
+gemm-clean:
+	@echo "clean up intermidiate files generated for GEMM ..."
+	rm -f ${CUR_DIR}/sw/SummaGEMM/include/gemm.h ${CUR_DIR}/sw/SummaGEMM/preload.elf ${CUR_DIR}/sw/SummaGEMM/preload.dump ${CUR_DIR}/sw/SummaGEMM/include/preload.h ${SH_DIR}/dump_*
+
+
+
+######################
+#   Normolization    #
+######################
+
+NORM_FILE ?= ${CUR_DIR}/config/norm.py
+ifdef norm
+	NORM_FILE = $(realpath $(norm))
+endif
+
+norm-cfg:
+	@echo "Generating configuration files for Normolization ..."
+	python3 ${CUR_DIR}/scripts/norm_config.py ${NORM_FILE} ${CUR_DIR}/sw/RMSNorm/include/norm.h
+
+norm-pld:
+	@echo "Generating preload files for Normolization ..."
+	python3 ${CUR_DIR}/scripts/norm_preload.py \
+			${CUR_DIR}/sw/RMSNorm/preload.elf \
+			${CUR_DIR}/sw/RMSNorm/include/preload.h \
+			${ARCH_FILE} \
+			${NORM_FILE}
+
+norm-hs:
+	@echo "Compiling SoftHier HW & SW for Normolization ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/RMSNorm make -C ${SH_DIR} hs
+
+norm-sw:
+	@echo "Compiling SoftHier HW & SW for Normolization ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/RMSNorm make -C ${SH_DIR} sw
+
+norm-pre: norm-clean norm-cfg norm-pld norm-hs
+
+norm-run: norm-pre
+	@echo "SoftHier simulation for Normolization ..."
+	pld=${CUR_DIR}/sw/RMSNorm/preload.elf make -C ${SH_DIR} run
+
+norm-run%: norm-pre
+	@echo "SoftHier simulation for Normolization ..."
+	pld=${CUR_DIR}/sw/RMSNorm/preload.elf make -C ${SH_DIR} run$*
+
+norm-num:
+	@echo "Numerical check for Normolization ..."
+	python3 ${CUR_DIR}/scripts/norm_numerical_check.py ${SH_DIR}/dump_0 ${NORM_FILE}
+
+norm-clean:
+	@echo "clean up intermidiate files generated for Normolization ..."
+	rm -f ${CUR_DIR}/sw/RMSNorm/include/norm.h ${CUR_DIR}/sw/RMSNorm/preload.elf ${CUR_DIR}/sw/RMSNorm/preload.dump ${CUR_DIR}/sw/RMSNorm/include/preload.h ${SH_DIR}/dump_*
