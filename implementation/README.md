@@ -10,6 +10,7 @@
 | 🔢 GEMM with SUMMA Dataflow         | `gemm`     |
 | 🌈 RMSNorm                          | `norm`     |
 | 🌀 RoPE (Rotary Position Embedding) | `rope`     |
+| ✨ Activation (Sigmoid, ReLU)       | `acti`     |
 
 ---
 

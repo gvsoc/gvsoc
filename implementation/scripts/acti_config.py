@@ -38,9 +38,9 @@ def import_module_from_path(module_path):
     globals().update(vars(module))
     return module
 
-parser = argparse.ArgumentParser(description="Generate C header files from a RoPE configuration file.")
-parser.add_argument("input_file",  nargs="?", help="Path to RoPE configuration python file")
-parser.add_argument("output_file", nargs="?", help="Path to RoPE configuration C header file")
+parser = argparse.ArgumentParser(description="Generate C header files from a Activation configuration file.")
+parser.add_argument("input_file",  nargs="?", help="Path to Activation configuration python file")
+parser.add_argument("output_file", nargs="?", help="Path to Activation configuration C header file")
 args = parser.parse_args()
 input_file = args.input_file
 
@@ -64,5 +64,5 @@ for module_path in [input_file]:
         print(f"Failed to import {absolute_path}: {e}")
 
 # Generate the C header file
-rope = RoPE()
-kc.generate_config_C_header("ROPE", rope, C_header_file, rope.dtype, rope.rope_numer)
+acti = Activation()
+kc.generate_config_C_header("ACTI", acti, C_header_file, acti.dtype, acti.acti_numer)

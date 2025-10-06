@@ -30,6 +30,9 @@ def generate_config_C_header(header_prefix, config, C_header_file, dtype, numeri
             define_name = f'{header_prefix.upper()}_{attr_name.upper()}'
             if define_name == f'{header_prefix.upper()}_DTYPE':
                 continue
+            if isinstance(attr_value, str):
+                file.write(f'#define {define_name}_{attr_value.upper()}\n')
+                continue
             file.write(f'#define {define_name} ((uint64_t){attr_value})\n')
 
         if dtype == 'fp16':

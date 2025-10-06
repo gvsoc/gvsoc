@@ -2,6 +2,7 @@
 **/gemm.h
 **/norm.h
 **/rope.h
+**/acti.h
 **/preload.elf
 **/preload.dump
 **/preload.h

@@ -17,6 +17,8 @@ pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
 
+clean: attn-clean gemm-clean norm-clean rope-clean acti-clean
+
 #####################
 #   FlatAttention   #
 #####################
@@ -211,3 +213,50 @@ rope-clean:
 	@echo "clean up intermidiate files generated for RoPE ..."
 	rm -f ${CUR_DIR}/sw/RoPE/include/rope.h ${CUR_DIR}/sw/RoPE/preload.elf ${CUR_DIR}/sw/RoPE/preload.dump ${CUR_DIR}/sw/RoPE/include/preload.h ${SH_DIR}/dump_*
 
+
+###################
+#   Activation    #
+###################
+
+ACTI_FILE ?= ${CUR_DIR}/config/acti.py
+ifdef acti
+	ACTI_FILE = $(realpath $(acti))
+endif
+
+acti-cfg:
+	@echo "Generating configuration files for Activation ..."
+	python3 ${CUR_DIR}/scripts/acti_config.py ${ACTI_FILE} ${CUR_DIR}/sw/Activation/include/acti.h
+
+acti-pld:
+	@echo "Generating preload files for Activation ..."
+	python3 ${CUR_DIR}/scripts/acti_preload.py \
+			${CUR_DIR}/sw/Activation/preload.elf \
+			${CUR_DIR}/sw/Activation/include/preload.h \
+			${ARCH_FILE} \
+			${ACTI_FILE}
+
+acti-hs:
+	@echo "Compiling SoftHier HW & SW for Activation ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/Activation make -C ${SH_DIR} hs
+
+acti-sw:
+	@echo "Compiling SoftHier HW & SW for Activation ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/Activation make -C ${SH_DIR} sw
+
+acti-pre: acti-clean acti-cfg acti-pld acti-hs
+
+acti-run: acti-pre
+	@echo "SoftHier simulation for Activation ..."
+	pld=${CUR_DIR}/sw/Activation/preload.elf make -C ${SH_DIR} run
+
+acti-run%: acti-pre
+	@echo "SoftHier simulation for Activation ..."
+	pld=${CUR_DIR}/sw/Activation/preload.elf make -C ${SH_DIR} run$*
+
+acti-num:
+	@echo "Numerical check for Activation ..."
+	python3 ${CUR_DIR}/scripts/acti_numerical_check.py ${SH_DIR}/dump_0 ${ACTI_FILE}
+
+acti-clean:
+	@echo "clean up intermidiate files generated for Activation ..."
+	rm -f ${CUR_DIR}/sw/Activation/include/acti.h ${CUR_DIR}/sw/Activation/preload.elf ${CUR_DIR}/sw/Activation/preload.dump ${CUR_DIR}/sw/Activation/include/preload.h ${SH_DIR}/dump_*
