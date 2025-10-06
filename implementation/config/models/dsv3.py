@@ -16,7 +16,7 @@
 
 # Author: Chi Zhang <chizhang@ethz.ch>
 
-class DeepSeekV3Config:
+class Model:
 
     def __init__(self):
 

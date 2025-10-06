@@ -1,12 +1,12 @@
 CUR_DIR := $(shell pwd)
 SH_DIR := $(realpath ..)
 
-ARCH_FILE ?= ${CUR_DIR}/config/arch.py
+ARCH_FILE ?= ${CUR_DIR}/config/arch/arch.py
 ifdef arch
 	ARCH_FILE = $(realpath $(arch))
 endif
 
-export PYTHONPATH := ${CUR_DIR}/script:$(PYTHONPATH)
+export PYTHONPATH := ${CUR_DIR}/scripts:$(PYTHONPATH)
 
 
 hw:
@@ -23,18 +23,18 @@ clean: attn-clean gemm-clean norm-clean rope-clean acti-clean
 #   FlatAttention   #
 #####################
 
-ATTN_FILE ?= ${CUR_DIR}/config/attn.py
+ATTN_FILE ?= ${CUR_DIR}/config/kernels/attn.py
 ifdef attn
 	ATTN_FILE = $(realpath $(attn))
 endif
 
 attn-cfg:
 	@echo "Generating configuration files for attention ..."
-	python3 ${CUR_DIR}/scripts/attn_config.py ${ATTN_FILE} ${CUR_DIR}/sw/FlatAttention/include/attn.h
+	python3 ${CUR_DIR}/scripts/kernels/attn_config.py ${ATTN_FILE} ${CUR_DIR}/sw/FlatAttention/include/attn.h
 
 attn-pld:
 	@echo "Generating preload files for attention ..."
-	python3 ${CUR_DIR}/scripts/attn_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/attn_preload.py \
 			${CUR_DIR}/sw/FlatAttention/preload.elf \
 			${CUR_DIR}/sw/FlatAttention/include/preload.h \
 			${ARCH_FILE} \
@@ -60,7 +60,7 @@ attn-run%: attn-pre
 
 attn-num:
 	@echo "Numerical check for attnetion ..."
-	python3 ${CUR_DIR}/scripts/attn_numerical_check.py ${SH_DIR}/dump_0 ${ATTN_FILE}
+	python3 ${CUR_DIR}/scripts/kernels/attn_numerical_check.py ${SH_DIR}/dump_0 ${ATTN_FILE}
 
 attn-clean:
 	@echo "clean up intermidiate files generated for attention ..."
@@ -72,18 +72,18 @@ attn-clean:
 #   GEMM    #
 #############
 
-GEMM_FILE ?= ${CUR_DIR}/config/gemm.py
+GEMM_FILE ?= ${CUR_DIR}/config/kernels/gemm.py
 ifdef gemm
 	GEMM_FILE = $(realpath $(gemm))
 endif
 
 gemm-cfg:
 	@echo "Generating configuration files for GEMM ..."
-	python3 ${CUR_DIR}/scripts/gemm_config.py ${GEMM_FILE} ${CUR_DIR}/sw/SummaGEMM/include/gemm.h
+	python3 ${CUR_DIR}/scripts/kernels/gemm_config.py ${GEMM_FILE} ${CUR_DIR}/sw/SummaGEMM/include/gemm.h
 
 gemm-pld:
 	@echo "Generating preload files for GEMM ..."
-	python3 ${CUR_DIR}/scripts/gemm_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/gemm_preload.py \
 			${CUR_DIR}/sw/SummaGEMM/preload.elf \
 			${CUR_DIR}/sw/SummaGEMM/include/preload.h \
 			${ARCH_FILE} \
@@ -109,7 +109,7 @@ gemm-run%: gemm-pre
 
 gemm-num:
 	@echo "Numerical check for GEMM ..."
-	python3 ${CUR_DIR}/scripts/gemm_numerical_check.py ${SH_DIR}/dump_0 ${GEMM_FILE}
+	python3 ${CUR_DIR}/scripts/kernels/gemm_numerical_check.py ${SH_DIR}/dump_0 ${GEMM_FILE}
 
 gemm-clean:
 	@echo "clean up intermidiate files generated for GEMM ..."
@@ -121,18 +121,18 @@ gemm-clean:
 #   Normolization    #
 ######################
 
-NORM_FILE ?= ${CUR_DIR}/config/norm.py
+NORM_FILE ?= ${CUR_DIR}/config/kernels/norm.py
 ifdef norm
 	NORM_FILE = $(realpath $(norm))
 endif
 
 norm-cfg:
 	@echo "Generating configuration files for Normolization ..."
-	python3 ${CUR_DIR}/scripts/norm_config.py ${NORM_FILE} ${CUR_DIR}/sw/RMSNorm/include/norm.h
+	python3 ${CUR_DIR}/scripts/kernels/norm_config.py ${NORM_FILE} ${CUR_DIR}/sw/RMSNorm/include/norm.h
 
 norm-pld:
 	@echo "Generating preload files for Normolization ..."
-	python3 ${CUR_DIR}/scripts/norm_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/norm_preload.py \
 			${CUR_DIR}/sw/RMSNorm/preload.elf \
 			${CUR_DIR}/sw/RMSNorm/include/preload.h \
 			${ARCH_FILE} \
@@ -158,7 +158,7 @@ norm-run%: norm-pre
 
 norm-num:
 	@echo "Numerical check for Normolization ..."
-	python3 ${CUR_DIR}/scripts/norm_numerical_check.py ${SH_DIR}/dump_0 ${NORM_FILE}
+	python3 ${CUR_DIR}/scripts/kernels/norm_numerical_check.py ${SH_DIR}/dump_0 ${NORM_FILE}
 
 norm-clean:
 	@echo "clean up intermidiate files generated for Normolization ..."
@@ -170,18 +170,18 @@ norm-clean:
 #   RoPE    #
 #############
 
-ROPE_FILE ?= ${CUR_DIR}/config/rope.py
+ROPE_FILE ?= ${CUR_DIR}/config/kernels/rope.py
 ifdef rope
 	ROPE_FILE = $(realpath $(rope))
 endif
 
 rope-cfg:
 	@echo "Generating configuration files for RoPE ..."
-	python3 ${CUR_DIR}/scripts/rope_config.py ${ROPE_FILE} ${CUR_DIR}/sw/RoPE/include/rope.h
+	python3 ${CUR_DIR}/scripts/kernels/rope_config.py ${ROPE_FILE} ${CUR_DIR}/sw/RoPE/include/rope.h
 
 rope-pld:
 	@echo "Generating preload files for RoPE ..."
-	python3 ${CUR_DIR}/scripts/rope_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/rope_preload.py \
 			${CUR_DIR}/sw/RoPE/preload.elf \
 			${CUR_DIR}/sw/RoPE/include/preload.h \
 			${ARCH_FILE} \
@@ -207,7 +207,7 @@ rope-run%: rope-pre
 
 rope-num:
 	@echo "Numerical check for RoPE ..."
-	python3 ${CUR_DIR}/scripts/rope_numerical_check.py ${SH_DIR}/dump_0 ${ROPE_FILE}
+	python3 ${CUR_DIR}/scripts/kernels/rope_numerical_check.py ${SH_DIR}/dump_0 ${ROPE_FILE}
 
 rope-clean:
 	@echo "clean up intermidiate files generated for RoPE ..."
@@ -218,18 +218,18 @@ rope-clean:
 #   Activation    #
 ###################
 
-ACTI_FILE ?= ${CUR_DIR}/config/acti.py
+ACTI_FILE ?= ${CUR_DIR}/config/kernels/acti.py
 ifdef acti
 	ACTI_FILE = $(realpath $(acti))
 endif
 
 acti-cfg:
 	@echo "Generating configuration files for Activation ..."
-	python3 ${CUR_DIR}/scripts/acti_config.py ${ACTI_FILE} ${CUR_DIR}/sw/Activation/include/acti.h
+	python3 ${CUR_DIR}/scripts/kernels/acti_config.py ${ACTI_FILE} ${CUR_DIR}/sw/Activation/include/acti.h
 
 acti-pld:
 	@echo "Generating preload files for Activation ..."
-	python3 ${CUR_DIR}/scripts/acti_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/acti_preload.py \
 			${CUR_DIR}/sw/Activation/preload.elf \
 			${CUR_DIR}/sw/Activation/include/preload.h \
 			${ARCH_FILE} \
@@ -255,7 +255,7 @@ acti-run%: acti-pre
 
 acti-num:
 	@echo "Numerical check for Activation ..."
-	python3 ${CUR_DIR}/scripts/acti_numerical_check.py ${SH_DIR}/dump_0 ${ACTI_FILE}
+	python3 ${CUR_DIR}/scripts/kernels/acti_numerical_check.py ${SH_DIR}/dump_0 ${ACTI_FILE}
 
 acti-clean:
 	@echo "clean up intermidiate files generated for Activation ..."
