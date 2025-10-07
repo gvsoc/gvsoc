@@ -14,10 +14,16 @@ typedef struct ActivationInfo
 {
     uint64_t        Input;
     uint64_t        Output;
+    uint64_t        Gate;
+    uint64_t        Bias;
     uint32_t        num_total_token;
     uint32_t        token_embedded_length;
+    uint32_t        gate_enable;
+    uint32_t        bias_enable;
     uint32_t        start_token;
     uint32_t        L1_I;
+    uint32_t        L1_G;
+    uint32_t        L1_B;
     uint32_t        L1_Area;
     uint32_t        L1_I_size;
 
@@ -30,23 +36,35 @@ typedef struct ActivationInfo
 
     //L1 location for spatz partition
     uint32_t        L1SP_I;
+    uint32_t        L1SP_G;
+    uint32_t        L1SP_B;
 }ActivationInfo;
 
 ActivationInfo ActivationAnaylze(
     uint32_t num_total_token,
     uint32_t token_embedded_length,
+    uint32_t gate_enable,
+    uint32_t bias_enable,
     uint64_t input_address,
-    uint64_t output_address)
+    uint64_t output_address,
+    uint64_t gate_address,
+    uint64_t bias_address)
 {
     ActivationInfo info;
 
     info.Input                  = input_address;
     info.Output                 = output_address;
+    info.Gate                   = gate_address;
+    info.Bias                   = bias_address;
     info.token_embedded_length  = token_embedded_length;
     info.num_total_token        = num_total_token;
+    info.gate_enable            = gate_enable;
+    info.bias_enable            = bias_enable;
     info.start_token            = flex_get_cluster_id();
     info.L1_I                   = local(0);
-    info.L1_Area                = info.L1_I + DATA_TYPE_BYTE * info.token_embedded_length;
+    info.L1_G                   = info.L1_I + DATA_TYPE_BYTE * info.token_embedded_length;
+    info.L1_B                   = info.L1_G + DATA_TYPE_BYTE * info.token_embedded_length;
+    info.L1_Area                = info.L1_B + DATA_TYPE_BYTE * info.token_embedded_length;
     info.L1_I_size              = DATA_TYPE_BYTE * info.token_embedded_length;
 
     //Spatz information
@@ -60,12 +78,16 @@ ActivationInfo ActivationAnaylze(
 
     //L1 location for spatz partition
     info.L1SP_I                 = info.L1_I  + info.spatz_sid * (info.L1_I_size  / ARCH_SPATZ_ATTACED_CORES);
+    info.L1SP_G                 = info.L1_G  + info.spatz_sid * (info.L1_I_size  / ARCH_SPATZ_ATTACED_CORES);
+    info.L1SP_B                 = info.L1_B  + info.spatz_sid * (info.L1_I_size  / ARCH_SPATZ_ATTACED_CORES);
 
     return info;
 }
 
 inline void vector_lib_sigmoid(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 inline void vector_lib_relu(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
+inline void vector_lib_gate(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
+inline void vector_lib_bias(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 
 void ActivationRun(ActivationInfo * info)
 {
@@ -79,6 +101,22 @@ void ActivationRun(ActivationInfo * info)
                 info->Input + info->start_token * info->L1_I_size, /*source*/
                 info->L1_I_size/*transfer size*/); //Start 2D iDMA
             flex_dma_async_wait_all(); // Wait for iDMA Finishing
+            if (info->gate_enable)
+            {
+                flex_dma_async_1d(
+                    info->L1_G, /*destination*/
+                    info->Gate + info->start_token * info->L1_I_size, /*source*/
+                    info->L1_I_size/*transfer size*/); //Start 2D iDMA
+                flex_dma_async_wait_all(); // Wait for iDMA Finishing
+            }
+            if (info->bias_enable)
+            {
+                flex_dma_async_1d(
+                    info->L1_B, /*destination*/
+                    info->Bias + info->start_token * info->L1_I_size, /*source*/
+                    info->L1_I_size/*transfer size*/); //Start 2D iDMA
+                flex_dma_async_wait_all(); // Wait for iDMA Finishing
+            }
         }
         flex_intra_cluster_sync();
 
@@ -96,6 +134,20 @@ void ActivationRun(ActivationInfo * info)
                 info->L1SP_I/*o_addr*/, 
                 info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
 #endif
+            if (info->gate_enable)
+            {
+                vector_lib_gate(
+                    info->L1SP_G/*i_addr*/, 
+                    info->L1SP_I/*o_addr*/, 
+                    info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
+            }
+            if (info->bias_enable)
+            {
+                vector_lib_bias(
+                    info->L1SP_B/*i_addr*/, 
+                    info->L1SP_I/*o_addr*/, 
+                    info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
+            }
         }
         flex_intra_cluster_sync();
 
@@ -155,6 +207,44 @@ inline void vector_lib_relu(
         asm volatile("vsetvli %0, %1, e" XSTR(DATA_TYPE_WIDTH) ", m8, ta, ma" : "=r"(avl) : "r"(vlen));
         asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(i_addr));
         asm volatile("vfmax.vf v8, v8, fa5");
+        asm volatile("vse" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(o_addr));
+        vlen -= avl;
+        i_addr += DATA_TYPE_BYTE*avl;
+        o_addr += DATA_TYPE_BYTE*avl;
+    }
+}
+
+/*Gate*/
+inline void vector_lib_gate(
+    uint32_t i_addr,
+    uint32_t o_addr,
+    uint32_t vlen)
+{
+    uint32_t avl;
+    while(vlen > 0){
+        asm volatile("vsetvli %0, %1, e" XSTR(DATA_TYPE_WIDTH) ", m8, ta, ma" : "=r"(avl) : "r"(vlen));
+        asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(i_addr));
+        asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v0,  (%0)" ::"r"(o_addr));
+        asm volatile("vfmul.vv v8, v8, v0");
+        asm volatile("vse" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(o_addr));
+        vlen -= avl;
+        i_addr += DATA_TYPE_BYTE*avl;
+        o_addr += DATA_TYPE_BYTE*avl;
+    }
+}
+
+/*Bias*/
+inline void vector_lib_bias(
+    uint32_t i_addr,
+    uint32_t o_addr,
+    uint32_t vlen)
+{
+    uint32_t avl;
+    while(vlen > 0){
+        asm volatile("vsetvli %0, %1, e" XSTR(DATA_TYPE_WIDTH) ", m8, ta, ma" : "=r"(avl) : "r"(vlen));
+        asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(i_addr));
+        asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v0,  (%0)" ::"r"(o_addr));
+        asm volatile("vfadd.vv v8, v8, v0");
         asm volatile("vse" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(o_addr));
         vlen -= avl;
         i_addr += DATA_TYPE_BYTE*avl;

@@ -72,6 +72,8 @@ def gen_acti_preload_numpy_arrays(acti):
 
     # Activation
     I_fptype = rand_fptype((acti.m_size,  acti.n_size), device)
+    G_fptype = rand_fptype((acti.m_size,  acti.n_size), device)
+    B_fptype = rand_fptype((acti.m_size,  acti.n_size), device)
     I = I_fptype.to(compute_dtype)
     if acti.algo == 'sigmoid':
         O = torch.sigmoid(I)
@@ -80,27 +82,43 @@ def gen_acti_preload_numpy_arrays(acti):
     else:
         raise RuntimeError(f"Activation not support for {acti.algo} algorithm")
         pass
+    if acti.gate_enable:
+        G = G_fptype.to(compute_dtype)
+        O = O * G
+        pass
+    if acti.bias_enable:
+        B = B_fptype.to(compute_dtype)
+        O = O + B
+        pass
     O_fptype = O.to(fptype)
 
     # convert to NumPy: cast to float16 (NumPy may not support PyTorch fptype dtype)
     if fptype == torch.float8_e5m2:
         I_np = I_fptype.view(torch.uint8).cpu().numpy()
         O_np = O_fptype.view(torch.uint8).cpu().numpy()
+        G_np = G_fptype.view(torch.uint8).cpu().numpy()
+        B_np = B_fptype.view(torch.uint8).cpu().numpy()
     else:
         I_np = I_fptype.view(torch.uint16).cpu().numpy()
         O_np = O_fptype.view(torch.uint16).cpu().numpy()
+        G_np = G_fptype.view(torch.uint16).cpu().numpy()
+        B_np = B_fptype.view(torch.uint16).cpu().numpy()
 
     # quick sanity prints
     print("I_fptype:", tuple(I_fptype.shape), I_fptype.dtype)
     print("O_fptype:", tuple(O_fptype.shape), O_fptype.dtype)
+    print("G_fptype:", tuple(G_fptype.shape), G_fptype.dtype)
+    print("B_fptype:", tuple(B_fptype.shape), B_fptype.dtype)
 
     print("I_np:", I_np.shape, I_np.dtype)
     print("O_np:", O_np.shape, O_np.dtype)
+    print("G_np:", G_np.shape, G_np.dtype)
+    print("B_np:", B_np.shape, B_np.dtype)
 
     O_empty = np.zeros(O_np.shape, dtype=O_np.dtype)
     O_golden = O_np
 
-    return I_np, O_empty, O_golden
+    return I_np, G_np, B_np, O_empty, O_golden
 
 
 if __name__ == '__main__':
@@ -138,24 +156,28 @@ if __name__ == '__main__':
     arch = FlexClusterArch()
 
     # Generate the preload
-    I_np, O_empty, O_golden = gen_acti_preload_numpy_arrays(acti)
+    I_np, G_np, B_np, O_empty, O_golden = gen_acti_preload_numpy_arrays(acti)
     I_addr = arch.hbm_start_base
     O_eaddr = I_addr + I_np.nbytes
     O_gaddr = O_eaddr + O_empty.nbytes
+    G_addr = arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
+    B_addr = G_addr + G_np.nbytes
     print(f"I_addr = {I_addr: #x}")
     print(f"O_eaddr = {O_eaddr: #x}")
     print(f"O_gaddr = {O_gaddr: #x}")
+    print(f"G_addr = {G_addr: #x}")
+    print(f"B_addr = {B_addr: #x}")
 
     #generate preload elf
     if acti.acti_numer == 1:
         pld.make_preload_elf(args.elf_path, 
-            [I_np,    O_empty,  O_golden],
-            [I_addr,  O_eaddr,  O_gaddr])
+            [I_np,    G_np,    B_np,    O_empty,  O_golden],
+            [I_addr,  G_addr,  B_addr,  O_eaddr,  O_gaddr])
     else:
         dumnp = np.array([1,1,1,1,1])
         pld.make_preload_elf(args.elf_path, 
-            [dumnp,   dumnp,    dumnp],
-            [I_addr,  O_eaddr,  O_gaddr])
+            [dumnp,   dumnp,   dumnp,   dumnp,    dumnp],
+            [I_addr,  G_addr,  B_addr,  O_eaddr,  O_gaddr])
         pass
 
     #generate preload header file
@@ -165,6 +187,8 @@ if __name__ == '__main__':
         file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
         file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
         file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+        file.write(f'#define {"G_addr".upper()} ((uint64_t){G_addr: #x})\n')
+        file.write(f'#define {"B_addr".upper()} ((uint64_t){B_addr: #x})\n')
         file.write('\n#endif // _ACTI_PRELOAD_H_\n')
 
     print(f'Header file "{args.header_path}" generated successfully.')

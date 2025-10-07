@@ -27,6 +27,10 @@ class Activation:
         self.n_size                  = 512
 
         #HyperParameters
+        ## [Gate ]: Whether to gate a matrix according to activation
+        self.gate_enable             = 0
+        ## [Bias ]: Whether to add bias
+        self.bias_enable             = 0
         ## [Numer]: Whether to check numerical correctness
         self.acti_numer              = 1
         self.acti_numer_chunk        = 8192

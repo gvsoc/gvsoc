@@ -27,8 +27,12 @@ int main()
     ActivationInfo info = ActivationAnaylze(
         ACTI_M_SIZE/*num_total_token*/,
         ACTI_N_SIZE/*token_embedded_length*/,
+        ACTI_GATE_ENABLE/*gate_enable*/,
+        ACTI_BIAS_ENABLE/*bias_enable*/,
         I_ADDR/*input_address*/,
-        O_EADDR/*output_address*/);
+        O_EADDR/*output_address*/,
+        G_ADDR/*gate_address*/,
+        B_ADDR/*bias_address*/);
     flex_global_barrier_xy();
 
     //execute Activation
