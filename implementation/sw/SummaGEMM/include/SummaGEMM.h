@@ -52,6 +52,12 @@ typedef struct SummaGEMMInfo
     uint64_t                    X_tile_base;
     uint64_t                    W_tile_base;
     uint64_t                    Z_tile_base;
+#if GEMM_RESHA_X_FROM_ENABLE == 1
+    uint64_t                    X_tile_base_offset;
+#endif
+#if GEMM_RESHA_Z_TO_ENABLE == 1
+    uint64_t                    Z_tile_base_offset;
+#endif
     uint64_t                    X_tile_M_iter_offset;
     uint64_t                    X_tile_N_iter_offset;
     uint64_t                    X_tile_K_iter_offset;
@@ -131,9 +137,19 @@ SummaGEMMInfo SummaGEMMAnaylze(
     info.store_step             = (info.summa_group_x + info.K_iter - 1) / info.K_iter;
     info.store_id               = info.summa_group_x;
     info.store_active           = (info.group_reduction == 0) ? 1 : (info.group.this_grid_id == 0)? 1 : 0;
+#if GEMM_RESHA_X_FROM_ENABLE == 1
+    info.X_tile_base_offset     = info.cluster_in_group_id_y * M_tile * K_size * DATA_TYPE_BYTE;
+    info.X_tile_base            = X_address + X_address_group_gap * info.group.this_grid_id;
+#else
     info.X_tile_base            = X_address + X_address_group_gap * info.group.this_grid_id + info.cluster_in_group_id_y * M_tile * K_size * DATA_TYPE_BYTE; 
+#endif
     info.W_tile_base            = W_address + W_address_group_gap * info.group.this_grid_id + info.cluster_in_group_id_x * N_tile          * DATA_TYPE_BYTE;
+#if GEMM_RESHA_Z_TO_ENABLE == 1
+    info.Z_tile_base_offset     = info.cluster_in_group_id_y * M_tile * N_size * DATA_TYPE_BYTE + info.cluster_in_group_id_x * N_tile * DATA_TYPE_BYTE;
+    info.Z_tile_base            = Z_address + Z_address_group_gap * info.group.this_grid_id;
+#else
     info.Z_tile_base            = Z_address + Z_address_group_gap * info.group.this_grid_id + info.cluster_in_group_id_y * M_tile * N_size * DATA_TYPE_BYTE + info.cluster_in_group_id_x * N_tile * DATA_TYPE_BYTE;
+#endif
     info.X_tile_M_iter_offset   = info.summa_group_x * M_tile * K_size * DATA_TYPE_BYTE;
     info.X_tile_N_iter_offset   = 0;
     info.X_tile_K_iter_offset   = K_tile * DATA_TYPE_BYTE;
@@ -184,6 +200,29 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                     if (info->cluster_in_group_id_x == 0)
                     {
                         //load X from west edge
+#if GEMM_RESHA_X_FROM_ENABLE == 1
+                        uint64_t origin_elem_offest = (info->X_tile_base_offset + m * info->X_tile_M_iter_offset + n * info->X_tile_N_iter_offset) / DATA_TYPE_BYTE;
+                        uint64_t origin_k = origin_elem_offest % GEMM_K_SIZE;
+                        uint64_t origin_m = origin_elem_offest / GEMM_K_SIZE;
+                        #if defined(GEMM_RESHA_X_FROM_TALL)
+                            uint64_t num_bulk = origin_k / GEMM_RESHAPE_X_FROM_K;
+                            uint64_t mapped_k = origin_k % GEMM_RESHAPE_X_FROM_K;
+                            uint64_t mapped_m = num_bulk * info->M_size + origin_m;
+                        #endif
+                        #if defined(GEMM_RESHA_X_FROM_THIN)
+                            uint64_t num_bulk = origin_m / GEMM_RESHA_X_FROM_M;
+                            uint64_t mapped_m = origin_m % GEMM_RESHA_X_FROM_M;
+                            uint64_t mapped_k = num_bulk * info->K_size + origin_k;
+                        #endif
+                        uint64_t mapped_offset = (mapped_m * GEMM_RESHAPE_X_FROM_K + mapped_k) * DATA_TYPE_BYTE;
+                        flex_dma_async_2d(
+                            info->L1_X1, /*destination*/
+                            info->X_tile_base + mapped_offset, /*source*/
+                            info->K_tile * DATA_TYPE_BYTE, /*transfer size*/
+                            info->K_tile * DATA_TYPE_BYTE, /*destination stride*/
+                            GEMM_RESHAPE_X_FROM_K * DATA_TYPE_BYTE, /*source stride*/
+                            info->M_tile /*repeat*/); //Start 2D iDMA
+#else
                         flex_dma_async_2d(
                             info->L1_X1, /*destination*/
                             info->X_tile_base + m * info->X_tile_M_iter_offset + n * info->X_tile_N_iter_offset, /*source*/
@@ -191,6 +230,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                             info->K_tile * DATA_TYPE_BYTE, /*destination stride*/
                             info->K_size * DATA_TYPE_BYTE, /*source stride*/
                             info->M_tile /*repeat*/); //Start 2D iDMA
+#endif
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         //row-wise multicast
                         if (info->summa_group_x > 1)
@@ -256,6 +296,29 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                             if (info->cluster_in_group_id_x == 0)
                             {
                                 //load X from west edge
+#if GEMM_RESHA_X_FROM_ENABLE == 1
+                                uint64_t origin_elem_offest = (info->X_tile_base_offset + m * info->X_tile_M_iter_offset + n * info->X_tile_N_iter_offset + k * info->X_tile_K_iter_offset) / DATA_TYPE_BYTE;
+                                uint64_t origin_k = origin_elem_offest % GEMM_K_SIZE;
+                                uint64_t origin_m = origin_elem_offest / GEMM_K_SIZE;
+                                #if defined(GEMM_RESHA_X_FROM_TALL)
+                                    uint64_t num_bulk = origin_k / GEMM_RESHAPE_X_FROM_K;
+                                    uint64_t mapped_k = origin_k % GEMM_RESHAPE_X_FROM_K;
+                                    uint64_t mapped_m = num_bulk * info->M_size + origin_m;
+                                #endif
+                                #if defined(GEMM_RESHA_X_FROM_THIN)
+                                    uint64_t num_bulk = origin_m / GEMM_RESHA_X_FROM_M;
+                                    uint64_t mapped_m = origin_m % GEMM_RESHA_X_FROM_M;
+                                    uint64_t mapped_k = num_bulk * info->K_size + origin_k;
+                                #endif
+                                uint64_t mapped_offset = (mapped_m * GEMM_RESHAPE_X_FROM_K + mapped_k) * DATA_TYPE_BYTE;
+                                flex_dma_async_2d(
+                                    DMA_L1_X, /*destination*/
+                                    info->X_tile_base + mapped_offset, /*source*/
+                                    info->K_tile * DATA_TYPE_BYTE, /*transfer size*/
+                                    info->K_tile * DATA_TYPE_BYTE, /*destination stride*/
+                                    GEMM_RESHAPE_X_FROM_K * DATA_TYPE_BYTE, /*source stride*/
+                                    info->M_tile /*repeat*/); //Start 2D iDMA
+#else
                                 flex_dma_async_2d(
                                     DMA_L1_X, /*destination*/
                                     info->X_tile_base + m * info->X_tile_M_iter_offset + n * info->X_tile_N_iter_offset + k * info->X_tile_K_iter_offset, /*source*/
@@ -263,6 +326,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                                     info->K_tile * DATA_TYPE_BYTE, /*destination stride*/
                                     info->K_size * DATA_TYPE_BYTE, /*source stride*/
                                     info->M_tile /*repeat*/); //Start 2D iDMA
+#endif
                                 flex_dma_async_wait_all(); // Wait for iDMA Finishing
                                 //row-wise multicast
                                 if (info->summa_group_x > 1)
@@ -319,6 +383,29 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                                     flex_dma_async_wait_all(); // Wait for iDMA Finishing
                                 }
                                 //Store Z
+#if GEMM_RESHA_Z_TO_ENABLE == 1
+                                uint64_t origin_elem_offest = (info->Z_tile_base_offset + info->store_m * info->Z_tile_M_iter_offset + info->store_n * info->Z_tile_N_iter_offset) / DATA_TYPE_BYTE;
+                                uint64_t origin_n = origin_elem_offest % GEMM_N_SIZE;
+                                uint64_t origin_m = origin_elem_offest / GEMM_N_SIZE;
+                                #if defined(GEMM_RESHA_Z_TO_TALL)
+                                    uint64_t num_buln = origin_n / GEMM_RESHAPE_Z_TO_N;
+                                    uint64_t mapped_n = origin_n % GEMM_RESHAPE_Z_TO_N;
+                                    uint64_t mapped_m = num_buln * info->M_size + origin_m;
+                                #endif
+                                #if defined(GEMM_RESHA_Z_TO_THIN)
+                                    uint64_t num_buln = origin_m / GEMM_RESHA_Z_TO_M;
+                                    uint64_t mapped_m = origin_m % GEMM_RESHA_Z_TO_M;
+                                    uint64_t mapped_n = num_buln * info->N_size + origin_n;
+                                #endif
+                                uint64_t mapped_offset = (mapped_m * GEMM_RESHAPE_Z_TO_N + mapped_n) * DATA_TYPE_BYTE;
+                                flex_dma_async_2d(
+                                    info->Z_tile_base + mapped_offset, /*destination*/
+                                    DMA_L1_Z, /*source*/
+                                    info->N_tile * DATA_TYPE_BYTE, /*transfer size*/
+                                    GEMM_RESHAPE_Z_TO_N * DATA_TYPE_BYTE, /*destination stride*/
+                                    info->N_tile * DATA_TYPE_BYTE, /*source stride*/
+                                    info->M_tile /*repeat*/); //Start 2D iDMA
+#else
                                 flex_dma_async_2d(
                                     info->Z_tile_base + info->store_m * info->Z_tile_M_iter_offset + info->store_n * info->Z_tile_N_iter_offset, /*destination*/
                                     DMA_L1_Z, /*source*/
@@ -326,6 +413,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                                     info->N_size * DATA_TYPE_BYTE, /*destination stride*/
                                     info->N_tile * DATA_TYPE_BYTE, /*source stride*/
                                     info->M_tile /*repeat*/); //Start 2D iDMA
+#endif
                                 flex_dma_async_wait_all(); // Wait for iDMA Finishing
                                 //Clear Z
                                 flex_dma_async_1d(DMA_L1_Z,zomem(0),info->L1_Z_size);
@@ -379,6 +467,29 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                 flex_dma_async_wait_all(); // Wait for iDMA Finishing
             }
             //Store Z
+#if GEMM_RESHA_Z_TO_ENABLE == 1
+            uint64_t origin_elem_offest = (info->Z_tile_base_offset + info->store_m * info->Z_tile_M_iter_offset + info->store_n * info->Z_tile_N_iter_offset) / DATA_TYPE_BYTE;
+            uint64_t origin_n = origin_elem_offest % GEMM_N_SIZE;
+            uint64_t origin_m = origin_elem_offest / GEMM_N_SIZE;
+            #if defined(GEMM_RESHA_Z_TO_TALL)
+                uint64_t num_buln = origin_n / GEMM_RESHAPE_Z_TO_N;
+                uint64_t mapped_n = origin_n % GEMM_RESHAPE_Z_TO_N;
+                uint64_t mapped_m = num_buln * info->M_size + origin_m;
+            #endif
+            #if defined(GEMM_RESHA_Z_TO_THIN)
+                uint64_t num_buln = origin_m / GEMM_RESHA_Z_TO_M;
+                uint64_t mapped_m = origin_m % GEMM_RESHA_Z_TO_M;
+                uint64_t mapped_n = num_buln * info->N_size + origin_n;
+            #endif
+            uint64_t mapped_offset = (mapped_m * GEMM_RESHAPE_Z_TO_N + mapped_n) * DATA_TYPE_BYTE;
+            flex_dma_async_2d(
+                info->Z_tile_base + mapped_offset, /*destination*/
+                DMA_L1_Z, /*source*/
+                info->N_tile * DATA_TYPE_BYTE, /*transfer size*/
+                GEMM_RESHAPE_Z_TO_N * DATA_TYPE_BYTE, /*destination stride*/
+                info->N_tile * DATA_TYPE_BYTE, /*source stride*/
+                info->M_tile /*repeat*/); //Start 2D iDMA
+#else
             flex_dma_async_2d(
                 info->Z_tile_base + info->store_m * info->Z_tile_M_iter_offset + info->store_n * info->Z_tile_N_iter_offset, /*destination*/
                 DMA_L1_Z, /*source*/
@@ -386,6 +497,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                 info->N_size * DATA_TYPE_BYTE, /*destination stride*/
                 info->N_tile * DATA_TYPE_BYTE, /*source stride*/
                 info->M_tile /*repeat*/); //Start 2D iDMA
+#endif
             flex_dma_async_wait_all(); // Wait for iDMA Finishing
         }
     }

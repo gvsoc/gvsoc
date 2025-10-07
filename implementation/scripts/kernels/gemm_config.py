@@ -65,4 +65,52 @@ for module_path in [input_file]:
 
 # Generate the C header file
 gemm = SummaGEMM()
-kc.generate_config_C_header("GEMM", gemm, C_header_file, gemm.dtype, gemm.summa_numer)
+
+# Dealing with Input/Output matrix reshaping
+appendix = []
+if gemm.resha_x_from_enable:
+    resha_x_m_size = gemm.resha_x_from_m
+    resha_x_k_size = (gemm.m_size * gemm.k_size) // gemm.resha_x_from_m
+    assert gemm.m_size % gemm.m_tile == 0, f"X Reshaped Enabled, We must make sure M size and tile are aligned"
+    assert gemm.k_size % gemm.k_tile == 0, f"X Reshaped Enabled, We must make sure K size and tile are aligned"
+    assert resha_x_k_size > 0, f"Invalide X Reshape {resha_x_m_size}, {resha_x_k_size}"
+    assert resha_x_m_size >= gemm.m_tile, f"X Reshape Cross M Tiles"
+    assert resha_x_k_size >= gemm.k_tile, f"X Reshape Cross K Tiles"
+    assert resha_x_m_size % gemm.m_tile == 0, f"X Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
+    assert resha_x_k_size % gemm.k_tile == 0, f"X Reshaped Enabled, We must make sure reshaped K size and tile are aligned"
+    if gemm.resha_x_from_m > gemm.m_size:
+        # Tall
+        appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
+        appendix.append(f"#define GEMM_RESHA_X_FROM_TALL")
+    elif gemm.resha_x_from_m < gemm.m_size:
+        # Thin
+        appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
+        appendix.append(f"#define GEMM_RESHA_X_FROM_THIN")
+    else:
+        raise RuntimeError(f"X Reshaped Enabled But Dimension Not Changed")
+        pass
+    pass
+
+if gemm.resha_z_to_enable:
+    resha_z_m_size = gemm.resha_z_to_m
+    resha_z_n_size = (gemm.m_size * gemm.n_size) // gemm.resha_z_to_m
+    assert gemm.m_size % gemm.m_tile == 0, f"Z Reshaped Enabled, We must make sure M size and tile are aligned"
+    assert gemm.n_size % gemm.n_tile == 0, f"Z Reshaped Enabled, We must make sure N size and tile are aligned"
+    assert resha_z_n_size > 0, f"Invalide Z Reshape {resha_z_m_size}, {resha_z_n_size}"
+    assert resha_z_m_size >= gemm.m_tile, f"Z Reshape Cross M Tiles"
+    assert resha_z_n_size >= gemm.n_tile, f"Z Reshape Cross N Tiles"
+    assert resha_z_m_size % gemm.m_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
+    assert resha_z_n_size % gemm.n_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped N size and tile are aligned"
+    if gemm.resha_z_to_m > gemm.m_size:
+        # Tall
+        appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
+        appendix.append(f"#define GEMM_RESHA_Z_TO_TALL")
+    elif gemm.resha_z_to_m < gemm.m_size:
+        # Thin
+        appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
+        appendix.append(f"#define GEMM_RESHA_Z_TO_THIN")
+    else:
+        raise RuntimeError(f"Z Reshaped Enabled But Dimension Not Changed")
+        pass
+    pass
+kc.generate_config_C_header("GEMM", gemm, C_header_file, gemm.dtype, gemm.summa_numer, appendix=appendix)

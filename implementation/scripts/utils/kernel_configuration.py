@@ -19,7 +19,7 @@
 import re
 import argparse
 
-def generate_config_C_header(header_prefix, config, C_header_file, dtype, numerical_check):
+def generate_config_C_header(header_prefix, config, C_header_file, dtype, numerical_check, appendix=None):
 
     with open(C_header_file, 'w') as file:
         file.write(f'#ifndef _{header_prefix.upper()}_CONFIG_H_\n')
@@ -32,6 +32,9 @@ def generate_config_C_header(header_prefix, config, C_header_file, dtype, numeri
                 continue
             if isinstance(attr_value, str):
                 file.write(f'#define {define_name}_{attr_value.upper()}\n')
+                continue
+            if 'ENABLE' in define_name:
+                file.write(f'#define {define_name} {attr_value}\n')
                 continue
             file.write(f'#define {define_name} ((uint64_t){attr_value})\n')
 
@@ -61,6 +64,12 @@ def generate_config_C_header(header_prefix, config, C_header_file, dtype, numeri
                 file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_UINT_8\n')
                 file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_NONE\n')
                 file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_NONE\n')
+
+        if appendix is not None:
+            for string in appendix:
+                file.write(f'{string}\n')
+                pass
+            pass
         
         file.write('#define STR(x) #x\n')
         file.write('#define XSTR(x) STR(x)\n')

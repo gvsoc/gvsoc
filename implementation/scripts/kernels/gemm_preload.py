@@ -70,13 +70,29 @@ def gen_gemm_preload_numpy_arrays(gemm):
 
     compute_dtype = torch.float16
 
-    # per-head Q,K,V in fptype
+    # X W and Z in fptype
     X_fptype = rand_fptype((gemm.m_size,  gemm.k_size), device)
     W_fptype = rand_fptype((gemm.k_size,  gemm.n_size), device)
     X = X_fptype.to(compute_dtype)
     W = W_fptype.to(compute_dtype)
     Z = X @ W
     Z_fptype = Z.to(fptype)
+
+    # Reshaping
+    if gemm.resha_x_from_enable:
+        resha_x_k_size = (gemm.m_size * gemm.k_size) // gemm.resha_x_from_m
+        if gemm.resha_x_from_m > gemm.m_size:
+            X_fptype = torch.cat(X_fptype.split(resha_x_k_size, dim=1), dim=0)
+        elif gemm.resha_x_from_m < gemm.m_size:
+            X_fptype = torch.cat(X_fptype.split(gemm.resha_x_from_m, dim=0), dim=1)
+        pass
+    if gemm.resha_z_to_enable:
+        resha_z_n_size = (gemm.m_size * gemm.n_size) // gemm.resha_z_to_m
+        if gemm.resha_z_to_m > gemm.m_size:
+            Z_fptype = torch.cat(Z_fptype.split(resha_z_n_size, dim=1), dim=0)
+        elif gemm.resha_z_to_m < gemm.m_size:
+            Z_fptype = torch.cat(Z_fptype.split(gemm.resha_z_to_m, dim=0), dim=1)
+        pass
 
     # Duplicate for groups
     X_list = []

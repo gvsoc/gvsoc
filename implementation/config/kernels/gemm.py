@@ -27,9 +27,9 @@ class SummaGEMM:
 
         #GEMM parameters
         self.dtype                   = 'fp16'
-        self.m_size                  = 1024
-        self.n_size                  = 1024
-        self.k_size                  = 1024
+        self.m_size                  = 512
+        self.n_size                  = 512
+        self.k_size                  = 512
 
         #Hyperparamters Settings
         ## [Tile ]: tile size for each cluster
@@ -48,6 +48,11 @@ class SummaGEMM:
         self.summa_group_gap_x       = 0
         self.summa_group_gap_w       = 0
         self.summa_group_gap_z       = 0
+        ## [Resha]: Reshape options on input and output
+        self.resha_x_from_enable     = 0
+        self.resha_z_to_enable       = 0
+        self.resha_x_from_m          = 128
+        self.resha_z_to_m            = 2048
         ## [Numer]: Whether to check numerical correctness
         self.summa_numer             = 1
         self.summa_numer_chunk       = 8192
