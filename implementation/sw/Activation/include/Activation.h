@@ -86,6 +86,7 @@ ActivationInfo ActivationAnaylze(
 
 inline void vector_lib_sigmoid(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 inline void vector_lib_relu(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
+inline void vector_lib_silu(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 inline void vector_lib_gate(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 inline void vector_lib_bias(uint32_t i_addr, uint32_t o_addr, uint32_t vlen);
 
@@ -130,6 +131,11 @@ void ActivationRun(ActivationInfo * info)
                 info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
 #elif defined(ACTI_ALGO_RELU)
             vector_lib_relu(
+                info->L1SP_I/*i_addr*/, 
+                info->L1SP_I/*o_addr*/, 
+                info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
+#elif defined(ACTI_ALGO_SILU)
+            vector_lib_silu(
                 info->L1SP_I/*i_addr*/, 
                 info->L1SP_I/*o_addr*/, 
                 info->token_embedded_length / ARCH_SPATZ_ATTACED_CORES/*vlen*/);
@@ -207,6 +213,34 @@ inline void vector_lib_relu(
         asm volatile("vsetvli %0, %1, e" XSTR(DATA_TYPE_WIDTH) ", m8, ta, ma" : "=r"(avl) : "r"(vlen));
         asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(i_addr));
         asm volatile("vfmax.vf v8, v8, fa5");
+        asm volatile("vse" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(o_addr));
+        vlen -= avl;
+        i_addr += DATA_TYPE_BYTE*avl;
+        o_addr += DATA_TYPE_BYTE*avl;
+    }
+}
+
+/*SiLU*/
+inline void vector_lib_silu(
+    uint32_t i_addr,
+    uint32_t o_addr,
+    uint32_t vlen)
+{
+    uint32_t avl;
+#if defined(ACTI_FP16)
+    acti_data_t minus_one = 0xbc00;
+#elif defined(ACTI_FP8)
+    acti_data_t minus_one = 0xbc;
+#endif
+    asm volatile("fld fa6, (%0)" ::"r"(&minus_one));
+    while(vlen > 0){
+        asm volatile("vsetvli %0, %1, e" XSTR(DATA_TYPE_WIDTH) ", m8, ta, ma" : "=r"(avl) : "r"(vlen));
+        asm volatile("vle" XSTR(DATA_TYPE_WIDTH) ".v v24,  (%0)" ::"r"(i_addr)); // x
+        asm volatile("vfmul.vf v8, v24, fa6"); // -x
+        asm volatile(".word %0\n"::"i"(0x32041857)) /*vfexp.vv v16, v8*/; // e^-x
+        asm volatile("vfdiv.vv v0, v16, v16"); // 1
+        asm volatile("vfadd.vv v16, v16, v0"); // 1 + e^-x
+        asm volatile("vfdiv.vv v8, v24, v16"); // x/(1 + e^-x)
         asm volatile("vse" XSTR(DATA_TYPE_WIDTH) ".v v8,  (%0)" ::"r"(o_addr));
         vlen -= avl;
         i_addr += DATA_TYPE_BYTE*avl;

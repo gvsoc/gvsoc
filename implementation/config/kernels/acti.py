@@ -20,9 +20,10 @@ class Activation:
 
     def __init__(self):
 
-        #Attention parameters
+        #Activation parameters
+        ## Algorithm support with : sigmoid, relu, silu
         self.dtype                   = 'fp16'
-        self.algo                    = 'sigmoid'
+        self.algo                    = 'silu'
         self.m_size                  = 512
         self.n_size                  = 512
 
