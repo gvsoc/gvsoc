@@ -16,16 +16,23 @@
 
 # Author: Chi Zhang <chizhang@ethz.ch>
 
-import os
-import io
-import re
-import sys
-import torch
-import shutil
-import argparse
+class Workload:
 
-def prefill_flow():
-	pass
+    def __init__(self):
 
-if __name__ == '__main__':
-	prefill_flow()
+        #Basic Configuration
+        self.prefill_enabled            = 1
+        self.decode_enabled             = 0
+        self.batch_size                 = 1
+        self.numerical_check_enable     = 0
+
+        #Prefill Configuration
+        self.prefill_input_token        = 1024
+
+        #Decode Configuration
+        self.decode_mode                = 'auto-regressive'
+        self.speculative_factor         = 8
+        self.speculative_ratio          = 0.75
+        self.kv_cache_length            = 1024
+        self.decode_output_token        = 1024
+        

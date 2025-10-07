@@ -82,6 +82,8 @@ def gen_acti_preload_numpy_arrays(acti):
     elif acti.algo == 'silu':
         O = torch.sigmoid(I)
         O = O * I
+    elif acti.algo == 'none':
+        O = I
     else:
         raise RuntimeError(f"Activation not support for {acti.algo} algorithm")
         pass

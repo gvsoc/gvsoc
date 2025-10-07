@@ -74,5 +74,5 @@ def generate_config_C_header(header_prefix, config, C_header_file, dtype, numeri
         file.write('#define STR(x) #x\n')
         file.write('#define XSTR(x) STR(x)\n')
         file.write(f'\n#endif // _{header_prefix.upper()}_CONFIG_H_\n')
-    print(f'Header file "{C_header_file}" generated successfully.')
+    # print(f'Header file "{C_header_file}" generated successfully.')
     pass

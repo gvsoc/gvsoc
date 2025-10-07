@@ -21,26 +21,21 @@ class Model:
     def __init__(self):
 
         #Basic Configuration
-        self.model_name                 = "DeepSeekV3-671B"
+        self.model_name                 = "Qwen"
         self.dtype                      = 'fp16'
-        self.num_layers                 = 61
-        self.embeded_length             = 7186
+        self.num_layers                 = 32
+        self.embeded_length             = 4096
         self.max_sequence_length        = 8192
 
         #Attention Configuration
-        self.attention_type             = 'MLA'
-        self.num_heads                  = 128
+        self.attention_type             = 'MHA'
+        self.num_heads                  = 32
         self.head_dimension             = 128
-        self.q_lora_rank                = 1536
-        self.kv_lora_rank               = 512
-        self.qk_nope_head_dim           = 128
-        self.qk_rope_head_dim           = 64
-        self.v_head_dim                 = 128 
+        self.qk_rope_enable             = 1
+        self.head_groups                = 4
 
-        #MoE Configuration
-        self.fnn_type                   = 'MoE'
-        self.moe_inter_dim              = 2048
-        self.n_routed_experts           = 256
-        self.n_shared_experts           = 1
-        self.n_activated_experts        = 8
+        #FFN Configuration
+        self.ffn_type                   = 'MLP'
+        self.mlp_inter_dim              = 22016
+        self.mlp_activation             = 'silu'
         

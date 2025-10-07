@@ -17,7 +17,7 @@ pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
 
-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean
+clean: attn-clean gemm-clean norm-clean rope-clean acti-clean llm-clean
 
 #####################
 #   FlatAttention   #
@@ -260,3 +260,35 @@ acti-num:
 acti-clean:
 	@echo "clean up intermidiate files generated for Activation ..."
 	rm -f ${CUR_DIR}/sw/Activation/include/acti.h ${CUR_DIR}/sw/Activation/preload.elf ${CUR_DIR}/sw/Activation/preload.dump ${CUR_DIR}/sw/Activation/include/preload.h ${SH_DIR}/dump_*
+
+#################
+#   LLM Flow    #
+#################
+
+MODEL_FILE ?= ${CUR_DIR}/config/models/qwen.py
+ifdef model
+	MODEL_FILE = $(realpath $(model))
+endif
+
+WORK_FILE ?= ${CUR_DIR}/config/workload/work.py
+ifdef work
+	WORK_FILE = $(realpath $(work))
+endif
+
+llm:
+	mkdir -p ${CUR_DIR}/out
+	python3 ${CUR_DIR}/scripts/llm/flow.py \
+			${SH_DIR} \
+			${CUR_DIR}/sw/ \
+			${CUR_DIR}/out/ \
+			${ARCH_FILE} \
+			${MODEL_FILE} \
+			${WORK_FILE} \
+			${ATTN_FILE} \
+			${GEMM_FILE} \
+			${NORM_FILE} \
+			${ROPE_FILE} \
+			${ACTI_FILE}
+
+llm-clean:
+	rm -rf ${CUR_DIR}/out
