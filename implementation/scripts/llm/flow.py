@@ -28,6 +28,7 @@ from tqdm import tqdm
 from rich import print
 from tabulate import tabulate
 import utils.softhier_engine as engine
+import utils.console_visualization as cv
 
 def import_module_from_path(module_path):
     """
@@ -677,31 +678,31 @@ def llm_prefill_layer_plan(llm, work, arch):
         "cfg"                           : ffn_resnet
     }
 
-    print("")
-    print("")
-    print("[green][West HBM Plan][/green]")
-    for k, v in west_hbm_plan.items():
-        print(f"[yellow]| {k}:[/yellow]")
-        print_dict_as_table(v)
-        pass
-    print("")
-    print("")
-    print("[green][South HBM Plan][/green]")
-    for k, v in south_hbm_plan.items():
-        print(f"[yellow]| {k}:[/yellow]")
-        print_dict_as_table(v)
-        pass
-    print("")
-    print("")
-    shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan)
-    print("[green][Kernel Flow][/green]")
-    for k, v in kernel_flow.items():
-        print(f"[yellow]{k}:[/yellow]")
-        print_dict_as_table(v)
-        print(f"[yellow]|[/yellow]")
-        print(f"[yellow]v[/yellow]")
-        pass
-    print(f"[yellow]End[/yellow]")
+    # print("")
+    # print("")
+    # print("[green][West HBM Plan][/green]")
+    # for k, v in west_hbm_plan.items():
+    #     print(f"[yellow]| {k}:[/yellow]")
+    #     print_dict_as_table(v)
+    #     pass
+    # print("")
+    # print("")
+    # print("[green][South HBM Plan][/green]")
+    # for k, v in south_hbm_plan.items():
+    #     print(f"[yellow]| {k}:[/yellow]")
+    #     print_dict_as_table(v)
+    #     pass
+    # print("")
+    # print("")
+    # shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan)
+    # print("[green][Kernel Flow][/green]")
+    # for k, v in kernel_flow.items():
+    #     print(f"[yellow]{k}:[/yellow]")
+    #     print_dict_as_table(v)
+    #     print(f"[yellow]|[/yellow]")
+    #     print(f"[yellow]v[/yellow]")
+    #     pass
+    # print(f"[yellow]End[/yellow]")
     
     return kernel_flow, west_hbm_plan, south_hbm_plan
     pass
@@ -755,8 +756,19 @@ def flow():
         kernel_flow, west_hbm_plan, south_hbm_plan = llm_prefill_layer_plan(llm, work, arch)
         pass
 
+    cv.show_key_flow(kernel_flow)
+
     Results = softhier_launch(chip, f"{llm.model_name} Prefill Layer", kernel_flow, west_hbm_plan, south_hbm_plan)
     print_dict_as_table(Results)
+
+    print(f"[green][West HBM Occupancy Breakdown][/green]")
+    cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+
+    print(f"[green][South HBM Occupancy Breakdown][/green]")
+    cv.show_breakdown(south_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+
+    print(f"[green][Kernel Runtime Breakdown][/green]")
+    cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
 
     pass
 

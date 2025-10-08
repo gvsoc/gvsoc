@@ -21,7 +21,7 @@ class Model:
     def __init__(self):
 
         #Basic Configuration
-        self.model_name                 = "Qwen"
+        self.model_name                 = "Qwen-7B-Chat"
         self.dtype                      = 'fp16'
         self.num_layers                 = 32
         self.embeded_length             = 4096
@@ -32,7 +32,7 @@ class Model:
         self.num_heads                  = 32
         self.head_dimension             = 128
         self.qk_rope_enable             = 1
-        self.head_groups                = 32
+        self.head_groups                = 8
 
         #FFN Configuration
         self.ffn_type                   = 'MLP'
