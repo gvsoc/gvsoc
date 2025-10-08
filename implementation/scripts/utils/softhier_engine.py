@@ -21,6 +21,7 @@ import io
 import re
 import sys
 import time
+import yaml
 import torch
 import shutil
 import argparse
@@ -90,6 +91,15 @@ class SoftHier(object):
             pass
         pass
 
+    def record_info(self, info_dict):
+        #Record information
+        for k, v in info_dict.items():
+            file_name  = self.output_folder_info / f"{k}.yaml"
+            with open(file_name, "w") as f:
+                yaml.dump(v, f)
+            pass
+        pass
+
     def compile_hw(self, arch, arch_path):
         if not Path(arch_path).exists():
             raise RuntimeError(f"Arch Path Not Exist at : {arch_path}")
@@ -104,12 +114,15 @@ class SoftHier(object):
         assert os.system(cmd) == 0
         pass
 
-    def register_workload(self, name):
+    def register_workload(self, name, info_dict):
         folder_name = re.sub(r'[^\w.\-]', '_', name)
         self.output_folder_log = self.output_folder / folder_name / "log"
         self.output_folder_trace = self.output_folder / folder_name / "trace"
+        self.output_folder_info = self.output_folder / folder_name / "info"
         os.system(f"mkdir -p {self.output_folder_log}")
         os.system(f"mkdir -p {self.output_folder_trace}")
+        os.system(f"mkdir -p {self.output_folder_info}")
+        self.record_info(info_dict)
         pass
 
     def gemm_auto(self, cfg, data, name):

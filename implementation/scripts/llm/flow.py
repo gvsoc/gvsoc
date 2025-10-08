@@ -98,8 +98,11 @@ def pack_data(kernel, west_hbm_plan, south_hbm_plan):
     return data_dist
     pass
 
-def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_plan):
-    chip.register_workload(launch_name)
+def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_plan, info = {}):
+    info['kernel_flow'] = kernel_flow
+    info['west_hbm_plan'] = west_hbm_plan
+    info['south_hbm_plan'] = south_hbm_plan
+    chip.register_workload(launch_name, info)
     pbar = tqdm(total=len(kernel_flow), desc=f"[{launch_name}]")
     kernel_results = {}
     for name, kernel in kernel_flow.items():
@@ -148,6 +151,7 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
         pbar.update(1)
         pass
     pbar.close()
+    chip.record_info({"Results" : kernel_results})
     return kernel_results
     pass
 
@@ -747,6 +751,7 @@ def flow():
     arch = FlexClusterArch()
     llm = Model()
     work = Workload()
+    info = {"llm": llm, "work": work}
 
     # SoftHier Initialization
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
@@ -756,10 +761,7 @@ def flow():
         kernel_flow, west_hbm_plan, south_hbm_plan = llm_prefill_layer_plan(llm, work, arch)
         pass
 
-    cv.show_key_flow(kernel_flow)
-
-    Results = softhier_launch(chip, f"{llm.model_name} Prefill Layer", kernel_flow, west_hbm_plan, south_hbm_plan)
-    print_dict_as_table(Results)
+    Results = softhier_launch(chip, f"{llm.model_name} Prefill Layer", kernel_flow, west_hbm_plan, south_hbm_plan, info)
 
     print(f"[green][West HBM Occupancy Breakdown][/green]")
     cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)
