@@ -28,6 +28,10 @@ class RoPE:
         self.maximun_seqlen          = 8192
 
         #HyperParameters
+        ## [View ]: view the input/output matrics from a different shape
+        ##          require: view_n < n_size
+        self.view_enable             = 0
+        self.view_n                  = 128
         ## [Numer]: Whether to check numerical correctness
         self.rope_numer              = 1
         self.rope_numer_chunk        = 8192

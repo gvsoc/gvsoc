@@ -65,4 +65,7 @@ for module_path in [input_file]:
 
 # Generate the C header file
 rope = RoPE()
+if rope.view_enable:
+    assert rope.n_size % rope.view_n == 0
+    pass
 kc.generate_config_C_header("ROPE", rope, C_header_file, rope.dtype, rope.rope_numer)

@@ -97,10 +97,20 @@ void RoPERun(RoPEInfo * info)
         //Load Input token and positioned cosine & sin table to L1
         if (flex_is_dm_core())
         {
+#if ROPE_VIEW_ENABLE == 1
+            flex_dma_async_2d(
+                info->L1_I, /*destination*/
+                info->input_address + info->start_token * ROPE_VIEW_N * DATA_TYPE_BYTE, /*source*/
+                ROPE_VIEW_N * DATA_TYPE_BYTE, /*transfer size*/
+                ROPE_VIEW_N * DATA_TYPE_BYTE, /*destination stride*/
+                info->num_total_token * ROPE_VIEW_N * DATA_TYPE_BYTE, /*source stride*/
+                info->token_embedded_length / ROPE_VIEW_N/*repeat*/); //Start 2D iDMA
+#else
             flex_dma_async_1d(
                 info->L1_I, /*destination*/
                 info->input_address + info->start_token * info->L1_I_size, /*source*/
                 info->L1_I_size/*transfer size*/); //Start 1D iDMA
+#endif
             flex_dma_async_1d(
                 info->L1_P, /*destination*/
                 info->position_address + info->start_token * sizeof(uint32_t), /*source*/
@@ -134,10 +144,20 @@ void RoPERun(RoPEInfo * info)
         //Store back to HBM
         if (flex_is_dm_core())
         {
+#if ROPE_VIEW_ENABLE == 1
+            flex_dma_async_2d(
+                info->output_address + info->start_token * ROPE_VIEW_N * DATA_TYPE_BYTE, /*destination*/
+                info->L1_I, /*source*/
+                ROPE_VIEW_N * DATA_TYPE_BYTE, /*transfer size*/
+                info->num_total_token * ROPE_VIEW_N * DATA_TYPE_BYTE, /*destination stride*/
+                ROPE_VIEW_N * DATA_TYPE_BYTE, /*source stride*/
+                info->token_embedded_length / ROPE_VIEW_N/*repeat*/); //Start 2D iDMA
+#else
             flex_dma_async_1d(
                 info->output_address + info->start_token * info->L1_I_size, /*destination*/
                 info->L1_I, /*source*/
                 info->L1_I_size/*transfer size*/); //Start 2D iDMA
+#endif
             flex_dma_async_wait_all(); // Wait for iDMA Finishing
         }
 

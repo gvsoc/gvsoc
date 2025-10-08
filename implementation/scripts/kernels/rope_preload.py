@@ -161,6 +161,12 @@ def gen_rope_preload_numpy_arrays(rope):
     O = torch.stack((P1, P2), dim=2).reshape(P1.size(0), -1)
     O_fptype = O.to(fptype)
 
+    # dealing with different matrix view
+    if rope.view_enable:
+        I_fptype = torch.cat(I_fptype.split(rope.view_n, dim=1), dim=0)
+        O_fptype = torch.cat(O_fptype.split(rope.view_n, dim=1), dim=0)
+        pass
+
     # convert to NumPy: cast to float16 (NumPy may not support PyTorch fptype dtype)
     if fptype == torch.float8_e5m2:
         I_np = I_fptype.view(torch.uint8).cpu().numpy()
