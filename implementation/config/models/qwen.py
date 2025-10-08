@@ -32,10 +32,11 @@ class Model:
         self.num_heads                  = 32
         self.head_dimension             = 128
         self.qk_rope_enable             = 1
-        self.head_groups                = 4
+        self.head_groups                = 32
 
         #FFN Configuration
         self.ffn_type                   = 'MLP'
         self.mlp_inter_dim              = 22016
-        self.mlp_activation             = 'silu'
+        self.mlp_acti_algo              = 'silu'
+        self.mlp_acti_bias_enable       = 0
         

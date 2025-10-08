@@ -20,9 +20,11 @@ import os
 import io
 import re
 import sys
+import time
 import torch
 import shutil
 import argparse
+import subprocess
 import numpy as np
 import importlib.util
 from tqdm import tqdm
@@ -75,22 +77,39 @@ class SoftHier(object):
         print(f"[System Call] {cmd}")
         pass
 
+    def get_runtime_ns(self, trace_file):
+        pattern = r"\[Performance Counter\]: Execution period is [0-9]+ ns"
+        a = subprocess.run(["grep", "-E", pattern, trace_file], capture_output=True, text=True, check=False)
+        line = a.stdout.splitlines()[0]
+        num_pattern = re.compile(r"Execution period is (\d+) ns")
+        match = num_pattern.search(line)
+        if match:
+            return int(match.group(1))
+        else:
+            raise RuntimeError(f"[SoftHier Result Error] performance is not exist in trace file : {trace_file}")
+            pass
+        pass
+
     def compile_hw(self, arch, arch_path):
         if not Path(arch_path).exists():
             raise RuntimeError(f"Arch Path Not Exist at : {arch_path}")
             pass
         self.arch_path = Path(arch_path).resolve()
         self.arch = arch
-        self.output_folder_cfg = self.output_folder / "config"
-        self.output_folder_log = self.output_folder / "log"
-        self.output_folder_trace = self.output_folder / "trace"
-        os.system(f"mkdir -p {self.output_folder_cfg}")
-        os.system(f"cp {self.arch_path} {self.output_folder_cfg}")
-        os.system(f"mkdir -p {self.output_folder_log}")
-        os.system(f"mkdir -p {self.output_folder_trace}")
-        cmd = f"cfg={self.arch_path} make -C {self.softhier_root} hw > {self.output_folder_log}/softhier_hw.log 2>&1"
+        self.output_folder_hwcfg = self.output_folder / "softhier_config"
+        os.system(f"mkdir -p {self.output_folder_hwcfg}")
+        os.system(f"cp {self.arch_path} {self.output_folder_hwcfg}")
+        cmd = f"cfg={self.arch_path} make -C {self.softhier_root} hw > {self.output_folder_hwcfg}/softhier_hw.log 2>&1"
         print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
+        pass
+
+    def register_workload(self, name):
+        folder_name = re.sub(r'[^\w.\-]', '_', name)
+        self.output_folder_log = self.output_folder / folder_name / "log"
+        self.output_folder_trace = self.output_folder / folder_name / "trace"
+        os.system(f"mkdir -p {self.output_folder_log}")
+        os.system(f"mkdir -p {self.output_folder_trace}")
         pass
 
     def gemm_auto(self, cfg, data, name):
@@ -99,6 +118,19 @@ class SoftHier(object):
         """
         # Check Configuration and Automatic Tiling/Scheduling
         app_path = self.kernel_root / "SummaGEMM"
+
+        # [TODO] need to change this naive check and do automatic parameterization
+        assert cfg.summa_scale_x == self.arch.num_cluster_x
+        assert cfg.summa_scale_y == self.arch.num_cluster_y
+        assert cfg.m_size > (cfg.summa_scale_y * cfg.m_tile)
+        assert cfg.n_size > (cfg.summa_scale_x * cfg.n_tile)
+        assert cfg.k_size > cfg.k_tile
+        assert cfg.summa_group_reduce == 0
+        assert cfg.summa_group_gap_x  == 0
+        assert cfg.summa_group_gap_w  == 0
+        assert cfg.summa_group_gap_z  == 0
+        # time.sleep(1); return {"runtime" : 100}
+
         # Generate Configuration
         gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
         appendix = []
@@ -175,6 +207,10 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
         pass
 
     def norm(self, cfg, data, name):
@@ -183,6 +219,7 @@ class SoftHier(object):
         """
         # Check Configuration
         app_path = self.kernel_root / "RMSNorm"
+        # time.sleep(1); return {"runtime" : 100}
         # Generate Configuration
         norm_cfg_h = self.kernel_root / "RMSNorm" / "include" / "norm.h"
         kc.generate_config_C_header("NORM", cfg, norm_cfg_h, cfg.dtype, cfg.norm_numer)
@@ -212,5 +249,220 @@ class SoftHier(object):
         cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
+
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
+        pass
+
+    def rope(self, cfg, data, name):
+        """
+        RoPE
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "RoPE"
+        assert cfg.m_size % cfg.contiguous_length == 0
+        # time.sleep(1); return {"runtime" : 100}
+
+        # Generate Configuration
+        rope_cfg_h = self.kernel_root / "RoPE" / "include" / "rope.h"
+        kc.generate_config_C_header("ROPE", cfg, rope_cfg_h, cfg.dtype, cfg.rope_numer)
+
+        # Generate Preload C Header File
+        rope_pld_h = self.kernel_root / "RoPE" / "include" / "preload.h"
+        I_addr = data["input"]["addr"]
+        C_addr = data["cos"]["addr"]
+        S_addr = data["sin"]["addr"]
+        P_addr = data["position"]["addr"]
+        O_eaddr = data["output"]["addr"]
+        O_gaddr = O_eaddr
+        with open(rope_pld_h, 'w') as file:
+            file.write('#ifndef _ROPE_PRELOAD_H_\n')
+            file.write('#define _ROPE_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write(f'#define {"C_addr".upper()} ((uint64_t){C_addr: #x})\n')
+            file.write(f'#define {"S_addr".upper()} ((uint64_t){S_addr: #x})\n')
+            file.write(f'#define {"P_addr".upper()} ((uint64_t){P_addr: #x})\n')
+            file.write('\n#endif // _ROPE_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Execute SoftHier Simulation
+        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
+        pass
+
+    def acti(self, cfg, data, name):
+        """
+        Activation
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "Activation"
+        algo_list = ['sigmoid', 'relu', 'silu']
+        assert cfg.algo in algo_list
+        # time.sleep(1); return {"runtime" : 100}
+
+        # Generate Configuration
+        acti_cfg_h = self.kernel_root / "Activation" / "include" / "acti.h"
+        kc.generate_config_C_header("ACTI", cfg, acti_cfg_h, cfg.dtype, cfg.acti_numer)
+
+        # Generate Preload C Header File
+        acti_pld_h = self.kernel_root / "Activation" / "include" / "preload.h"
+        I_addr = data["input"]["addr"]
+        G_addr = I_addr if "gate" not in data else data["gate"]["addr"]
+        B_addr = I_addr if "bias" not in data else data["bias"]["addr"]
+        O_eaddr = data["output"]["addr"]
+        O_gaddr = O_eaddr
+        with open(acti_pld_h, 'w') as file:
+            file.write('#ifndef _ACTI_PRELOAD_H_\n')
+            file.write('#define _ACTI_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write(f'#define {"G_addr".upper()} ((uint64_t){G_addr: #x})\n')
+            file.write(f'#define {"B_addr".upper()} ((uint64_t){B_addr: #x})\n')
+            file.write('\n#endif // _ACTI_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Execute SoftHier Simulation
+        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
+        pass
+
+    def addi(self, cfg, data, name):
+        """
+        Addition
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "Activation"
+        assert cfg.algo == 'none'
+        assert cfg.gate_enable == 0
+        assert cfg.bias_enable == 1
+        # time.sleep(1); return {"runtime" : 100}
+
+        # Generate Configuration
+        acti_cfg_h = self.kernel_root / "Activation" / "include" / "acti.h"
+        kc.generate_config_C_header("ACTI", cfg, acti_cfg_h, cfg.dtype, cfg.acti_numer)
+
+        # Generate Preload C Header File
+        acti_pld_h = self.kernel_root / "Activation" / "include" / "preload.h"
+        I_addr = data["input"]["addr"]
+        G_addr = I_addr if "gate" not in data else data["gate"]["addr"]
+        B_addr = I_addr if "bias" not in data else data["bias"]["addr"]
+        O_eaddr = data["output"]["addr"]
+        O_gaddr = O_eaddr
+        with open(acti_pld_h, 'w') as file:
+            file.write('#ifndef _ACTI_PRELOAD_H_\n')
+            file.write('#define _ACTI_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write(f'#define {"G_addr".upper()} ((uint64_t){G_addr: #x})\n')
+            file.write(f'#define {"B_addr".upper()} ((uint64_t){B_addr: #x})\n')
+            file.write('\n#endif // _ACTI_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Execute SoftHier Simulation
+        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
+        pass
+
+    def flat_attn_auto(self, cfg, data, name):
+        """
+        Automatic Hyper-parameteric FlatAttention
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "FlatAttention"
+
+        # [TODO] need to change this naive check and do automatic parameterization
+        assert self.arch.num_cluster_x % cfg.flatten_scale_x == 0
+        assert self.arch.num_cluster_y % cfg.flatten_scale_y == 0
+        assert (cfg.batch_size * cfg.num_head_group) % ((self.arch.num_cluster_x // cfg.flatten_scale_x) * (self.arch.num_cluster_y // cfg.flatten_scale_y)) == 0
+        if cfg.flatten_async == 1:
+            assert (cfg.batch_size * cfg.num_head_group) % (2 * (self.arch.num_cluster_x // cfg.flatten_scale_x) * (self.arch.num_cluster_y // cfg.flatten_scale_y)) == 0
+            pass
+        assert cfg.kv_sequence_length % cfg.flatten_shape_x == 0
+        assert (cfg.q_sequence_length * cfg.speculative_length * (cfg.num_head // cfg.num_head_group)) % cfg.flatten_shape_x == 0
+        # time.sleep(1); return {"runtime" : 100}
+
+        # Generate Configuration
+        attn_cfg_h = self.kernel_root / "FlatAttention" / "include" / "attn.h"
+        kc.generate_config_C_header("ATTN", cfg, attn_cfg_h, cfg.dtype, cfg.flatten_numer)
+
+        # Generate Preload C Header File
+        attn_pld_h = self.kernel_root / "FlatAttention" / "include" / "preload.h"
+        Q_addr = data["q"]["addr"]
+        K_addr = data["k"]["addr"]
+        V_addr = data["v"]["addr"]
+        O_eaddr = data["o"]["addr"]
+        O_gaddr = O_eaddr
+        with open(attn_pld_h, 'w') as file:
+            file.write('#ifndef _ATTN_PRELOAD_H_\n')
+            file.write('#define _ATTN_PRELOAD_H_\n\n')
+            file.write(f'#define {"Q_addr".upper()} ((uint64_t){Q_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write(f'#define {"K_addr".upper()} ((uint64_t){K_addr: #x})\n')
+            file.write(f'#define {"V_addr".upper()} ((uint64_t){V_addr: #x})\n')
+            file.write('\n#endif // _ATTN_PRELOAD_H_\n')
+            file.close()
+
+        # [TODO] Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Execute SoftHier Simulation
+        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        # Anaylze Result
+        result = {}
+        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+        return result
         pass
         
