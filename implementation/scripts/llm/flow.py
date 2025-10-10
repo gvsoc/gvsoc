@@ -27,6 +27,7 @@ import importlib.util
 from tqdm import tqdm
 from rich import print
 from tabulate import tabulate
+import utils.view_onnx as view_onnx
 import utils.softhier_engine as engine
 import utils.console_visualization as cv
 
@@ -104,6 +105,7 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
     info['south_hbm_plan'] = south_hbm_plan
     cv.show_key_flow(kernel_flow)
     chip.register_workload(launch_name, info)
+    view_onnx.create_onnx_graph(kernel_flow, west_hbm_plan, south_hbm_plan, chip.output_folder_info / "workload.onnx")
     pbar = tqdm(total=len(kernel_flow), desc=f"[{launch_name}]")
     kernel_results = {}
     for name, kernel in kernel_flow.items():
@@ -762,7 +764,7 @@ def flow():
         kernel_flow, west_hbm_plan, south_hbm_plan = llm_prefill_layer_plan(llm, work, arch)
         pass
 
-    Results = softhier_launch(chip, f"{llm.model_name} Prefill Layer", kernel_flow, west_hbm_plan, south_hbm_plan, info)
+    Results = softhier_launch(chip, f"{llm.model_name} Prefill Sequence {work.prefill_input_token}", kernel_flow, west_hbm_plan, south_hbm_plan, info)
 
     print(f"[green][West HBM Occupancy Breakdown][/green]")
     cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)

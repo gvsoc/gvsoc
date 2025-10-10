@@ -20,3 +20,5 @@ dataclasses
 jsonref
 torch
 tdqm
+onnx
+netron
