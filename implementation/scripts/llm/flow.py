@@ -226,6 +226,7 @@ def llm_prefill_layer_plan(llm, work, arch):
 
     west_hbm_plan["attn_q"] = {
         "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
@@ -265,6 +266,7 @@ def llm_prefill_layer_plan(llm, work, arch):
 
     south_hbm_plan["attn_k"] = {
         "addr"                          : south_hbm_addr,
+        "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
@@ -300,6 +302,7 @@ def llm_prefill_layer_plan(llm, work, arch):
 
     south_hbm_plan["attn_v"] = {
         "addr"                          : south_hbm_addr,
+        "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
@@ -406,6 +409,7 @@ def llm_prefill_layer_plan(llm, work, arch):
     #############################
     west_hbm_plan["attn_o"] = {
         "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None

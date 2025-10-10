@@ -113,6 +113,9 @@ def create_onnx_tensors(tensor_map, west_hbm_plan, south_hbm_plan, onnx_dtype=Te
 
         # Create onnx tensors
         shape = list(plan_info['shape'])
+        if 'view' in plan_info:
+            shape = list(plan_info['view'])
+            pass
         doc_string = f"[info] On: {direction} | Start: {plan_info['addr']: #x} | Size: {plan_info['size']: #x} bytes"
         if 'bias' in tensor_name or 'weight' in tensor_name or 'table' in tensor_name:
             tensor_dict['constant'].append(helper.make_tensor(tensor_name, onnx_dtype, shape,[]))
