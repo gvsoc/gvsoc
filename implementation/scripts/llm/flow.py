@@ -102,6 +102,7 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
     info['kernel_flow'] = kernel_flow
     info['west_hbm_plan'] = west_hbm_plan
     info['south_hbm_plan'] = south_hbm_plan
+    cv.show_key_flow(kernel_flow)
     chip.register_workload(launch_name, info)
     pbar = tqdm(total=len(kernel_flow), desc=f"[{launch_name}]")
     kernel_results = {}
