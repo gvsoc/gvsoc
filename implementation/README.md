@@ -10,7 +10,8 @@
 | 🔢 GEMM with SUMMA Dataflow         | `gemm`     |
 | 🌈 RMSNorm                          | `norm`     |
 | 🌀 RoPE (Rotary Position Embedding) | `rope`     |
-| ✨ Activation (Sigmoid, ReLU)       | `acti`     |
+| ✨ Activation (Sigmoid, ReLU, SiLU) | `acti`     |
+| 📊 MoEGate (TopK Val&Idx of Score)  | `moeg`     |
 
 ---
 

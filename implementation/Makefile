@@ -17,7 +17,8 @@ pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
 
-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean llm-clean
+kernel-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean moeg-clean
+clean: kernel-clean llm-clean
 
 #####################
 #   FlatAttention   #
@@ -260,6 +261,53 @@ acti-num:
 acti-clean:
 	@echo "clean up intermidiate files generated for Activation ..."
 	rm -f ${CUR_DIR}/sw/Activation/include/acti.h ${CUR_DIR}/sw/Activation/preload.elf ${CUR_DIR}/sw/Activation/preload.dump ${CUR_DIR}/sw/Activation/include/preload.h ${SH_DIR}/dump_*
+
+################
+#   MoEGate    #
+################
+
+MOEG_FILE ?= ${CUR_DIR}/config/kernels/moeg.py
+ifdef moeg
+	MOEG_FILE = $(realpath $(moeg))
+endif
+
+moeg-cfg:
+	@echo "Generating configuration files for MoEGate ..."
+	python3 ${CUR_DIR}/scripts/kernels/moeg_config.py ${MOEG_FILE} ${CUR_DIR}/sw/MoEGate/include/moeg.h
+
+moeg-pld:
+	@echo "Generating preload files for MoEGate ..."
+	python3 ${CUR_DIR}/scripts/kernels/moeg_preload.py \
+			${CUR_DIR}/sw/MoEGate/preload.elf \
+			${CUR_DIR}/sw/MoEGate/include/preload.h \
+			${ARCH_FILE} \
+			${MOEG_FILE}
+
+moeg-hs:
+	@echo "Compiling SoftHier HW & SW for MoEGate ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoEGate make -C ${SH_DIR} hs
+
+moeg-sw:
+	@echo "Compiling SoftHier HW & SW for MoEGate ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoEGate make -C ${SH_DIR} sw
+
+moeg-pre: moeg-clean moeg-cfg moeg-pld moeg-hs
+
+moeg-run: moeg-pre
+	@echo "SoftHier simulation for MoEGate ..."
+	pld=${CUR_DIR}/sw/MoEGate/preload.elf make -C ${SH_DIR} run
+
+moeg-run%: moeg-pre
+	@echo "SoftHier simulation for MoEGate ..."
+	pld=${CUR_DIR}/sw/MoEGate/preload.elf make -C ${SH_DIR} run$*
+
+moeg-num:
+	@echo "Numerical check for MoEGate ..."
+	python3 ${CUR_DIR}/scripts/kernels/moeg_numerical_check.py ${SH_DIR}/dump_0 ${MOEG_FILE}
+
+moeg-clean:
+	@echo "clean up intermidiate files generated for MoEGate ..."
+	rm -f ${CUR_DIR}/sw/MoEGate/include/moeg.h ${CUR_DIR}/sw/MoEGate/preload.elf ${CUR_DIR}/sw/MoEGate/preload.dump ${CUR_DIR}/sw/MoEGate/include/preload.h ${SH_DIR}/dump_*
 
 #################
 #   LLM Flow    #

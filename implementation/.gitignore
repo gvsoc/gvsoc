@@ -3,6 +3,7 @@
 **/norm.h
 **/rope.h
 **/acti.h
+**/moeg.h
 **/preload.elf
 **/preload.dump
 **/preload.h
