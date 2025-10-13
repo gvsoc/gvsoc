@@ -16,19 +16,20 @@
 
 # Author: Chi Zhang <chizhang@ethz.ch>
 
-class MoEGate:
+class MoEDispatch:
 
     def __init__(self):
 
-        #MoEGate parameters
+        #MoEDispatch parameters
         self.dtype                   = 'fp16'
-        self.num_tokens              = 1024
+        self.num_tokens              = 512
+        self.embedded_length         = 2048
         self.num_routed_experts      = 256
         self.num_active_experts      = 8
 
         #HyperParameters
         ## [Token]: number of token to be processed within a cluster
-        self.token_per_cluster       = 4
+        self.token_per_cluster       = 32
         ## [Numer]: Whether to check numerical correctness
-        self.moeg_numer              = 1
-        self.moeg_numer_chunk        = 8192
+        self.moed_numer              = 1
+        self.moed_numer_chunk        = 1024

@@ -309,6 +309,49 @@ moeg-clean:
 	@echo "clean up intermidiate files generated for MoEGate ..."
 	rm -f ${CUR_DIR}/sw/MoEGate/include/moeg.h ${CUR_DIR}/sw/MoEGate/preload.elf ${CUR_DIR}/sw/MoEGate/preload.dump ${CUR_DIR}/sw/MoEGate/include/preload.h ${SH_DIR}/dump_*
 
+####################
+#   MoEDispatch    #
+####################
+
+MOED_FILE ?= ${CUR_DIR}/config/kernels/moed.py
+ifdef moed
+	MOED_FILE = $(realpath $(moed))
+endif
+
+moed-cfg:
+	@echo "Generating configuration files for MoEDispatch ..."
+	python3 ${CUR_DIR}/scripts/kernels/moed_config.py ${MOED_FILE} ${CUR_DIR}/sw/MoEDispatch/include/moed.h
+
+moed-pld:
+	@echo "Generating preload files for MoEDispatch ..."
+	python3 ${CUR_DIR}/scripts/kernels/moed_preload.py \
+			${CUR_DIR}/sw/MoEDispatch/preload.elf \
+			${CUR_DIR}/sw/MoEDispatch/include/preload.h \
+			${ARCH_FILE} \
+			${MOED_FILE}
+
+moed-hs:
+	@echo "Compiling SoftHier HW & SW for MoEDispatch ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoEDispatch make -C ${SH_DIR} hs
+
+moed-sw:
+	@echo "Compiling SoftHier HW & SW for MoEDispatch ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoEDispatch make -C ${SH_DIR} sw
+
+moed-pre: moed-clean moed-cfg moed-pld moed-hs
+
+moed-run: moed-pre
+	@echo "SoftHier simulation for MoEDispatch ..."
+	pld=${CUR_DIR}/sw/MoEDispatch/preload.elf make -C ${SH_DIR} run
+
+moed-run%: moed-pre
+	@echo "SoftHier simulation for MoEDispatch ..."
+	pld=${CUR_DIR}/sw/MoEDispatch/preload.elf make -C ${SH_DIR} run$*
+
+moed-clean:
+	@echo "clean up intermidiate files generated for MoEDispatch ..."
+	rm -f ${CUR_DIR}/sw/MoEDispatch/include/moed.h ${CUR_DIR}/sw/MoEDispatch/preload.elf ${CUR_DIR}/sw/MoEDispatch/preload.dump ${CUR_DIR}/sw/MoEDispatch/include/preload.h ${SH_DIR}/dump_*
+
 #################
 #   LLM Flow    #
 #################

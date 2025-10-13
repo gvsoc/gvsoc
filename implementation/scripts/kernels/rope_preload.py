@@ -256,7 +256,7 @@ if __name__ == '__main__':
     else:
         dumnp = np.array([1,1,1,1,1])
         pld.make_preload_elf(args.elf_path, 
-            [dumnp,   dumnp,   dumnp,   dumnp,   dumnp,    dumnp],
+            [dumnp,   dumnp,   dumnp,   P_np,    dumnp,    dumnp],
             [I_addr,  C_addr,  S_addr,  P_addr,  O_eaddr,  O_gaddr])
         pass
 
