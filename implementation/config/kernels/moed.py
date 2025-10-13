@@ -30,6 +30,8 @@ class MoEDispatch:
         #HyperParameters
         ## [Token]: number of token to be processed within a cluster
         self.token_per_cluster       = 32
+        ## [NoDis]: No Token Dispatch, but only compute the positon matrix
+        self.nodis_enable            = 1
         ## [Numer]: Whether to check numerical correctness
         self.moed_numer              = 1
         self.moed_numer_chunk        = 1024

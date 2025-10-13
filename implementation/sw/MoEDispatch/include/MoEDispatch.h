@@ -103,11 +103,13 @@ void MoEDispatchRun(MoEDispatchInfo * info)
                 volatile uint32_t * idx_ptr = (volatile uint32_t *)(info->L1_D);
                 volatile uint32_t * pos_ptr = (volatile uint32_t *)(info->L1_P);
 
+#if MOED_NODIS_ENABLE == 0
                  //2. load input
                 flex_dma_async_1d(
                     info->L1_I, /*destination*/
                     info->input_address + (info->start_token + t) * info->embedded_length * DATA_TYPE_BYTE, /*source*/
                     info->L1_I_size/*transfer size*/); //Start 1D iDMA
+#endif
 
                 for (int e = 0; e < info->num_active_experts; ++e)
                 {
@@ -119,6 +121,7 @@ void MoEDispatchRun(MoEDispatchInfo * info)
                     uint32_t store_idx = flex_amo_fetch_add(cnt_ptr);
                     pos_ptr[t * info->num_active_experts + e] = store_idx;
 
+#if MOED_NODIS_ENABLE == 0
                     //5. Calculate dispatch address
                     uint64_t dest_addr = info->output_address + expert_idx * info->expert_buffer_gap + store_idx * info->embedded_length * DATA_TYPE_BYTE;
 
@@ -129,9 +132,12 @@ void MoEDispatchRun(MoEDispatchInfo * info)
                         dest_addr, /*destination*/
                         info->L1_I, /*source*/
                         info->L1_I_size/*transfer size*/); //Start 1D iDMA
+#endif
                 }
 
+#if MOED_NODIS_ENABLE == 0
                 flex_dma_async_wait_all(); // Wait for previouse iDMA Finishing
+#endif
             }
 
             //7. Store back position matrix
