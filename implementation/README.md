@@ -13,6 +13,7 @@
 | ✨ Activation (Sigmoid, ReLU, SiLU) | `acti`     |
 | 📊 MoEGate (TopK Val&Idx of Score)  | `moeg`     |
 | 🧩 MoEDispatch                      | `moed`     |
+| 🧬 MoECombine                       | `moec`     |
 
 ---
 
