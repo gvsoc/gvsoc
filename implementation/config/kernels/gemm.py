@@ -45,6 +45,7 @@ class SummaGEMM:
         ##          Adress gaps between groups
         self.summa_group_number      = 1
         self.summa_group_reduce      = 0
+        self.summa_group_splitk      = 0
         self.summa_group_gap_x       = 0
         self.summa_group_gap_w       = 0
         self.summa_group_gap_z       = 0

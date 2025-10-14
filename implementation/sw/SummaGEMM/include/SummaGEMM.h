@@ -20,6 +20,7 @@ typedef struct SummaGEMMInfo
     uint32_t                    N_tile;
     uint32_t                    K_tile;
     uint32_t                    group_reduction;
+    uint32_t                    group_splitK;
     uint32_t                    summa_group_x;
     uint32_t                    summa_group_y;
     uint32_t                    summa_groups;
@@ -97,6 +98,7 @@ SummaGEMMInfo SummaGEMMAnaylze(
     uint32_t                    group_y,
     uint32_t                    num_group,
     uint32_t                    group_reduction,
+    uint32_t                    group_splitK,
     uint32_t                    X_address_group_gap,
     uint32_t                    W_address_group_gap,
     uint32_t                    Z_address_group_gap)
@@ -113,6 +115,7 @@ SummaGEMMInfo SummaGEMMAnaylze(
     info.N_tile                 = N_tile;
     info.K_tile                 = K_tile;
     info.group_reduction        = group_reduction;
+    info.group_splitK           = group_splitK;
     info.summa_group_x          = group_x;
     info.summa_group_y          = group_y;
     info.summa_groups           = num_group;
@@ -130,7 +133,7 @@ SummaGEMMInfo SummaGEMMAnaylze(
 
     info.M_iter                 = (M_size + info.summa_group_y * M_tile - 1) / (info.summa_group_y * M_tile);
     info.N_iter                 = (N_size + info.summa_group_x * N_tile - 1) / (info.summa_group_x * N_tile);
-    info.K_iter                 = (K_size + K_tile - 1) / K_tile;
+    info.K_iter                 = (info.group_reduction && info.group_splitK)? (((K_size / info.summa_groups) + K_tile - 1) / K_tile) : ((K_size + K_tile - 1) / K_tile);
     info.store_recorded         = 0;
     info.store_m                = 0;
     info.store_n                = 0;
