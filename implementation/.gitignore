@@ -4,6 +4,7 @@
 **/rope.h
 **/acti.h
 **/moeg.h
+**/moec.h
 **/moed.h
 **/preload.elf
 **/preload.dump

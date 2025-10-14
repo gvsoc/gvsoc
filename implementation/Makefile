@@ -17,7 +17,7 @@ pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
 
-kernel-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean moeg-clean
+kernel-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean moeg-clean moed-clean moec-clean
 clean: kernel-clean llm-clean
 
 #####################
@@ -348,9 +348,61 @@ moed-run%: moed-pre
 	@echo "SoftHier simulation for MoEDispatch ..."
 	pld=${CUR_DIR}/sw/MoEDispatch/preload.elf make -C ${SH_DIR} run$*
 
+moed-num:
+	@echo "Numerical check for MoEDispatch ..."
+	python3 ${CUR_DIR}/scripts/kernels/moed_numerical_check.py ${SH_DIR}/dump_0 ${MOED_FILE}
+
 moed-clean:
 	@echo "clean up intermidiate files generated for MoEDispatch ..."
 	rm -f ${CUR_DIR}/sw/MoEDispatch/include/moed.h ${CUR_DIR}/sw/MoEDispatch/preload.elf ${CUR_DIR}/sw/MoEDispatch/preload.dump ${CUR_DIR}/sw/MoEDispatch/include/preload.h ${SH_DIR}/dump_*
+
+###################
+#   MoECombine    #
+###################
+
+MOEC_FILE ?= ${CUR_DIR}/config/kernels/moec.py
+ifdef moec
+	MOEC_FILE = $(realpath $(moec))
+endif
+
+moec-cfg:
+	@echo "Generating configuration files for MoECombine ..."
+	python3 ${CUR_DIR}/scripts/kernels/moec_config.py ${MOEC_FILE} ${CUR_DIR}/sw/MoECombine/include/moec.h
+
+moec-pld:
+	@echo "Generating preload files for MoECombine ..."
+	python3 ${CUR_DIR}/scripts/kernels/moec_preload.py \
+			${CUR_DIR}/sw/MoECombine/preload.elf \
+			${CUR_DIR}/sw/MoECombine/include/preload.h \
+			${ARCH_FILE} \
+			${MOEC_FILE}
+
+moec-hs:
+	@echo "Compiling SoftHier HW & SW for MoECombine ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoECombine make -C ${SH_DIR} hs
+
+moec-sw:
+	@echo "Compiling SoftHier HW & SW for MoECombine ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/MoECombine make -C ${SH_DIR} sw
+
+moec-pre: moec-clean moec-cfg moec-pld moec-hs
+
+moec-run: moec-pre
+	@echo "SoftHier simulation for MoECombine ..."
+	pld=${CUR_DIR}/sw/MoECombine/preload.elf make -C ${SH_DIR} run
+
+moec-run%: moec-pre
+	@echo "SoftHier simulation for MoECombine ..."
+	pld=${CUR_DIR}/sw/MoECombine/preload.elf make -C ${SH_DIR} run$*
+
+moec-num:
+	@echo "Numerical check for MoECombine ..."
+	python3 ${CUR_DIR}/scripts/kernels/moec_numerical_check.py ${SH_DIR}/dump_0 ${MOEC_FILE}
+
+moec-clean:
+	@echo "clean up intermidiate files generated for MoECombine ..."
+	rm -f ${CUR_DIR}/sw/MoECombine/include/moec.h ${CUR_DIR}/sw/MoECombine/preload.elf ${CUR_DIR}/sw/MoECombine/preload.dump ${CUR_DIR}/sw/MoECombine/include/preload.h ${SH_DIR}/dump_*
+
 
 #################
 #   LLM Flow    #
