@@ -57,6 +57,7 @@ int main()
             flex_dump_open();
             for (uint64_t i = 0; i < num_output_chunk; ++i)
             {
+                flex_dump_hbm(i * MOED_MOED_NUMER_CHUNK + D_ADDR - ARCH_HBM_START_BASE, MOED_MOED_NUMER_CHUNK);
                 flex_dump_hbm(i * MOED_MOED_NUMER_CHUNK + P_ADDR - ARCH_HBM_START_BASE, MOED_MOED_NUMER_CHUNK);
             }
             flex_dump_close();
