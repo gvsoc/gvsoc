@@ -92,9 +92,9 @@ int flat_attention(
     flex_global_barrier_xy();
     if (async_enable)
     {
-        flatasync_run(&info);
+        if (info.work_group_enable) flatasync_run(&info);
     } else {
-        flatcoll_run(&info);
+        if (info.work_group_enable) flatcoll_run(&info);
     }
     flex_global_barrier_xy();
     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_end();

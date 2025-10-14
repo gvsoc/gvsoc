@@ -101,6 +101,7 @@ typedef struct FlatAttentionInfo
     uint32_t                DB_L1_lr;
 
     //Workload information
+    uint32_t                work_group_enable;
     uint32_t                work_group_head_num;
     uint32_t                work_group_head_start;
     uint64_t                HBM_Q;
@@ -282,7 +283,12 @@ FlatAttentionInfo flat_attention_analyze(
     info.DB_L1SP_lr             = info.DB_L1_lr + info.spatz_sid * (info.L1_l_size / ARCH_SPATZ_ATTACED_CORES);
 
     //Workload information
+    info.work_group_enable      = 1;
     info.work_group_head_num    = (info.batch_size * info.head_num) / (info.group.grid_x_num * info.group.grid_y_num);
+    if (info.work_group_head_num == 0){
+        info.work_group_enable  = (info.group.this_grid_id < (info.batch_size * info.head_num))? 1:0;
+        info.work_group_head_num= 1;
+    }
     info.work_group_head_start  = info.work_group_head_num * info.group.this_grid_id;
     info.HBM_Q                  = Q_base_address + info.work_group_head_start * info.head_dimemsion * info.q_sequence_length  * DATA_TYPE_BYTE;
     info.HBM_K                  = K_base_address + info.work_group_head_start * info.head_dimemsion * info.kv_sequence_length * DATA_TYPE_BYTE;
