@@ -62,8 +62,8 @@ def roi_to_perfetto(roi_trace, perfetto_trace):
                 'ph': "X",  # Complete event type
                 'ts': us(ts),
                 'dur': us(dur),
-                'pid': 0,
-                'tid': thread,
+                'pid': thread,
+                'tid': region['label'],
                 'args': region['attrs']
             }
             events.append(event)

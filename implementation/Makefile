@@ -403,6 +403,53 @@ moec-clean:
 	@echo "clean up intermidiate files generated for MoECombine ..."
 	rm -f ${CUR_DIR}/sw/MoECombine/include/moec.h ${CUR_DIR}/sw/MoECombine/preload.elf ${CUR_DIR}/sw/MoECombine/preload.dump ${CUR_DIR}/sw/MoECombine/include/preload.h ${SH_DIR}/dump_*
 
+###############
+#   FlatMLA   #
+###############
+
+TMLA_FILE ?= ${CUR_DIR}/config/kernels/tmla.py
+ifdef tmla
+	TMLA_FILE = $(realpath $(tmla))
+endif
+
+tmla-cfg:
+	@echo "Generating configuration files for FlatMLA ..."
+	python3 ${CUR_DIR}/scripts/kernels/tmla_config.py ${TMLA_FILE} ${CUR_DIR}/sw/FlatMLA/include/tmla.h
+
+tmla-pld:
+	@echo "Generating preload files for FlatMLA ..."
+	python3 ${CUR_DIR}/scripts/kernels/tmla_preload.py \
+			${CUR_DIR}/sw/FlatMLA/preload.elf \
+			${CUR_DIR}/sw/FlatMLA/include/preload.h \
+			${ARCH_FILE} \
+			${TMLA_FILE}
+
+tmla-hs:
+	@echo "Compiling SoftHier HW & SW for FlatMLA ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FlatMLA make -C ${SH_DIR} hs
+
+tmla-sw:
+	@echo "Compiling SoftHier HW & SW for FlatMLA ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FlatMLA make -C ${SH_DIR} sw
+
+tmla-pre: tmla-clean tmla-cfg tmla-pld tmla-hs
+
+tmla-run: tmla-pre
+	@echo "SoftHier simulation for FlatMLA ..."
+	pld=${CUR_DIR}/sw/FlatMLA/preload.elf make -C ${SH_DIR} run
+
+tmla-run%: tmla-pre
+	@echo "SoftHier simulation for FlatMLA ..."
+	pld=${CUR_DIR}/sw/FlatMLA/preload.elf make -C ${SH_DIR} run$*
+
+tmla-num:
+	@echo "Numerical check for tmlaetion ..."
+	python3 ${CUR_DIR}/scripts/kernels/tmla_numerical_check.py ${SH_DIR}/dump_0 ${TMLA_FILE}
+
+tmla-clean:
+	@echo "clean up intermidiate files generated for FlatMLA ..."
+	rm -f ${CUR_DIR}/sw/FlatMLA/include/tmla.h ${CUR_DIR}/sw/FlatMLA/preload.elf ${CUR_DIR}/sw/FlatMLA/preload.dump ${CUR_DIR}/sw/FlatMLA/include/preload.h ${SH_DIR}/dump_*
+
 
 #################
 #   LLM Flow    #

@@ -6,6 +6,7 @@
 **/moeg.h
 **/moec.h
 **/moed.h
+**/tmla.h
 **/preload.elf
 **/preload.dump
 **/preload.h
