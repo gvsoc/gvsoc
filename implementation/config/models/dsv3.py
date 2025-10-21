@@ -33,12 +33,10 @@ class Model:
         self.head_dimension             = 128
         self.q_lora_rank                = 1536
         self.kv_lora_rank               = 512
-        self.qk_nope_head_dim           = 128
-        self.qk_rope_head_dim           = 64
-        self.v_head_dim                 = 128 
+        self.rope_head_dim              = 64
 
         #MoE Configuration
-        self.fnn_type                   = 'MoE'
+        self.ffn_type                   = 'MoE'
         self.moe_inter_dim              = 2048
         self.n_routed_experts           = 256
         self.n_shared_experts           = 1

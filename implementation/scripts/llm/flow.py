@@ -30,6 +30,8 @@ from tabulate import tabulate
 import utils.view_onnx as view_onnx
 import utils.softhier_engine as engine
 import utils.console_visualization as cv
+import llm.normal_llm_plan as normal_llm
+import llm.deepseek_plan as deepseek
 
 def import_module_from_path(module_path):
     """
@@ -158,565 +160,6 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
     return kernel_results
     pass
 
-def llm_prefill_layer_plan(llm, work, arch):
-
-    #Basic Settings
-    elem_size                           = 1 if llm.dtype == 'fp8' else 2
-    index_size                          = 4 #uint32_t
-    kernel_flow                         = {}
-    west_hbm_plan                       = {}
-    south_hbm_plan                      = {}
-    west_hbm_addr                       = arch.hbm_start_base
-    south_hbm_addr                      = arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
-
-    south_hbm_plan["layer_input"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
-
-    west_hbm_plan["position"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token,),
-        "size"                          : work.batch_size * work.prefill_input_token * index_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * index_size
-    west_hbm_addr                       = align_addr(west_hbm_addr)
-
-
-
-    #################################
-    #       1. Normalization        #
-    #################################
-    west_hbm_plan["attn_norm"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
-
-    attn_norm_cfg                       = RMSNorm()
-    attn_norm_cfg.dtype                 = llm.dtype
-    attn_norm_cfg.m_size                = work.batch_size * work.prefill_input_token
-    attn_norm_cfg.n_size                = llm.embeded_length
-    attn_norm_cfg.norm_numer            = work.numerical_check_enable
-
-    kernel_flow["attn_norm"] = {
-        "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "attn_norm"},
-        "cfg"                           : attn_norm_cfg
-    }
-
-
-    #################################
-    #       2. Q Projection         #
-    #################################
-    south_hbm_plan["q_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.embeded_length,  llm.num_heads * llm.head_dimension),
-        "size"                          : llm.embeded_length * llm.num_heads * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.embeded_length * llm.num_heads * llm.head_dimension * elem_size
-
-    west_hbm_plan["attn_q"] = {
-        "addr"                          : west_hbm_addr,
-        "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
-        "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
-
-    attn_q_proj                         = SummaGEMM()
-    attn_q_proj.dtype                   = llm.dtype
-    attn_q_proj.m_size                  = work.batch_size * work.prefill_input_token
-    attn_q_proj.n_size                  = llm.num_heads * llm.head_dimension
-    attn_q_proj.k_size                  = llm.embeded_length
-    attn_q_proj.resha_x_from_enable     = 0
-    attn_q_proj.resha_z_to_enable       = 1
-    attn_q_proj.resha_z_to_m            = work.batch_size * work.prefill_input_token * llm.num_heads
-    attn_q_proj.summa_numer             = work.numerical_check_enable
-
-    kernel_flow["attn_q_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "q_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_q"},
-        "cfg"                           : attn_q_proj
-    }
-
-
-
-    #################################
-    #       3. KV Projection        #
-    #################################
-    south_hbm_plan["k_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.embeded_length,  llm.head_groups * llm.head_dimension),
-        "size"                          : llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
-
-    south_hbm_plan["attn_k"] = {
-        "addr"                          : south_hbm_addr,
-        "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
-        "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
-
-    attn_k_proj                         = SummaGEMM()
-    attn_k_proj.dtype                   = llm.dtype
-    attn_k_proj.m_size                  = work.batch_size * work.prefill_input_token
-    attn_k_proj.n_size                  = llm.head_groups * llm.head_dimension
-    attn_k_proj.k_size                  = llm.embeded_length
-    attn_k_proj.resha_x_from_enable     = 0
-    attn_k_proj.resha_z_to_enable       = 1
-    attn_k_proj.resha_z_to_m            = work.batch_size * work.prefill_input_token * llm.head_groups
-    attn_k_proj.summa_numer             = work.numerical_check_enable
-
-    kernel_flow["attn_k_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "k_proj_weight"},
-        "output"                        : {"on": "south",   "name": "attn_k"},
-        "cfg"                           : attn_k_proj
-    }
-
-
-    south_hbm_plan["v_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.embeded_length,  llm.head_groups * llm.head_dimension),
-        "size"                          : llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
-
-    south_hbm_plan["attn_v"] = {
-        "addr"                          : south_hbm_addr,
-        "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
-        "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
-
-    attn_v_proj                         = SummaGEMM()
-    attn_v_proj.dtype                   = llm.dtype
-    attn_v_proj.m_size                  = work.batch_size * work.prefill_input_token
-    attn_v_proj.n_size                  = llm.head_groups * llm.head_dimension
-    attn_v_proj.k_size                  = llm.embeded_length
-    attn_v_proj.resha_x_from_enable     = 0
-    attn_v_proj.resha_z_to_enable       = 1
-    attn_v_proj.resha_z_to_m            = work.batch_size * work.prefill_input_token * llm.head_groups
-    attn_v_proj.summa_numer             = work.numerical_check_enable
-
-    kernel_flow["attn_v_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "v_proj_weight"},
-        "output"                        : {"on": "south",   "name": "attn_v"},
-        "cfg"                           : attn_v_proj
-    }
-
-
-    #########################
-    #       4. QK RoPE      #
-    #########################
-    if llm.qk_rope_enable:
-        ## Cosine and Sine Table
-        south_hbm_plan["rope_q_cos_table"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.head_dimension // 2)),
-        "size"                          : llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size,
-        "tensor"                        : None
-        }
-        south_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
-
-        south_hbm_plan["rope_q_sin_table"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.head_dimension // 2)),
-        "size"                          : llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size,
-        "tensor"                        : None
-        }
-        south_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
-
-        attn_rope_q                     = RoPE()
-        attn_rope_q.dtype               = llm.dtype
-        attn_rope_q.m_size              = work.batch_size * work.prefill_input_token
-        attn_rope_q.n_size              = llm.num_heads * llm.head_dimension
-        attn_rope_q.maximun_seqlen      = llm.max_sequence_length
-        attn_rope_q.view_enable         = 1
-        attn_rope_q.view_n              = llm.head_dimension
-        attn_rope_q.rope_numer          = work.numerical_check_enable
-
-        kernel_flow["attn_rope_q"] = {
-        "type"                          : "rope",
-        "input"                         : {"on": "west",   "name": "attn_q"},
-        "output"                        : {"on": "west",   "name": "attn_q"},
-        "cos"                           : {"on": "south",  "name": "rope_q_cos_table"},
-        "sin"                           : {"on": "south",  "name": "rope_q_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
-        "cfg"                           : attn_rope_q
-        }
-
-        west_hbm_plan["rope_k_cos_table"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(llm.max_sequence_length,  (llm.head_groups * llm.head_dimension // 2)),
-        "size"                          : llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size,
-        "tensor"                        : None
-        }
-        west_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
-
-        west_hbm_plan["rope_k_sin_table"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(llm.max_sequence_length,  (llm.head_groups * llm.head_dimension // 2)),
-        "size"                          : llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size,
-        "tensor"                        : None
-        }
-        west_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
-
-        attn_rope_k                     = RoPE()
-        attn_rope_k.dtype               = llm.dtype
-        attn_rope_k.m_size              = work.batch_size * work.prefill_input_token
-        attn_rope_k.n_size              = llm.head_groups * llm.head_dimension
-        attn_rope_k.maximun_seqlen      = llm.max_sequence_length
-        attn_rope_k.view_enable         = 1
-        attn_rope_k.view_n              = llm.head_dimension
-        attn_rope_k.rope_numer          = work.numerical_check_enable
-
-        kernel_flow["attn_rope_k"] = {
-        "type"                          : "rope",
-        "input"                         : {"on": "south",  "name": "attn_k"},
-        "output"                        : {"on": "south",  "name": "attn_k"},
-        "cos"                           : {"on": "west",   "name": "rope_k_cos_table"},
-        "sin"                           : {"on": "west",   "name": "rope_k_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
-        "cfg"                           : attn_rope_k
-        }
-        pass
-
-    #############################
-    #       5. Attention        #
-    #############################
-    west_hbm_plan["attn_o"] = {
-        "addr"                          : west_hbm_addr,
-        "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
-        "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
-
-    attn_mha                            = FlatAttetion()
-    attn_mha.dtype                      = llm.dtype
-    attn_mha.kv_sequence_length         = work.prefill_input_token
-    attn_mha.q_sequence_length          = work.prefill_input_token
-    attn_mha.speculative_length         = 1 # Prefill process here
-    attn_mha.head_dimemsion             = llm.head_dimension
-    attn_mha.num_head                   = llm.num_heads
-    attn_mha.num_head_group             = llm.head_groups
-    attn_mha.batch_size                 = work.batch_size
-    attn_mha.flatten_async              = 1 # Best Performance
-    attn_mha.flatten_numer              = work.numerical_check_enable
-
-    kernel_flow["attn_mha"] = {
-        "type"                          : "flat_attn",
-        "q"                             : {"on": "west",    "name": "attn_q"},
-        "k"                             : {"on": "south",   "name": "attn_k"},
-        "v"                             : {"on": "south",   "name": "attn_v"},
-        "o"                             : {"on": "west",    "name": "attn_o"},
-        "cfg"                           : attn_mha
-    }
-
-
-    #############################
-    #       6. O Projection     #
-    #############################
-    south_hbm_plan["o_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.num_heads * llm.head_dimension,  llm.embeded_length),
-        "size"                          : llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size
-
-    west_hbm_plan["attn_a"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
-
-    attn_o_proj                         = SummaGEMM()
-    attn_o_proj.dtype                   = llm.dtype
-    attn_o_proj.m_size                  = work.batch_size * work.prefill_input_token
-    attn_o_proj.n_size                  = llm.embeded_length
-    attn_o_proj.k_size                  = llm.num_heads * llm.head_dimension
-    attn_o_proj.resha_x_from_enable     = 1
-    attn_o_proj.resha_z_to_enable       = 0
-    attn_o_proj.resha_x_from_m          = work.batch_size * work.prefill_input_token * llm.num_heads
-    attn_o_proj.summa_numer             = work.numerical_check_enable
-
-    kernel_flow["attn_o_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_o"},
-        "weight"                        : {"on": "south",   "name": "o_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_a"},
-        "cfg"                           : attn_o_proj
-    }
-
-    #################################
-    #       7. ResNet Addition      #
-    #################################
-    attn_resnet                         = Activation()
-    attn_resnet.dtype                   = llm.dtype
-    attn_resnet.algo                    = 'none'
-    attn_resnet.m_size                  = work.batch_size * work.prefill_input_token
-    attn_resnet.n_size                  = llm.embeded_length
-    attn_resnet.gate_enable             = 0
-    attn_resnet.bias_enable             = 1
-    attn_resnet.acti_numer              = work.numerical_check_enable
-
-    kernel_flow["attn_resnet"] = {
-        "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "attn_a"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
-        "cfg"                           : attn_resnet
-    }
-
-    #################################
-    #       8. Normalization        #
-    #################################
-    west_hbm_plan["ffn_norm"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
-
-    ffn_norm_cfg                        = RMSNorm()
-    ffn_norm_cfg.dtype                  = llm.dtype
-    ffn_norm_cfg.m_size                 = work.batch_size * work.prefill_input_token
-    ffn_norm_cfg.n_size                 = llm.embeded_length
-    ffn_norm_cfg.norm_numer             = work.numerical_check_enable
-
-    kernel_flow["ffn_norm"] = {
-        "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "ffn_norm"},
-        "cfg"                           : ffn_norm_cfg
-    }
-
-    #####################################
-    #       9. FFN Up Projection        #
-    #####################################
-    south_hbm_plan["up_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
-        "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
-
-    west_hbm_plan["ffn_up"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
-
-    ffn_up_proj                         = SummaGEMM()
-    ffn_up_proj.dtype                   = llm.dtype
-    ffn_up_proj.m_size                  = work.batch_size * work.prefill_input_token
-    ffn_up_proj.n_size                  = llm.mlp_inter_dim
-    ffn_up_proj.k_size                  = llm.embeded_length
-    ffn_up_proj.resha_x_from_enable     = 0
-    ffn_up_proj.resha_z_to_enable       = 0
-    ffn_up_proj.summa_numer             = work.numerical_check_enable
-
-    kernel_flow["ffn_up_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_norm"},
-        "weight"                        : {"on": "south",   "name": "up_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_up"},
-        "cfg"                           : ffn_up_proj
-    }
-
-    #####################################
-    #       10. FFN Gate Projection     #
-    #####################################
-    south_hbm_plan["gate_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
-        "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
-
-    west_hbm_plan["ffn_gate"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
-
-    ffn_gate_proj                       = SummaGEMM()
-    ffn_gate_proj.dtype                 = llm.dtype
-    ffn_gate_proj.m_size                = work.batch_size * work.prefill_input_token
-    ffn_gate_proj.n_size                = llm.mlp_inter_dim
-    ffn_gate_proj.k_size                = llm.embeded_length
-    ffn_gate_proj.resha_x_from_enable   = 0
-    ffn_gate_proj.resha_z_to_enable     = 0
-    ffn_gate_proj.summa_numer           = work.numerical_check_enable
-
-    kernel_flow["ffn_gate_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_norm"},
-        "weight"                        : {"on": "south",   "name": "gate_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_gate"},
-        "cfg"                           : ffn_gate_proj
-    }
-
-    #################################
-    #       11. FFN Activation      #
-    #################################
-    west_hbm_plan["ffn_acti"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
-
-    if llm.mlp_acti_bias_enable:
-        south_hbm_plan["ffn_acti_bias"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
-        "tensor"                        : None
-        }
-        south_hbm_addr                  += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
-        pass
-
-    ffn_acti                            = Activation()
-    ffn_acti.dtype                      = llm.dtype
-    ffn_acti.algo                       = llm.mlp_acti_algo
-    ffn_acti.m_size                     = work.batch_size * work.prefill_input_token
-    ffn_acti.n_size                     = llm.mlp_inter_dim
-    ffn_acti.gate_enable                = 1
-    ffn_acti.bias_enable                = llm.mlp_acti_bias_enable
-    ffn_acti.acti_numer                 = work.numerical_check_enable
-
-    kernel_flow["ffn_acti"] = {
-        "type"                          : "acti",
-        "input"                         : {"on": "west",    "name": "ffn_up"},
-        "gate"                          : {"on": "west",    "name": "ffn_gate"},
-        "output"                        : {"on": "west",    "name": "ffn_acti"},
-        "cfg"                           : ffn_acti
-    }
-
-    if llm.mlp_acti_bias_enable:
-        kernel_flow["ffn_acti"]["bias"] = {"on": "south",   "name": "ffn_acti_bias"}
-        pass
-
-    #####################################
-    #       12. FFN Down Projection     #
-    #####################################
-    south_hbm_plan["down_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
-        "shape"                         :(llm.mlp_inter_dim,  llm.embeded_length),
-        "size"                          : llm.mlp_inter_dim * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    south_hbm_addr                      += llm.mlp_inter_dim * llm.embeded_length * elem_size
-
-    west_hbm_plan["ffn_o"] = {
-        "addr"                          : west_hbm_addr,
-        "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
-        "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
-        "tensor"                        : None
-    }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
-
-    ffn_down_proj                       = SummaGEMM()
-    ffn_down_proj.dtype                 = llm.dtype
-    ffn_down_proj.m_size                = work.batch_size * work.prefill_input_token
-    ffn_down_proj.n_size                = llm.embeded_length
-    ffn_down_proj.k_size                = llm.mlp_inter_dim
-    ffn_down_proj.resha_x_from_enable   = 0
-    ffn_down_proj.resha_z_to_enable     = 0
-    ffn_down_proj.summa_numer           = work.numerical_check_enable
-
-    kernel_flow["ffn_down_proj"] = {
-        "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_acti"},
-        "weight"                        : {"on": "south",   "name": "down_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_o"},
-        "cfg"                           : ffn_down_proj
-    }
-
-    #################################
-    #       13. ResNet Addition     #
-    #################################
-    ffn_resnet                          = Activation()
-    ffn_resnet.dtype                    = llm.dtype
-    ffn_resnet.algo                     = 'none'
-    ffn_resnet.m_size                   = work.batch_size * work.prefill_input_token
-    ffn_resnet.n_size                   = llm.embeded_length
-    ffn_resnet.gate_enable              = 0
-    ffn_resnet.bias_enable              = 1
-    ffn_resnet.acti_numer               = work.numerical_check_enable
-
-    kernel_flow["ffn_resnet"] = {
-        "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "ffn_o"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
-        "cfg"                           : ffn_resnet
-    }
-
-    # print("")
-    # print("")
-    # print("[green][West HBM Plan][/green]")
-    # for k, v in west_hbm_plan.items():
-    #     print(f"[yellow]| {k}:[/yellow]")
-    #     print_dict_as_table(v)
-    #     pass
-    # print("")
-    # print("")
-    # print("[green][South HBM Plan][/green]")
-    # for k, v in south_hbm_plan.items():
-    #     print(f"[yellow]| {k}:[/yellow]")
-    #     print_dict_as_table(v)
-    #     pass
-    # print("")
-    # print("")
-    # shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan)
-    # print("[green][Kernel Flow][/green]")
-    # for k, v in kernel_flow.items():
-    #     print(f"[yellow]{k}:[/yellow]")
-    #     print_dict_as_table(v)
-    #     print(f"[yellow]|[/yellow]")
-    #     print(f"[yellow]v[/yellow]")
-    #     pass
-    # print(f"[yellow]End[/yellow]")
-    
-    return kernel_flow, west_hbm_plan, south_hbm_plan
-    pass
 
 
 def flow():
@@ -754,6 +197,8 @@ def flow():
             print(f"Failed to import {absolute_path}: {e}")
 
     # Initialize Configuration
+    normal_llm.init(args.module_paths)
+    deepseek.init(args.module_paths)
     chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root)
     arch = FlexClusterArch()
     llm = Model()
@@ -765,19 +210,58 @@ def flow():
 
     # LLM Layer Plan
     if work.prefill_enabled and llm.attention_type == 'MHA' and llm.ffn_type == 'MLP':
-        kernel_flow, west_hbm_plan, south_hbm_plan = llm_prefill_layer_plan(llm, work, arch)
+        kernel_flow, west_hbm_plan, south_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
         pass
 
-    Results = softhier_launch(chip, f"{llm.model_name} Prefill Sequence {work.prefill_input_token}", kernel_flow, west_hbm_plan, south_hbm_plan, info)
+    if work.decode_enabled and llm.attention_type == 'MLA'and llm.ffn_type == 'MoE':
+        kernel_flow, west_hbm_plan, south_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch)
+        print("")
+        print("")
+        print("[green][West HBM Plan][/green]")
+        for k, v in west_hbm_plan.items():
+            print(f"[yellow]| {k}:[/yellow]")
+            print_dict_as_table(v)
+            pass
+        print("")
+        print("")
+        print("[green][South HBM Plan][/green]")
+        for k, v in south_hbm_plan.items():
+            print(f"[yellow]| {k}:[/yellow]")
+            print_dict_as_table(v)
+            pass
+        print("")
+        print("")
+        shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan)
+        print("[green][Kernel Flow][/green]")
+        for k, v in kernel_flow.items():
+            print(f"[yellow]{k}:[/yellow]")
+            print_dict_as_table(v)
+            print(f"[yellow]|[/yellow]")
+            print(f"[yellow]v[/yellow]")
+            pass
+        print(f"[yellow]End[/yellow]")
+        print(f"[green][West HBM Occupancy Breakdown][/green]")
+        cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+        print(f"[green][South HBM Occupancy Breakdown][/green]")
+        cv.show_breakdown(south_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+        cv.show_key_flow(kernel_flow)
+        info['kernel_flow'] = kernel_flow
+        info['west_hbm_plan'] = west_hbm_plan
+        info['south_hbm_plan'] = south_hbm_plan
+        chip.register_workload(f"{llm.model_name} decode phase", info)
+        view_onnx.create_onnx_graph(kernel_flow, west_hbm_plan, south_hbm_plan, chip.output_folder_info / "workload.onnx")
+        pass
 
-    print(f"[green][West HBM Occupancy Breakdown][/green]")
-    cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+    # Results = softhier_launch(chip, f"{llm.model_name} Prefill Sequence {work.prefill_input_token}", kernel_flow, west_hbm_plan, south_hbm_plan, info)
 
-    print(f"[green][South HBM Occupancy Breakdown][/green]")
-    cv.show_breakdown(south_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+    # print(f"[green][West HBM Occupancy Breakdown][/green]")
+    # cv.show_breakdown(west_hbm_plan, metric='size', unit='KiB', scale_div=1024)
 
-    print(f"[green][Kernel Runtime Breakdown][/green]")
-    cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
+    # print(f"[green][South HBM Occupancy Breakdown][/green]")
+    # cv.show_breakdown(south_hbm_plan, metric='size', unit='KiB', scale_div=1024)
+
+    # print(f"[green][Kernel Runtime Breakdown][/green]")
+    # cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
 
     pass
 

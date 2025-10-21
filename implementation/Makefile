@@ -478,7 +478,11 @@ llm:
 			${GEMM_FILE} \
 			${NORM_FILE} \
 			${ROPE_FILE} \
-			${ACTI_FILE}
+			${ACTI_FILE} \
+			${MOEG_FILE} \
+			${MOED_FILE} \
+			${MOEC_FILE} \
+			${TMLA_FILE}
 
 llm-clean:
 	rm -rf ${CUR_DIR}/out

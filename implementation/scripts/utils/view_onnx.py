@@ -28,7 +28,7 @@ def analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan):
         kernel_output_list = []
         for k, v in kernel_flow[kernel_name].items():
             if k != "type" and k != "cfg":
-                if k == 'o' or k == 'output':
+                if k == 'o' or 'output' in k:
                     kernel_output_list.append(v['name'])
                 else:
                     kernel_input_list.append(v['name'])
@@ -74,6 +74,7 @@ def analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan):
         #3. add to nodes_dict
         nodes_dict[kernel_name] = {
             'name'      : kernel_name,
+            'type'      : kernel_flow[kernel_name]['type'],
             'inputs'    : mapped_kernel_input_list,
             'outputs'   : mapped_kernel_output_list
         }
@@ -134,7 +135,7 @@ def create_onnx_tensors(tensor_map, west_hbm_plan, south_hbm_plan, onnx_dtype=Te
 def create_onnx_node_list(nodes_dict):
     node_list = []
     for k, v in nodes_dict.items():
-        node_list.append(helper.make_node(op_type=k, inputs=v['inputs'], outputs=v['outputs'], name=v['name']))
+        node_list.append(helper.make_node(op_type=v['name'], inputs=v['inputs'], outputs=v['outputs'], name=v['type']))
         pass
     return node_list
     pass

@@ -21,16 +21,13 @@ class Workload:
     def __init__(self):
 
         #Basic Configuration
-        self.prefill_enabled            = 1
-        self.decode_enabled             = 0
-        self.batch_size                 = 1
+        self.prefill_enabled            = 0
+        self.decode_enabled             = 1
+        self.batch_size                 = 4
         self.numerical_check_enable     = 0
 
-        #Prefill Configuration
-        self.prefill_input_token        = 1024
-
         #Decode Configuration
-        self.decode_mode                = 'auto-regressive'
+        self.decode_mode                = 'speculative'
         self.speculative_factor         = 8
         self.speculative_ratio          = 0.75
-        self.kv_cache_length            = 1024
+        self.kv_cache_length            = 1016

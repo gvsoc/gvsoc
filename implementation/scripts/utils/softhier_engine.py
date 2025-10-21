@@ -67,7 +67,7 @@ class SoftHier(object):
         self.arch_path = None
         self.logout_option = " > "
 
-    def launch_softhier(self, pld_path = None, target = "runv"):
+    def launch_softhier(self, pld_path = None, target = "runq"):
         if pld_path is not None:
             pld = Path(pld_path).resolve()
             assert pld.exists()
@@ -216,7 +216,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
@@ -259,7 +259,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
@@ -310,7 +310,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
@@ -360,7 +360,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
@@ -411,7 +411,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
@@ -469,7 +469,7 @@ class SoftHier(object):
         assert os.system(cmd) == 0
 
         # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runv > {self.output_folder_trace}/{name}.log 2>&1"
+        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
