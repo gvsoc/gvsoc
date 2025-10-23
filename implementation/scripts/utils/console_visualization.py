@@ -69,7 +69,12 @@ def show_breakdown(dict_dict, metric, unit = '', scale_div = 1):
 def show_key_flow(dict_in, color = 'green'):
     string = '[bold yellow]START[/bold yellow]'
     for key in dict_in:
-        string += f"->[{color}]{key}[/{color}]"
+        if "repeat" in dict_in[key]:
+            repeat = dict_in[key]["repeat"]
+            string += f"->[{color}]{key}(x{repeat})[/{color}]"
+        else:
+            string += f"->[{color}]{key}[/{color}]"
+            pass
         pass
     string += '->[bold yellow]END[/bold yellow]'
     print(string)

@@ -22,6 +22,7 @@ import sys
 import shutil
 import importlib.util
 from rich import print
+import utils.console_visualization as cv
 
 def import_module_from_path(module_path):
     """
@@ -69,6 +70,14 @@ def align_addr(addr, align=0x10000):
         int: The aligned address.
     """
     return (addr + align - 1) & ~(align - 1)
+
+def kernel_flow_simplify(kernel_flow):
+    return kernel_flow
+    pass
+
+def hbm_plan_summary(plan):
+    cv.show_breakdown(plan, metric='size', unit='KiB', scale_div=1024)
+    pass
 
 def normal_llm_prefill_layer_plan(llm, work, arch):
 

@@ -24,7 +24,7 @@ class Model:
         self.model_name                 = "DeepSeekV3-671B"
         self.dtype                      = 'fp16'
         self.num_layers                 = 61
-        self.embeded_length             = 7186
+        self.embeded_length             = 7168
         self.max_sequence_length        = 8192
 
         #Attention Configuration
@@ -37,6 +37,7 @@ class Model:
 
         #MoE Configuration
         self.ffn_type                   = 'MoE'
+        self.moe_acti_algo              = 'silu'
         self.moe_inter_dim              = 2048
         self.n_routed_experts           = 256
         self.n_shared_experts           = 1

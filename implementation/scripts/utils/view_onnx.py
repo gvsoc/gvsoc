@@ -27,7 +27,7 @@ def analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan):
         kernel_input_list = []
         kernel_output_list = []
         for k, v in kernel_flow[kernel_name].items():
-            if k != "type" and k != "cfg":
+            if k != "type" and k != "cfg" and k != "info":
                 if k == 'o' or 'output' in k:
                     kernel_output_list.append(v['name'])
                 else:

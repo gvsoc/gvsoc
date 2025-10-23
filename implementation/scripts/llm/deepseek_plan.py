@@ -19,9 +19,13 @@ import os
 import io
 import re
 import sys
+import copy
+import torch
 import shutil
 import importlib.util
+from tqdm import tqdm
 from rich import print
+import utils.console_visualization as cv
 
 def import_module_from_path(module_path):
     """
@@ -70,8 +74,186 @@ def align_addr(addr, align=0x10000):
     """
     return (addr + align - 1) & ~(align - 1)
 
+def gen_moe_gate_index(num_tokens, num_routed_experts, num_active_experts, moe_distribution = 'Fair'):
+    if moe_distribution == 'Fair':
+        x = torch.arange(num_tokens * num_active_experts) % num_routed_experts
+        idx = torch.randperm(x.size(0))
+        x_shuffled = x[idx]
+        D = x.view(num_tokens, num_active_experts).to(torch.int32)
+    else:
+        raise RuntimeError(f"MoE Distribution {moe_distribution} currently not supported")
+        pass
+    P = torch.zeros(D.shape, dtype=D.dtype)
+    SCORE = torch.zeros(num_routed_experts, dtype=torch.int32)
+    for i in tqdm(range(D.shape[0]), desc="[Expert Positioning]"):
+        for j in range(D.shape[1]):
+            #1. get expert idx
+            expert_idx = D[i, j]
+            #2. get position
+            pos = SCORE[expert_idx].clone()
+            SCORE[expert_idx] += 1
+            #3. store position
+            P[i, j] = pos
+            pass
+        pass
+    return D, P, SCORE
+    pass
 
-def deepseek_decode_layer_plan(llm, work, arch):
+def kernel_flow_simplify(kernel_flow_in):
+    kernel_flow = copy.deepcopy(kernel_flow_in)
+    # Set Repeat for redundant kernels
+    keys = []
+    pattern = r"^moe_routed_\d+_up$"
+    for k, v in kernel_flow.items():
+        if re.match(pattern, k):
+            keys.append(k)
+            pass
+        pass
+    compare_list = [[kernel_flow[k]['cfg'].m_size, kernel_flow[k]['cfg'].n_size, kernel_flow[k]['cfg'].k_size] for k in keys]
+    unique_list = []
+    unique_id_list = []
+    for i in range(len(compare_list)):
+        obj = compare_list[i]
+        if obj not in unique_list:
+            unique_list.append(obj)
+            unique_id_list.append(i)
+    for i in unique_id_list:
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        pass
+    keys_to_delete = []
+    for i in range(len(keys)):
+        if i not in unique_id_list: keys_to_delete.append(keys[i])
+        pass
+    for k in keys_to_delete: del kernel_flow[k]
+
+    keys = []
+    pattern = r"^moe_routed_\d+_gate$"
+    for k, v in kernel_flow.items():
+        if re.match(pattern, k):
+            keys.append(k)
+            pass
+        pass
+    compare_list = [[kernel_flow[k]['cfg'].m_size, kernel_flow[k]['cfg'].n_size, kernel_flow[k]['cfg'].k_size] for k in keys]
+    unique_list = []
+    unique_id_list = []
+    for i in range(len(compare_list)):
+        obj = compare_list[i]
+        if obj not in unique_list:
+            unique_list.append(obj)
+            unique_id_list.append(i)
+    for i in unique_id_list:
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        pass
+    keys_to_delete = []
+    for i in range(len(keys)):
+        if i not in unique_id_list: keys_to_delete.append(keys[i])
+        pass
+    for k in keys_to_delete: del kernel_flow[k]
+
+    keys = []
+    pattern = r"^moe_routed_\d+_acti$"
+    for k, v in kernel_flow.items():
+        if re.match(pattern, k):
+            keys.append(k)
+            pass
+        pass
+    compare_list = [[kernel_flow[k]['cfg'].m_size, kernel_flow[k]['cfg'].n_size] for k in keys]
+    unique_list = []
+    unique_id_list = []
+    for i in range(len(compare_list)):
+        obj = compare_list[i]
+        if obj not in unique_list:
+            unique_list.append(obj)
+            unique_id_list.append(i)
+    for i in unique_id_list:
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        pass
+    keys_to_delete = []
+    for i in range(len(keys)):
+        if i not in unique_id_list: keys_to_delete.append(keys[i])
+        pass
+    for k in keys_to_delete: del kernel_flow[k]
+
+    keys = []
+    pattern = r"^moe_routed_\d+_down$"
+    for k, v in kernel_flow.items():
+        if re.match(pattern, k):
+            keys.append(k)
+            pass
+        pass
+    compare_list = [[kernel_flow[k]['cfg'].m_size, kernel_flow[k]['cfg'].n_size, kernel_flow[k]['cfg'].k_size] for k in keys]
+    unique_list = []
+    unique_id_list = []
+    for i in range(len(compare_list)):
+        obj = compare_list[i]
+        if obj not in unique_list:
+            unique_list.append(obj)
+            unique_id_list.append(i)
+    for i in unique_id_list:
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        pass
+    keys_to_delete = []
+    for i in range(len(keys)):
+        if i not in unique_id_list: keys_to_delete.append(keys[i])
+        pass
+    for k in keys_to_delete: del kernel_flow[k]
+
+    return kernel_flow
+    pass
+
+def hbm_plan_summary(plan_in):
+    plan = copy.deepcopy(plan_in)
+    # Remove belonging
+    keys_to_delete = []
+    for k, v in plan.items():
+        if "belongs" in v:
+            keys_to_delete.append(k)
+            pass
+        pass
+    for k in keys_to_delete: del plan[k]
+
+    # Summaries MoE Weights
+    keys_to_delete = []
+    pattern = r"^moe_routed_\d+_up_proj_weight$"
+    size = 0
+    for k, v in plan.items():
+        if re.match(pattern, k):
+            size += v["size"]
+            keys_to_delete.append(k)
+            pass
+        pass
+    for k in keys_to_delete: del plan[k]
+    if len(keys_to_delete) > 0: plan["moe_routed_up_proj_weight"] = {"size" : size}
+
+    keys_to_delete = []
+    pattern = r"^moe_routed_\d+_gate_proj_weight$"
+    size = 0
+    for k, v in plan.items():
+        if re.match(pattern, k):
+            size += v["size"]
+            keys_to_delete.append(k)
+            pass
+        pass
+    for k in keys_to_delete: del plan[k]
+    if len(keys_to_delete) > 0: plan["moe_routed_gate_proj_weight"] = {"size" : size}
+
+    keys_to_delete = []
+    pattern = r"^moe_routed_\d+_down_proj_weight$"
+    size = 0
+    for k, v in plan.items():
+        if re.match(pattern, k):
+            size += v["size"]
+            keys_to_delete.append(k)
+            pass
+        pass
+    for k in keys_to_delete: del plan[k]
+    if len(keys_to_delete) > 0: plan["moe_routed_down_proj_weight"] = {"size" : size}
+
+    #Report
+    cv.show_breakdown(plan, metric='size', unit='KiB', scale_div=1024)
+    pass
+
+def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -277,8 +459,8 @@ def deepseek_decode_layer_plan(llm, work, arch):
     }
     west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size
 
-    kernel_flow["attn_cache_concat"] = {
-        "type"                          : "layout",
+    kernel_flow["attn_split_concat"] = {
+        "type"                          : "split_concat",
         "input1"                        : {"on": "west",    "name": "attn_latqc"},
         "input2"                        : {"on": "south",   "name": "attn_latcr"},
         "output1"                       : {"on": "west",    "name": "attn_latq"},
@@ -526,7 +708,8 @@ def deepseek_decode_layer_plan(llm, work, arch):
     ##################################
     #       13. Normalization        #
     ##################################
-    west_hbm_plan["ffn_norm"] = {
+
+    west_hbm_plan["moe_norm"] = {
         "addr"                          : west_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
@@ -535,17 +718,556 @@ def deepseek_decode_layer_plan(llm, work, arch):
     }
     west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
-    ffn_norm_cfg                        = RMSNorm()
-    ffn_norm_cfg.dtype                  = llm.dtype
-    ffn_norm_cfg.m_size                 = work.batch_size * work.speculative_factor
-    ffn_norm_cfg.n_size                 = llm.embeded_length
-    ffn_norm_cfg.norm_numer             = work.numerical_check_enable
+    moe_norm_cfg                        = RMSNorm()
+    moe_norm_cfg.dtype                  = llm.dtype
+    moe_norm_cfg.m_size                 = work.batch_size * work.speculative_factor
+    moe_norm_cfg.n_size                 = llm.embeded_length
+    moe_norm_cfg.norm_numer             = work.numerical_check_enable
 
-    kernel_flow["ffn_norm"] = {
+    kernel_flow["moe_norm"] = {
         "type"                          : "norm",
         "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "ffn_norm"},
-        "cfg"                           : ffn_norm_cfg
+        "output"                        : {"on": "west",    "name": "moe_norm"},
+        "cfg"                           : moe_norm_cfg
+    }
+
+    ###################################
+    #       14. Shared Experts        #
+    ###################################
+
+    for eid in range(llm.n_shared_experts):
+        prefix = f"moe_shared_{eid}_"
+
+        #Up Projection
+        south_hbm_plan[f"{prefix}up_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
+            "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+
+        west_hbm_plan[f"{prefix}up"] = {
+            "addr"                          : west_hbm_addr,
+            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+        ffn_up_proj                         = SummaGEMM()
+        ffn_up_proj.dtype                   = llm.dtype
+        ffn_up_proj.m_size                  = work.batch_size * work.speculative_factor
+        ffn_up_proj.n_size                  = llm.moe_inter_dim
+        ffn_up_proj.k_size                  = llm.embeded_length
+        ffn_up_proj.resha_x_from_enable     = 0
+        ffn_up_proj.resha_z_to_enable       = 0
+        ffn_up_proj.summa_numer             = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}up"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": "moe_norm"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}up_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}up"},
+            "cfg"                           : ffn_up_proj
+        }
+
+        #Gate Projection
+        south_hbm_plan[f"{prefix}gate_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
+            "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+
+        west_hbm_plan[f"{prefix}gate"] = {
+            "addr"                          : west_hbm_addr,
+            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+        ffn_gate_proj                       = SummaGEMM()
+        ffn_gate_proj.dtype                 = llm.dtype
+        ffn_gate_proj.m_size                = work.batch_size * work.speculative_factor
+        ffn_gate_proj.n_size                = llm.moe_inter_dim
+        ffn_gate_proj.k_size                = llm.embeded_length
+        ffn_gate_proj.resha_x_from_enable   = 0
+        ffn_gate_proj.resha_z_to_enable     = 0
+        ffn_gate_proj.summa_numer           = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}gate"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": "moe_norm"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}gate_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}gate"},
+            "cfg"                           : ffn_gate_proj
+        }
+
+        #Activation
+        west_hbm_plan[f"{prefix}acti"] = {
+            "addr"                          : west_hbm_addr,
+            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+        ffn_acti                            = Activation()
+        ffn_acti.dtype                      = llm.dtype
+        ffn_acti.algo                       = llm.moe_acti_algo
+        ffn_acti.m_size                     = work.batch_size * work.speculative_factor
+        ffn_acti.n_size                     = llm.moe_inter_dim
+        ffn_acti.gate_enable                = 1
+        ffn_acti.bias_enable                = 0
+        ffn_acti.acti_numer                 = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}acti"] = {
+            "type"                          : "acti",
+            "input"                         : {"on": "west",    "name": f"{prefix}up"},
+            "gate"                          : {"on": "west",    "name": f"{prefix}gate"},
+            "output"                        : {"on": "west",    "name": f"{prefix}acti"},
+            "cfg"                           : ffn_acti
+        }
+
+        #Down Projection
+        south_hbm_plan[f"{prefix}down_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.moe_inter_dim,  llm.embeded_length),
+            "size"                          : llm.moe_inter_dim * llm.embeded_length * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
+
+        west_hbm_plan[f"{prefix}down"] = {
+            "addr"                          : west_hbm_addr,
+            "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
+            "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
+            "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+            "tensor"                        : None
+        }
+        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+
+        ffn_down_proj                       = SummaGEMM()
+        ffn_down_proj.dtype                 = llm.dtype
+        ffn_down_proj.m_size                = work.batch_size * work.speculative_factor
+        ffn_down_proj.n_size                = llm.embeded_length
+        ffn_down_proj.k_size                = llm.moe_inter_dim
+        ffn_down_proj.resha_x_from_enable   = 0
+        ffn_down_proj.resha_z_to_enable     = 0
+        ffn_down_proj.summa_numer           = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}down"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": f"{prefix}acti"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}down_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}down"},
+            "cfg"                           : ffn_gate_proj
+        }
+        pass
+
+    #####################################
+    #       15. MoE Route Gating        #
+    #####################################
+
+    south_hbm_plan["moe_rgate_weight"] = {
+        "addr"                          : south_hbm_addr,
+        "shape"                         :(llm.embeded_length,  llm.n_routed_experts),
+        "size"                          : llm.embeded_length * llm.n_routed_experts * elem_size,
+        "tensor"                        : None
+    }
+    south_hbm_addr                      += llm.embeded_length * llm.n_routed_experts * elem_size
+
+    west_hbm_plan["moe_rgate"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_routed_experts),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_routed_experts),
+        "size"                          : work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size
+
+    moe_rgate_proj                      = SummaGEMM()
+    moe_rgate_proj.dtype                = llm.dtype
+    moe_rgate_proj.m_size               = work.batch_size * work.speculative_factor
+    moe_rgate_proj.n_size               = llm.n_routed_experts
+    moe_rgate_proj.k_size               = llm.embeded_length
+    moe_rgate_proj.resha_x_from_enable  = 0
+    moe_rgate_proj.resha_z_to_enable    = 0
+    moe_rgate_proj.summa_numer          = work.numerical_check_enable
+
+    kernel_flow["moe_rgate_proj"] = {
+        "type"                          : "gemm",
+        "input"                         : {"on": "west",    "name": "moe_norm"},
+        "weight"                        : {"on": "south",   "name": "moe_rgate_weight"},
+        "output"                        : {"on": "west",    "name": "moe_rgate"},
+        "cfg"                           : moe_rgate_proj
+    }
+
+    ###################################
+    #       16. MoE Route TopK        #
+    ###################################
+
+    D, P, SCORE = gen_moe_gate_index(work.batch_size * work.speculative_factor, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
+
+    south_hbm_plan["moe_route_val"] = {
+        "addr"                          : south_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
+        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size,
+        "tensor"                        : None
+    }
+    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size
+
+    south_hbm_plan["moe_route_idx"] = {
+        "addr"                          : south_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
+        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
+        "is_index"                      : True,
+        "tensor"                        : D
+    }
+    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+
+    moe_rgate_topk                      = MoEGate()
+    moe_rgate_topk.dtype                = llm.dtype
+    moe_rgate_topk.num_tokens           = work.batch_size * work.speculative_factor
+    moe_rgate_topk.num_routed_experts   = llm.n_routed_experts
+    moe_rgate_topk.num_active_experts   = llm.n_activated_experts
+    moe_rgate_topk.moeg_numer           = work.numerical_check_enable
+
+    kernel_flow["moe_rgate_topk"] = {
+        "type"                          : "moeg",
+        "input"                         : {"on": "west",    "name": "moe_rgate"},
+        "output_val"                    : {"on": "south",   "name": "moe_route_val"},
+        "output_idx"                    : {"on": "south",   "name": "moe_route_idx"},
+        "cfg"                           : moe_rgate_topk
+    }
+
+    #################################
+    #       17. MoE Dispatch        #
+    #################################
+
+    west_hbm_plan["moe_dispatch_buffer"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(llm.n_routed_experts,  work.batch_size * work.speculative_factor,  llm.embeded_length),
+        "shape"                         :(llm.n_routed_experts * work.batch_size * work.speculative_factor,  llm.embeded_length),
+        "size"                          : llm.n_routed_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += llm.n_routed_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+
+    #Generate Memory Notations
+    for eid in range(llm.n_routed_experts):
+        prefix = f"moe_routed_{eid}_"
+        num_tokens = SCORE[eid].item()
+        if num_tokens == 0:
+            continue
+            pass
+
+        west_hbm_plan[f"{prefix}input"] = {
+            "addr"                          : west_hbm_plan["moe_dispatch_buffer"]["addr"] + eid * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+            "view"                          :(num_tokens,  llm.embeded_length),
+            "shape"                         :(num_tokens,  llm.embeded_length),
+            "size"                          : num_tokens * llm.embeded_length * elem_size,
+            "belongs"                       : "moe_dispatch_buffer",
+            "tensor"                        : None
+        }
+        pass
+
+    south_hbm_plan["moe_route_pos"] = {
+        "addr"                          : south_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
+        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
+        "is_index"                      : True,
+        "tensor"                        : P
+    }
+    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+
+    moe_dispatch                        = MoEDispatch()
+    moe_dispatch.dtype                  = llm.dtype
+    moe_dispatch.num_tokens             = work.batch_size * work.speculative_factor
+    moe_dispatch.embedded_length        = llm.embeded_length
+    moe_dispatch.num_routed_experts     = llm.n_routed_experts
+    moe_dispatch.num_active_experts     = llm.n_activated_experts
+    moe_dispatch.nodis_enable           = 1
+    moe_dispatch.moed_numer             = work.numerical_check_enable
+
+    kernel_flow["moe_dispatch"] = {
+        "type"                          : "moed",
+        "input"                         : {"on": "west",    "name": "moe_norm"},
+        "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
+        "info"                          : {"merged_output" : {"on": "west",    "name": "moe_dispatch_buffer"}},
+        "output_pos"                    : {"on": "south",   "name": "moe_route_pos"},
+        "cfg"                           : moe_dispatch
+    }
+
+    for eid in range(llm.n_routed_experts):
+        prefix = f"moe_routed_{eid}_"
+        num_tokens = SCORE[eid].item()
+        if num_tokens == 0:
+            continue
+            pass
+        kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
+        pass
+
+    ###################################
+    #       18. Routed Experts        #
+    ###################################
+
+    #Shared Memory Spaces
+    west_hbm_plan["moe_routed_up"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+    west_hbm_plan["moe_routed_gate"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+    west_hbm_plan["moe_routed_acti"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+
+    for eid in range(llm.n_routed_experts):
+        prefix = f"moe_routed_{eid}_"
+        num_tokens = SCORE[eid].item()
+        if num_tokens == 0:
+            continue
+            pass
+
+        #Up Projection
+        south_hbm_plan[f"{prefix}up_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
+            "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+
+        west_hbm_plan[f"{prefix}up"] = {
+            "addr"                          : west_hbm_plan["moe_routed_up"]["addr"],
+            "view"                          :(num_tokens,  llm.moe_inter_dim),
+            "shape"                         :(num_tokens,  llm.moe_inter_dim),
+            "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
+            "belongs"                       : "moe_routed_up",
+            "tensor"                        : None
+        }
+
+        ffn_up_proj                         = SummaGEMM()
+        ffn_up_proj.dtype                   = llm.dtype
+        ffn_up_proj.m_size                  = num_tokens
+        ffn_up_proj.n_size                  = llm.moe_inter_dim
+        ffn_up_proj.k_size                  = llm.embeded_length
+        ffn_up_proj.resha_x_from_enable     = 0
+        ffn_up_proj.resha_z_to_enable       = 0
+        ffn_up_proj.summa_numer             = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}up"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": f"{prefix}input"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}up_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}up"},
+            "cfg"                           : ffn_up_proj
+        }
+
+        #Gate Projection
+        south_hbm_plan[f"{prefix}gate_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
+            "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+
+        west_hbm_plan[f"{prefix}gate"] = {
+            "addr"                          : west_hbm_plan["moe_routed_gate"]["addr"],
+            "view"                          :(num_tokens,  llm.moe_inter_dim),
+            "shape"                         :(num_tokens,  llm.moe_inter_dim),
+            "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
+            "belongs"                       : "moe_routed_gate",
+            "tensor"                        : None
+        }
+
+        ffn_gate_proj                       = SummaGEMM()
+        ffn_gate_proj.dtype                 = llm.dtype
+        ffn_gate_proj.m_size                = num_tokens
+        ffn_gate_proj.n_size                = llm.moe_inter_dim
+        ffn_gate_proj.k_size                = llm.embeded_length
+        ffn_gate_proj.resha_x_from_enable   = 0
+        ffn_gate_proj.resha_z_to_enable     = 0
+        ffn_gate_proj.summa_numer           = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}gate"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": f"{prefix}input"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}gate_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}gate"},
+            "cfg"                           : ffn_gate_proj
+        }
+
+        #Activation
+        west_hbm_plan[f"{prefix}acti"] = {
+            "addr"                          : west_hbm_plan["moe_routed_acti"]["addr"],
+            "view"                          :(num_tokens,  llm.moe_inter_dim),
+            "shape"                         :(num_tokens,  llm.moe_inter_dim),
+            "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
+            "belongs"                       : "moe_routed_acti",
+            "tensor"                        : None
+        }
+
+        ffn_acti                            = Activation()
+        ffn_acti.dtype                      = llm.dtype
+        ffn_acti.algo                       = llm.moe_acti_algo
+        ffn_acti.m_size                     = num_tokens
+        ffn_acti.n_size                     = llm.moe_inter_dim
+        ffn_acti.gate_enable                = 1
+        ffn_acti.bias_enable                = 0
+        ffn_acti.acti_numer                 = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}acti"] = {
+            "type"                          : "acti",
+            "input"                         : {"on": "west",    "name": f"{prefix}up"},
+            "gate"                          : {"on": "west",    "name": f"{prefix}gate"},
+            "output"                        : {"on": "west",    "name": f"{prefix}acti"},
+            "cfg"                           : ffn_acti
+        }
+
+        #Down Projection
+        south_hbm_plan[f"{prefix}down_proj_weight"] = {
+            "addr"                          : south_hbm_addr,
+            "shape"                         :(llm.moe_inter_dim,  llm.embeded_length),
+            "size"                          : llm.moe_inter_dim * llm.embeded_length * elem_size,
+            "tensor"                        : None
+        }
+        south_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
+
+        ffn_down_proj                       = SummaGEMM()
+        ffn_down_proj.dtype                 = llm.dtype
+        ffn_down_proj.m_size                = num_tokens
+        ffn_down_proj.n_size                = llm.embeded_length
+        ffn_down_proj.k_size                = llm.moe_inter_dim
+        ffn_down_proj.resha_x_from_enable   = 0
+        ffn_down_proj.resha_z_to_enable     = 0
+        ffn_down_proj.summa_numer           = work.numerical_check_enable
+
+        kernel_flow[f"{prefix}down"] = {
+            "type"                          : "gemm",
+            "input"                         : {"on": "west",    "name": f"{prefix}acti"},
+            "weight"                        : {"on": "south",   "name": f"{prefix}down_proj_weight"},
+            "output"                        : {"on": "west",    "name": f"{prefix}input"},
+            "cfg"                           : ffn_gate_proj
+        }
+        pass
+
+    ################################
+    #       19. MoE Combine        #
+    ################################
+
+    west_hbm_plan["moe_route_output"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
+        "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
+        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+
+    moe_combine                         = MoECombine()
+    moe_combine.dtype                   = llm.dtype
+    moe_combine.num_tokens              = work.batch_size * work.speculative_factor
+    moe_combine.embedded_length         = llm.embeded_length
+    moe_combine.num_routed_experts      = llm.n_routed_experts
+    moe_combine.num_active_experts      = llm.n_activated_experts
+    moe_combine.moec_numer              = work.numerical_check_enable
+
+    kernel_flow["moe_combine"] = {
+        "type"                          : "moec",
+        "input_val"                     : {"on": "south",   "name": "moe_route_val"},
+        "input_pos"                     : {"on": "south",   "name": "moe_route_pos"},
+        "info"                          : {"merged_input" : {"on": "west",    "name": "moe_dispatch_buffer"}},
+        "output"                        : {"on": "west",    "name": "moe_route_output"},
+        "cfg"                           : moe_combine
+    }
+
+    for eid in range(llm.n_routed_experts):
+        prefix = f"moe_routed_{eid}_"
+        num_tokens = SCORE[eid].item()
+        if num_tokens == 0:
+            continue
+            pass
+        kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
+        pass
+
+    ############################################################
+    #       20. Merge Shared and Routed Experts Results        #
+    ############################################################
+
+    west_hbm_plan["moe_o"] = {
+        "addr"                          : west_hbm_addr,
+        "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
+        "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
+        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+
+    moe_share_add_route                = Activation()
+    moe_share_add_route.dtype          = llm.dtype
+    moe_share_add_route.algo           = 'none'
+    moe_share_add_route.m_size         = work.batch_size * work.speculative_factor
+    moe_share_add_route.n_size         = llm.embeded_length
+    moe_share_add_route.gate_enable    = 0
+    moe_share_add_route.bias_enable    = 1
+    moe_share_add_route.acti_numer     = work.numerical_check_enable
+
+    kernel_flow["moe_share_add_route"] = {
+        "type"                          : "addi",
+        "input"                         : {"on": "west",    "name": "moe_shared_0_down"},
+        "bias"                          : {"on": "west",    "name": "moe_route_output"},
+        "output"                        : {"on": "west",    "name": "moe_o"},
+        "cfg"                           : moe_share_add_route
+    }
+
+    ####################################
+    #       21. ResNet Addition        #
+    ####################################
+
+    moe_resnet                          = Activation()
+    moe_resnet.dtype                    = llm.dtype
+    moe_resnet.algo                     = 'none'
+    moe_resnet.m_size                   = work.batch_size * work.speculative_factor
+    moe_resnet.n_size                   = llm.embeded_length
+    moe_resnet.gate_enable              = 0
+    moe_resnet.bias_enable              = 1
+    moe_resnet.acti_numer               = work.numerical_check_enable
+
+    kernel_flow["moe_resnet"] = {
+        "type"                          : "addi",
+        "input"                         : {"on": "south",   "name": "layer_input"},
+        "bias"                          : {"on": "west",    "name": "moe_o"},
+        "output"                        : {"on": "south",   "name": "layer_input"},
+        "cfg"                           : moe_resnet
     }
 
     return kernel_flow, west_hbm_plan, south_hbm_plan

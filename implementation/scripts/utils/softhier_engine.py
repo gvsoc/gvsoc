@@ -36,6 +36,7 @@ from datetime import datetime
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import utils.kernel_configuration as kc
+import kernels.auto_config.gemm_auto as gemm_optimizer
 
 sw_dict = {
     "gemm" : "SummaGEMM",
@@ -91,10 +92,15 @@ class SoftHier(object):
             pass
         pass
 
-    def record_info(self, info_dict):
+    def record_info(self, info_dict, subdir = None):
         #Record information
+        prefix = self.output_folder_info
+        if subdir != None:
+            prefix = self.output_folder_info / subdir
+            os.system(f"mkdir -p {prefix}")
+            pass
         for k, v in info_dict.items():
-            file_name  = self.output_folder_info / f"{k}.yaml"
+            file_name  = prefix / f"{k}.yaml"
             with open(file_name, "w") as f:
                 yaml.dump(v, f)
             pass
@@ -125,24 +131,16 @@ class SoftHier(object):
         self.record_info(info_dict)
         pass
 
-    def gemm_auto(self, cfg, data, name):
+    def gemm_auto(self, cfg, data, name, dry_run = False):
         """
         Automatic Hyper-parameteric GEMM
         """
         # Check Configuration and Automatic Tiling/Scheduling
         app_path = self.kernel_root / "SummaGEMM"
 
-        # [TODO] need to change this naive check and do automatic parameterization
-        assert cfg.summa_scale_x == self.arch.num_cluster_x
-        assert cfg.summa_scale_y == self.arch.num_cluster_y
-        assert cfg.m_size > (cfg.summa_scale_y * cfg.m_tile)
-        assert cfg.n_size > (cfg.summa_scale_x * cfg.n_tile)
-        assert cfg.k_size > cfg.k_tile
-        assert cfg.summa_group_reduce == 0
-        assert cfg.summa_group_gap_x  == 0
-        assert cfg.summa_group_gap_w  == 0
-        assert cfg.summa_group_gap_z  == 0
-        # time.sleep(1); return {"runtime" : 100}
+        # Naive check and do automatic parameterization
+        cfg = gemm_optimizer.opt(cfg, self.arch)
+        self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
         gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
@@ -215,24 +213,26 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-        return result
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
         pass
 
-    def norm(self, cfg, data, name):
+    def norm(self, cfg, data, name, dry_run = False):
         """
         Normalizaiton
         """
         # Check Configuration
         app_path = self.kernel_root / "RMSNorm"
-        # time.sleep(1); return {"runtime" : 100}
+        self.record_info({name : cfg}, subdir="kernels")
+
         # Generate Configuration
         norm_cfg_h = self.kernel_root / "RMSNorm" / "include" / "norm.h"
         kc.generate_config_C_header("NORM", cfg, norm_cfg_h, cfg.dtype, cfg.norm_numer)
@@ -258,25 +258,26 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-        return result
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
         pass
 
-    def rope(self, cfg, data, name):
+    def rope(self, cfg, data, name, dry_run = False):
         """
         RoPE
         """
         # Check Configuration
         app_path = self.kernel_root / "RoPE"
         assert cfg.m_size % cfg.contiguous_length == 0
-        # time.sleep(1); return {"runtime" : 100}
+        self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
         rope_cfg_h = self.kernel_root / "RoPE" / "include" / "rope.h"
@@ -309,18 +310,19 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-        return result
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
         pass
 
-    def acti(self, cfg, data, name):
+    def acti(self, cfg, data, name, dry_run = False):
         """
         Activation
         """
@@ -328,7 +330,7 @@ class SoftHier(object):
         app_path = self.kernel_root / "Activation"
         algo_list = ['sigmoid', 'relu', 'silu']
         assert cfg.algo in algo_list
-        # time.sleep(1); return {"runtime" : 100}
+        self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
         acti_cfg_h = self.kernel_root / "Activation" / "include" / "acti.h"
@@ -359,18 +361,19 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-        return result
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
         pass
 
-    def addi(self, cfg, data, name):
+    def addi(self, cfg, data, name, dry_run = False):
         """
         Addition
         """
@@ -379,7 +382,7 @@ class SoftHier(object):
         assert cfg.algo == 'none'
         assert cfg.gate_enable == 0
         assert cfg.bias_enable == 1
-        # time.sleep(1); return {"runtime" : 100}
+        self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
         acti_cfg_h = self.kernel_root / "Activation" / "include" / "acti.h"
@@ -410,18 +413,19 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-        return result
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
         pass
 
-    def flat_attn_auto(self, cfg, data, name):
+    def flat_attn_auto(self, cfg, data, name, dry_run = False):
         """
         Automatic Hyper-parameteric FlatAttention
         """
@@ -437,7 +441,7 @@ class SoftHier(object):
             pass
         assert cfg.kv_sequence_length % cfg.flatten_shape_x == 0
         assert (cfg.q_sequence_length * cfg.speculative_length * (cfg.num_head // cfg.num_head_group)) % cfg.flatten_shape_x == 0
-        # time.sleep(1); return {"runtime" : 100}
+        self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
         attn_cfg_h = self.kernel_root / "FlatAttention" / "include" / "attn.h"
@@ -468,14 +472,21 @@ class SoftHier(object):
         # print(f"[System Call] {cmd}")
         assert os.system(cmd) == 0
 
-        # Execute SoftHier Simulation
-        cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
 
-        # Anaylze Result
-        result = {}
-        result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
+        pass
+
+    def split_concat(self, cfg, data, name, dry_run = False):
+        #[TODO] Implementation
+        result = {"runtime" : 0}
         return result
         pass
         
