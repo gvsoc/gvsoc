@@ -19,8 +19,21 @@ TARGETS ?= rv64 \
     chimera \
     snitch_testbench
 
-BUILDDIR ?= build
-INSTALLDIR ?= install
+ifndef BUILDDIR
+ifdef GVSOC_WORKDIR
+BUILDDIR = $(GVSOC_WORKDIR)/build
+else
+BUILDDIR = build
+endif
+endif
+
+ifndef INSTALLDIR
+ifdef GVSOC_WORKDIR
+INSTALLDIR = $(GVSOC_WORKDIR)/install
+else
+INSTALLDIR = install
+endif
+endif
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 

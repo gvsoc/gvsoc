@@ -17,7 +17,7 @@ TEST_TARGETS ?= \
     snitch_testbench
 
 GVTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
-GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit
+GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit summary
 
 
 
