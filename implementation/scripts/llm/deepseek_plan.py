@@ -432,6 +432,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     attn_rope_cr.m_size                 = work.batch_size * work.speculative_factor
     attn_rope_cr.n_size                 = llm.rope_head_dim
     attn_rope_cr.maximun_seqlen         = llm.max_sequence_length
+    attn_rope_cr.contiguous_length      = work.speculative_factor
     attn_rope_cr.view_enable            = 0
     attn_rope_cr.rope_numer             = work.numerical_check_enable
 
@@ -571,6 +572,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     attn_rope_qr.m_size                 = work.batch_size * work.speculative_factor
     attn_rope_qr.n_size                 = llm.num_heads * llm.rope_head_dim
     attn_rope_qr.maximun_seqlen         = llm.max_sequence_length
+    attn_rope_qr.contiguous_length      = work.speculative_factor
     attn_rope_qr.view_enable            = 0
     attn_rope_qr.rope_numer             = work.numerical_check_enable
 
@@ -923,6 +925,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
         "tensor"                        : None
     }
     south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size
+    south_hbm_addr                      = align_addr(south_hbm_addr)
 
     south_hbm_plan["moe_route_idx"] = {
         "addr"                          : south_hbm_addr,
@@ -933,6 +936,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
         "tensor"                        : D
     }
     south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+    south_hbm_addr                      = align_addr(south_hbm_addr)
 
     moe_rgate_topk                      = MoEGate()
     moe_rgate_topk.dtype                = llm.dtype
@@ -989,6 +993,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
         "tensor"                        : P
     }
     south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+    south_hbm_addr                      = align_addr(south_hbm_addr)
 
     moe_dispatch                        = MoEDispatch()
     moe_dispatch.dtype                  = llm.dtype
@@ -1204,6 +1209,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     kernel_flow["moe_combine"] = {
         "type"                          : "moec",
         "input_val"                     : {"on": "south",   "name": "moe_route_val"},
+        "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
         "input_pos"                     : {"on": "south",   "name": "moe_route_pos"},
         "info"                          : {"merged_input" : {"on": "west",    "name": "moe_dispatch_buffer"}},
         "output"                        : {"on": "west",    "name": "moe_route_output"},

@@ -22,7 +22,7 @@ class Model:
 
         #Basic Configuration
         self.model_name                 = "DeepSeekV3-671B"
-        self.dtype                      = 'fp16'
+        self.dtype                      = 'fp8'
         self.num_layers                 = 61
         self.embeded_length             = 7168
         self.max_sequence_length        = 8192

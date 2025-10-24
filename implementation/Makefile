@@ -17,7 +17,7 @@ pfto:
 	@echo "Compiling SoftHier HW & SW for attention ..."
 	make -C ${SH_DIR} pfto
 
-kernel-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean moeg-clean moed-clean moec-clean
+kernel-clean: attn-clean gemm-clean norm-clean rope-clean acti-clean moeg-clean moed-clean moec-clean tmla-clean
 clean: kernel-clean llm-clean
 
 #####################
@@ -465,9 +465,14 @@ ifdef work
 	WORK_FILE = $(realpath $(work))
 endif
 
+TEST_FILE ?= ${CUR_DIR}/scripts/llm/flow.py
+ifdef test
+	TEST_FILE = $(realpath $(test))
+endif
+
 llm:
 	mkdir -p ${CUR_DIR}/out
-	python3 ${CUR_DIR}/scripts/llm/flow.py \
+	python3 ${TEST_FILE} \
 			${SH_DIR} \
 			${CUR_DIR}/sw/ \
 			${CUR_DIR}/out/ \

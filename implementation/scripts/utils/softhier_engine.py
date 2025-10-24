@@ -37,6 +37,8 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import utils.kernel_configuration as kc
 import kernels.auto_config.gemm_auto as gemm_optimizer
+import kernels.auto_config.tmla_auto as tmla_optimizer
+import kernels.auto_config.moex_auto as moex_optimizer
 
 sw_dict = {
     "gemm" : "SummaGEMM",
@@ -137,92 +139,98 @@ class SoftHier(object):
         """
         # Check Configuration and Automatic Tiling/Scheduling
         app_path = self.kernel_root / "SummaGEMM"
+        runtime = 0
+        result = {}
 
         # Naive check and do automatic parameterization
-        cfg = gemm_optimizer.opt(cfg, self.arch)
-        self.record_info({name : cfg}, subdir="kernels")
+        cfg_list = gemm_optimizer.opt(cfg, self.arch)
+        for cfg in cfg_list:
+            self.record_info({f"{name}.{cfg.strategy}" : cfg}, subdir="kernels")
 
-        # Generate Configuration
-        gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
-        appendix = []
-        if cfg.resha_x_from_enable:
-            resha_x_m_size = cfg.resha_x_from_m
-            resha_x_k_size = (cfg.m_size * cfg.k_size) // cfg.resha_x_from_m
-            assert cfg.m_size % cfg.m_tile == 0, f"X Reshaped Enabled, We must make sure M size and tile are aligned"
-            assert cfg.k_size % cfg.k_tile == 0, f"X Reshaped Enabled, We must make sure K size and tile are aligned"
-            assert resha_x_k_size > 0, f"Invalide X Reshape {resha_x_m_size}, {resha_x_k_size}"
-            assert resha_x_m_size >= cfg.m_tile, f"X Reshape Cross M Tiles"
-            assert resha_x_k_size >= cfg.k_tile, f"X Reshape Cross K Tiles"
-            assert resha_x_m_size % cfg.m_tile == 0, f"X Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
-            assert resha_x_k_size % cfg.k_tile == 0, f"X Reshaped Enabled, We must make sure reshaped K size and tile are aligned"
-            if cfg.resha_x_from_m > cfg.m_size:
-                # Tall
-                appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
-                appendix.append(f"#define GEMM_RESHA_X_FROM_TALL")
-            elif cfg.resha_x_from_m < cfg.m_size:
-                # Thin
-                appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
-                appendix.append(f"#define GEMM_RESHA_X_FROM_THIN")
-            else:
-                raise RuntimeError(f"X Reshaped Enabled But Dimension Not Changed")
+            # Generate Configuration
+            gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
+            appendix = []
+            if cfg.resha_x_from_enable:
+                resha_x_m_size = cfg.resha_x_from_m
+                resha_x_k_size = (cfg.m_size * cfg.k_size) // cfg.resha_x_from_m
+                assert cfg.m_size % cfg.m_tile == 0, f"X Reshaped Enabled, We must make sure M size and tile are aligned"
+                assert cfg.k_size % cfg.k_tile == 0, f"X Reshaped Enabled, We must make sure K size and tile are aligned"
+                assert resha_x_k_size > 0, f"Invalide X Reshape {resha_x_m_size}, {resha_x_k_size}"
+                assert resha_x_m_size >= cfg.m_tile, f"X Reshape Cross M Tiles"
+                assert resha_x_k_size >= cfg.k_tile, f"X Reshape Cross K Tiles"
+                assert resha_x_m_size % cfg.m_tile == 0, f"X Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
+                assert resha_x_k_size % cfg.k_tile == 0, f"X Reshaped Enabled, We must make sure reshaped K size and tile are aligned"
+                if cfg.resha_x_from_m > cfg.m_size:
+                    # Tall
+                    appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
+                    appendix.append(f"#define GEMM_RESHA_X_FROM_TALL")
+                elif cfg.resha_x_from_m < cfg.m_size:
+                    # Thin
+                    appendix.append(f"#define GEMM_RESHAPE_X_FROM_K ((uint64_t){resha_x_k_size})")
+                    appendix.append(f"#define GEMM_RESHA_X_FROM_THIN")
+                else:
+                    raise RuntimeError(f"X Reshaped Enabled But Dimension Not Changed")
+                    pass
                 pass
-            pass
 
-        if cfg.resha_z_to_enable:
-            resha_z_m_size = cfg.resha_z_to_m
-            resha_z_n_size = (cfg.m_size * cfg.n_size) // cfg.resha_z_to_m
-            assert cfg.m_size % cfg.m_tile == 0, f"Z Reshaped Enabled, We must make sure M size and tile are aligned"
-            assert cfg.n_size % cfg.n_tile == 0, f"Z Reshaped Enabled, We must make sure N size and tile are aligned"
-            assert resha_z_n_size > 0, f"Invalide Z Reshape {resha_z_m_size}, {resha_z_n_size}"
-            assert resha_z_m_size >= cfg.m_tile, f"Z Reshape Cross M Tiles"
-            assert resha_z_n_size >= cfg.n_tile, f"Z Reshape Cross N Tiles"
-            assert resha_z_m_size % cfg.m_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
-            assert resha_z_n_size % cfg.n_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped N size and tile are aligned"
-            if cfg.resha_z_to_m > cfg.m_size:
-                # Tall
-                appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
-                appendix.append(f"#define GEMM_RESHA_Z_TO_TALL")
-            elif cfg.resha_z_to_m < cfg.m_size:
-                # Thin
-                appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
-                appendix.append(f"#define GEMM_RESHA_Z_TO_THIN")
-            else:
-                raise RuntimeError(f"Z Reshaped Enabled But Dimension Not Changed")
+            if cfg.resha_z_to_enable:
+                resha_z_m_size = cfg.resha_z_to_m
+                resha_z_n_size = (cfg.m_size * cfg.n_size) // cfg.resha_z_to_m
+                assert cfg.m_size % cfg.m_tile == 0, f"Z Reshaped Enabled, We must make sure M size and tile are aligned"
+                assert cfg.n_size % cfg.n_tile == 0, f"Z Reshaped Enabled, We must make sure N size and tile are aligned"
+                assert resha_z_n_size > 0, f"Invalide Z Reshape {resha_z_m_size}, {resha_z_n_size}"
+                assert resha_z_m_size >= cfg.m_tile, f"Z Reshape Cross M Tiles"
+                assert resha_z_n_size >= cfg.n_tile, f"Z Reshape Cross N Tiles"
+                assert resha_z_m_size % cfg.m_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped M size and tile are aligned"
+                assert resha_z_n_size % cfg.n_tile == 0, f"Z Reshaped Enabled, We must make sure reshaped N size and tile are aligned"
+                if cfg.resha_z_to_m > cfg.m_size:
+                    # Tall
+                    appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
+                    appendix.append(f"#define GEMM_RESHA_Z_TO_TALL")
+                elif cfg.resha_z_to_m < cfg.m_size:
+                    # Thin
+                    appendix.append(f"#define GEMM_RESHAPE_Z_TO_N ((uint64_t){resha_z_n_size})")
+                    appendix.append(f"#define GEMM_RESHA_Z_TO_THIN")
+                else:
+                    raise RuntimeError(f"Z Reshaped Enabled But Dimension Not Changed")
+                    pass
                 pass
-            pass
-        kc.generate_config_C_header("GEMM", cfg, gemm_cfg_h, cfg.dtype, cfg.summa_numer, appendix=appendix)
+            kc.generate_config_C_header("GEMM", cfg, gemm_cfg_h, cfg.dtype, cfg.summa_numer, appendix=appendix)
 
-        # Generate Preload C Header File
-        gemm_pld_h = self.kernel_root / "SummaGEMM" / "include" / "preload.h"
-        X_addr = data["input"]["addr"]
-        W_addr = data["weight"]["addr"]
-        Z_eaddr = data["output"]["addr"]
-        Z_gaddr = Z_eaddr
-        with open(gemm_pld_h, 'w') as file:
-            file.write('#ifndef _GEMM_PRELOAD_H_\n')
-            file.write('#define _GEMM_PRELOAD_H_\n\n')
-            file.write(f'#define {"X_addr".upper()} ((uint64_t){X_addr: #x})\n')
-            file.write(f'#define {"Z_eaddr".upper()} ((uint64_t){Z_eaddr: #x})\n')
-            file.write(f'#define {"W_addr".upper()} ((uint64_t){W_addr: #x})\n')
-            file.write(f'#define {"Z_gaddr".upper()} ((uint64_t){Z_gaddr: #x})\n')
-            file.write('\n#endif // _GEMM_PRELOAD_H_\n')
-            file.close()
+            # Generate Preload C Header File
+            gemm_pld_h = self.kernel_root / "SummaGEMM" / "include" / "preload.h"
+            X_addr = data["input"]["addr"]
+            W_addr = data["weight"]["addr"]
+            Z_eaddr = data["output"]["addr"]
+            Z_gaddr = Z_eaddr
+            with open(gemm_pld_h, 'w') as file:
+                file.write('#ifndef _GEMM_PRELOAD_H_\n')
+                file.write('#define _GEMM_PRELOAD_H_\n\n')
+                file.write(f'#define {"X_addr".upper()} ((uint64_t){X_addr: #x})\n')
+                file.write(f'#define {"Z_eaddr".upper()} ((uint64_t){Z_eaddr: #x})\n')
+                file.write(f'#define {"W_addr".upper()} ((uint64_t){W_addr: #x})\n')
+                file.write(f'#define {"Z_gaddr".upper()} ((uint64_t){Z_gaddr: #x})\n')
+                file.write('\n#endif // _GEMM_PRELOAD_H_\n')
+                file.close()
 
-        # Compile SW
-        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
-        # print(f"[System Call] {cmd}")
-        assert os.system(cmd) == 0
-
-        if not dry_run:
-            # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # Compile SW
+            cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}.{cfg.strategy}_sw.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
-            # Anaylze Result
-            result = {}
-            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
-            return result
+            if not dry_run:
+                # Execute SoftHier Simulation
+                cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.{cfg.strategy}.log 2>&1"
+                # print(f"[System Call] {cmd}")
+                assert os.system(cmd) == 0
+
+                # Anaylze Result
+                try_runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.{cfg.strategy}.log")
+                runtime = try_runtime if try_runtime > runtime else runtime
+                pass
+            pass
+        result["runtime"] = runtime
+        return result
         pass
 
     def norm(self, cfg, data, name, dry_run = False):
@@ -484,7 +492,227 @@ class SoftHier(object):
             return result
         pass
 
+    def flat_mla_auto(self, cfg, data, name, dry_run = False):
+        """
+        Automatic Hyper-parameteric FlatMLA
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "FlatMLA"
+
+        # Naive check and do automatic parameterization
+        cfg = tmla_optimizer.opt(cfg, self.arch)
+        self.record_info({name : cfg}, subdir="kernels")
+
+        # Generate Configuration
+        tmla_cfg_h = self.kernel_root / "FlatMLA" / "include" / "tmla.h"
+        kc.generate_config_C_header("TMLA", cfg, tmla_cfg_h, cfg.dtype, cfg.flatten_numer)
+
+        # Generate Preload C Header File
+        tmla_pld_h = self.kernel_root / "FlatMLA" / "include" / "preload.h"
+        QN_addr = data["qn"]["addr"]
+        QR_addr = data["qr"]["addr"]
+        O_eaddr = data["o"]["addr"]
+        O_gaddr = O_eaddr
+        CN_addr = data["cn"]["addr"]
+        CR_addr = data["cr"]["addr"]
+        with open(tmla_pld_h, 'w') as file:
+            file.write('#ifndef _TMLA_PRELOAD_H_\n')
+            file.write('#define _TMLA_PRELOAD_H_\n\n')
+            file.write(f'#define {"QN_addr".upper()} ((uint64_t){QN_addr: #x})\n')
+            file.write(f'#define {"QR_addr".upper()} ((uint64_t){QR_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write(f'#define {"CN_addr".upper()} ((uint64_t){CN_addr: #x})\n')
+            file.write(f'#define {"CR_addr".upper()} ((uint64_t){CR_addr: #x})\n')
+            file.write('\n#endif // _TMLA_PRELOAD_H_\n')
+            file.close()
+
+        # [TODO] Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
+
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
+        pass
+
+    def moe_gate_topk(self, cfg, data, name, dry_run = False):
+        """
+        MoE Gate TopK
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "MoEGate"
+        cfg = moex_optimizer.opt(cfg, self.arch)
+        self.record_info({name : cfg}, subdir="kernels")
+
+        # Generate Configuration
+        moeg_cfg_h = self.kernel_root / "MoEGate" / "include" / "moeg.h"
+        kc.generate_config_C_header("MOEG", cfg, moeg_cfg_h, cfg.dtype, cfg.moeg_numer)
+
+        # Generate Preload C Header File
+        moeg_pld_h = self.kernel_root / "MoEGate" / "include" / "preload.h"
+        I_addr  = data['input']['addr']
+        V_eaddr = data['output_val']['addr']
+        V_gaddr = V_eaddr
+        D_eaddr = data['output_idx']['addr']
+        D_gaddr = D_eaddr
+        with open(moeg_pld_h, 'w') as file:
+            file.write('#ifndef _MOEG_PRELOAD_H_\n')
+            file.write('#define _MOEG_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"V_eaddr".upper()} ((uint64_t){V_eaddr: #x})\n')
+            file.write(f'#define {"V_gaddr".upper()} ((uint64_t){V_gaddr: #x})\n')
+            file.write(f'#define {"D_eaddr".upper()} ((uint64_t){D_eaddr: #x})\n')
+            file.write(f'#define {"D_gaddr".upper()} ((uint64_t){D_gaddr: #x})\n')
+            file.write('\n#endif // _MOEG_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
+
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
+        pass
+
+    def moe_dispatch(self, cfg, data, name, dry_run = False):
+        """
+        MoE Token Dispatch
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "MoEDispatch"
+        cfg = moex_optimizer.opt(cfg, self.arch)
+        self.record_info({name : cfg}, subdir="kernels")
+
+        # Generate Configuration
+        moed_cfg_h = self.kernel_root / "MoEDispatch" / "include" / "moed.h"
+        kc.generate_config_C_header("MOED", cfg, moed_cfg_h, cfg.dtype, cfg.moed_numer)
+
+        # Generate Preload C Header File
+        moed_pld_h = self.kernel_root / "MoEDispatch" / "include" / "preload.h"
+        I_addr = data['input']['addr']
+        S_addr = data['merged_output']['addr']
+        D_addr = data['input_idx']['addr']
+        P_addr = data['output_pos']['addr']
+        with open(moed_pld_h, 'w') as file:
+            file.write('#ifndef _MOED_PRELOAD_H_\n')
+            file.write('#define _MOED_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"S_addr".upper()} ((uint64_t){S_addr: #x})\n')
+            file.write(f'#define {"D_addr".upper()} ((uint64_t){D_addr: #x})\n')
+            file.write(f'#define {"P_addr".upper()} ((uint64_t){P_addr: #x})\n')
+            file.write('\n#endif // _MOED_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+        moed_pld_elf = self.kernel_root / "MoEDispatch" / "preload.elf"
+        assert(data['input_idx']['tensor'] != None)
+        D_np = data['input_idx']['tensor'].to(torch.int32).cpu().numpy()
+        pld.make_preload_elf(moed_pld_elf, [D_np], [D_addr])
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"pld={moed_pld_elf} make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
+
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
+        pass
+
+    def moe_combine(self, cfg, data, name, dry_run = False):
+        """
+        MoE Token Combine
+        """
+        # Check Configuration
+        app_path = self.kernel_root / "MoECombine"
+        cfg = moex_optimizer.opt(cfg, self.arch)
+        self.record_info({name : cfg}, subdir="kernels")
+
+        # Generate Configuration
+        moec_cfg_h = self.kernel_root / "MoECombine" / "include" / "moec.h"
+        kc.generate_config_C_header("MOEC", cfg, moec_cfg_h, cfg.dtype, cfg.moec_numer)
+
+        # Generate Preload C Header File
+        moec_pld_h = self.kernel_root / "MoECombine" / "include" / "preload.h"
+        I_addr  = data['merged_input']['addr']
+        V_addr  = data['input_val']['addr']
+        D_addr  = data['input_idx']['addr']
+        P_addr  = data['input_pos']['addr']
+        O_eaddr = data['output']['addr']
+        O_gaddr = O_eaddr
+        with open(moec_pld_h, 'w') as file:
+            file.write('#ifndef _MOEC_PRELOAD_H_\n')
+            file.write('#define _MOEC_PRELOAD_H_\n\n')
+            file.write(f'#define {"I_addr".upper()} ((uint64_t){I_addr: #x})\n')
+            file.write(f'#define {"V_addr".upper()} ((uint64_t){V_addr: #x})\n')
+            file.write(f'#define {"D_addr".upper()} ((uint64_t){D_addr: #x})\n')
+            file.write(f'#define {"P_addr".upper()} ((uint64_t){P_addr: #x})\n')
+            file.write(f'#define {"O_eaddr".upper()} ((uint64_t){O_eaddr: #x})\n')
+            file.write(f'#define {"O_gaddr".upper()} ((uint64_t){O_gaddr: #x})\n')
+            file.write('\n#endif // _MOEC_PRELOAD_H_\n')
+            file.close()
+
+        # Generate Preload Data
+        moec_pld_elf = self.kernel_root / "MoECombine" / "preload.elf"
+        assert(data['input_idx']['tensor'] != None)
+        assert(data['input_pos']['tensor'] != None)
+        D_np = data['input_idx']['tensor'].to(torch.int32).cpu().numpy()
+        P_np = data['input_pos']['tensor'].to(torch.int32).cpu().numpy()
+        pld.make_preload_elf(moec_pld_elf, [D_np, P_np], [D_addr, P_addr])
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
+        if not dry_run:
+            # Execute SoftHier Simulation
+            cmd = f"pld={moec_pld_elf} make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
+
+            # Anaylze Result
+            result = {}
+            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            return result
+        pass
+
     def split_concat(self, cfg, data, name, dry_run = False):
+        #[TODO] Implementation
+        result = {"runtime" : 0}
+        return result
+        pass
+
+    def mla_ofdp(self, cfg, data, name, dry_run = False):
         #[TODO] Implementation
         result = {"runtime" : 0}
         return result

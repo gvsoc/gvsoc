@@ -20,6 +20,7 @@ import os
 import io
 import re
 import sys
+import copy
 import torch
 import shutil
 import argparse
@@ -37,11 +38,15 @@ def max_divisor(M, K):
         if M % d == 0:
             return d
 
+def next_power_of_2(n: int) -> int:
+    if n < 1:
+        return 1
+    return 1 << (n - 1).bit_length()
+
 def opt(gemm, arch):
     #1. Find Tile Size
     m_tile = 4 * arch.redmule_ce_height
     n_tile = 4 * arch.redmule_ce_height
-    k_tile = 4 * arch.redmule_ce_height
     m_tile = gemm.m_size if gemm.m_size < m_tile else m_tile
     n_tile = gemm.n_size if gemm.n_size < n_tile else n_tile
     assert(gemm.m_size % m_tile == 0)
@@ -50,19 +55,38 @@ def opt(gemm, arch):
     #2. Determine Group Scale
     scale_y = gemm.m_size // m_tile
     scale_x = gemm.n_size // n_tile
-    is_power_of_two("scale_x", scale_x)
-    is_power_of_two("scale_y", scale_y)
+    try:
+        is_power_of_two("scale_x", scale_x)
+    except AssertionError as e:
+        #Rescale to the next closet power of 2 number
+        scale_x = next_power_of_2(scale_x)
+        assert(gemm.n_size % scale_x == 0)
+        n_tile = gemm.n_size // scale_x
+    try:
+        is_power_of_two("scale_y", scale_y)
+    except AssertionError as e:
+        #Rescale to the next closet power of 2 number
+        scale_y = next_power_of_2(scale_y)
+        assert(gemm.m_size % scale_y == 0)
+        m_tile = gemm.m_size // scale_y
     scale_y = arch.num_cluster_y if scale_y > arch.num_cluster_y else scale_y
     scale_x = arch.num_cluster_x if scale_x > arch.num_cluster_x else scale_x
 
-    #3. Determine Split K
+
+    #3. Determine Split K or Split N
+    gemm_list = []
     group_number = 1
     group_reduce = 0
     group_splitk = 0
+    group_splitn = 0
     group_gap_x = 0
     group_gap_w = 0
     group_gap_z = 0
+    k_tile = 4 * arch.redmule_ce_height
+    elem_size = 1 if gemm.dtype == 'fp8' else 2
     available_group = (arch.num_cluster_y * arch.num_cluster_x) // (scale_y * scale_x)
+
+    ## First Discuss the Split K Option
     try_splitK = 2
     while try_splitK <= available_group:
         if gemm.k_size % try_splitK == 0:
@@ -72,6 +96,7 @@ def opt(gemm, arch):
             pass
         try_splitK *= 2
         pass
+    gemm.strategy  = "Nosplit"
     if group_number > 1:
         splitedK = gemm.k_size // group_number
         k_line = 4 * arch.redmule_ce_height
@@ -84,10 +109,10 @@ def opt(gemm, arch):
         assert(gemm.k_size % k_tile == 0)
         group_reduce = 1
         group_splitk = 1
-        elem_size = 1 if gemm.dtype == 'fp8' else 2
         group_gap_x = splitedK * elem_size
         group_gap_w = splitedK * gemm.n_size * elem_size
         group_gap_z = 0
+        gemm.strategy  = "splitK"
         pass
 
     gemm.m_tile                  = m_tile
@@ -98,9 +123,45 @@ def opt(gemm, arch):
     gemm.summa_group_number      = group_number
     gemm.summa_group_reduce      = group_reduce
     gemm.summa_group_splitk      = group_splitk
+    gemm.summa_group_splitn      = group_splitn
     gemm.summa_group_gap_x       = group_gap_x
     gemm.summa_group_gap_w       = group_gap_w
     gemm.summa_group_gap_z       = group_gap_z
+    gemm_list.append(copy.deepcopy(gemm))
 
-    return gemm
+    #If we enconter the dilema to also consider Split N
+    group_number = 1
+    group_reduce = 0
+    group_splitk = 0
+    group_splitn = 0
+    group_gap_x = 0
+    group_gap_w = 0
+    group_gap_z = 0
+    k_tile = 4 * arch.redmule_ce_height
+    if available_group > 1 and (gemm.n_size // (scale_x * n_tile)) > 1:
+        if gemm.k_size < k_tile: k_tile = gemm.k_size
+        group_number = gemm.n_size // (scale_x * n_tile)
+        group_number = min(available_group, group_number)
+        group_splitn = 1
+        group_gap_w = scale_x * n_tile * elem_size
+        group_gap_z = scale_x * n_tile * elem_size
+
+        #Setup the gemm configuration
+        gemm.m_tile                  = m_tile
+        gemm.n_tile                  = n_tile
+        gemm.k_tile                  = k_tile
+        gemm.summa_scale_x           = scale_x
+        gemm.summa_scale_y           = scale_y
+        gemm.summa_group_number      = group_number
+        gemm.summa_group_reduce      = group_reduce
+        gemm.summa_group_splitk      = group_splitk
+        gemm.summa_group_splitn      = group_splitn
+        gemm.summa_group_gap_x       = group_gap_x
+        gemm.summa_group_gap_w       = group_gap_w
+        gemm.summa_group_gap_z       = group_gap_z
+        gemm.strategy                = "splitN"
+        gemm_list.append(copy.deepcopy(gemm))
+        pass
+
+    return gemm_list
     pass

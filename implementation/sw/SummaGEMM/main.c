@@ -39,6 +39,7 @@ int main()
         GEMM_SUMMA_GROUP_NUMBER/*num_group*/,
         GEMM_SUMMA_GROUP_REDUCE/*group_reduction*/,
         GEMM_SUMMA_GROUP_SPLITK/*group_splitK*/,
+        GEMM_SUMMA_GROUP_SPLITN/*group_splitN*/,
         GEMM_SUMMA_GROUP_GAP_X/*X_address_group_gap*/,
         GEMM_SUMMA_GROUP_GAP_W/*W_address_group_gap*/,
         GEMM_SUMMA_GROUP_GAP_Z/*Z_address_group_gap*/);

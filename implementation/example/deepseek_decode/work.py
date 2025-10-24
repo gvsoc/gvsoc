@@ -23,11 +23,11 @@ class Workload:
         #Basic Configuration
         self.prefill_enabled            = 0
         self.decode_enabled             = 1
-        self.batch_size                 = 4
+        self.batch_size                 = 1
         self.numerical_check_enable     = 0
 
         #Decode Configuration
         self.decode_mode                = 'speculative'
-        self.speculative_factor         = 8
+        self.speculative_factor         = 1
         self.speculative_ratio          = 0.75
-        self.kv_cache_length            = 1016
+        self.kv_cache_length            = 1023
