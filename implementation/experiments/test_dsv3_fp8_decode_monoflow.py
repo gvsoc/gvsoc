@@ -167,9 +167,9 @@ def test():
                 flow.softhier_launch(chip, f"DRY-RUN b={batch_size} kv={kv_cache_length} sp={speculative_factor}", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
 
                 # Full Run
-                # Results = flow.softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
-                # print(f"[green][Kernel Runtime Breakdown][/green]")
-                # cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
+                Results = flow.softhier_launch(chip, f"{llm.model_name} decode b{batch_size} kv{kv_cache_length} sp{speculative_factor}", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
+                print(f"[green][Kernel Runtime Breakdown][/green]")
+                cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
             pass
         pass
     pass
