@@ -32,6 +32,7 @@ import llm.deepseek_plan as deepseek
 import utils.softhier_engine as engine
 import utils.console_visualization as cv
 import llm.normal_llm_plan as normal_llm
+import utils.analyze_results as ar
 
 def import_module_from_path(module_path):
     """
@@ -244,7 +245,10 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
     chip.register_workload(launch_name, info)
     view_onnx.create_onnx_graph(kernel_flow, west_hbm_plan, south_hbm_plan, chip.output_folder_info / "workload.onnx")
     kernel_results = softhier_run_flow(chip, run_flow, west_hbm_plan, south_hbm_plan, launch_name, dry_run=dry_run)
-    if kernel_results: chip.record_info({"Results" : kernel_results})
+    if kernel_results:
+        chip.record_info({"Results" : kernel_results})
+        ar.generate_polts(arch=chip.arch, results=kernel_results, save_root=chip.output_folder_info)
+        pass
     return kernel_results
     pass
 
@@ -302,7 +306,7 @@ def flow():
         pass
 
     if work.decode_enabled and llm.attention_type == 'MLA'and llm.ffn_type == 'MoE':
-        kernel_flow, west_hbm_plan, south_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch)
+        kernel_flow, west_hbm_plan, south_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch, EP=64, use_flash_attn=True)
         info['kernel_flow'] = kernel_flow
         info['west_hbm_plan'] = west_hbm_plan
         info['south_hbm_plan'] = south_hbm_plan

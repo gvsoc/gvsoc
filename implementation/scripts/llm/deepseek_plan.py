@@ -253,7 +253,11 @@ def hbm_plan_summary(plan_in):
     cv.show_breakdown(plan, metric='size', unit='KiB', scale_div=1024)
     pass
 
-def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
+
+
+
+
+def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_flash_attn = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -609,6 +613,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     attn_flatmla.num_head               = llm.num_heads
     attn_flatmla.batch_size             = work.batch_size
     attn_flatmla.flatten_numer          = work.numerical_check_enable
+    attn_flatmla.use_flash_attn         = use_flash_attn
 
     kernel_flow["attn_flatmla"] = {
         "type"                          : "flatmla",
@@ -915,7 +920,11 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     #       16. MoE Route TopK        #
     ###################################
 
-    D, P, SCORE = gen_moe_gate_index(work.batch_size * work.speculative_factor, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
+    D, P, SCORE = gen_moe_gate_index(work.batch_size * work.speculative_factor * EP, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
+    D           = D[::EP]
+    P           = P[::EP]
+    SCORE       = SCORE[::EP]
+    ep_experts  = llm.n_routed_experts // EP
 
     south_hbm_plan["moe_route_val"] = {
         "addr"                          : south_hbm_addr,
@@ -959,15 +968,15 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
 
     west_hbm_plan["moe_dispatch_buffer"] = {
         "addr"                          : west_hbm_addr,
-        "view"                          :(llm.n_routed_experts,  work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "shape"                         :(llm.n_routed_experts * work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "size"                          : llm.n_routed_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(ep_experts,  work.batch_size * work.speculative_factor,  llm.embeded_length),
+        "shape"                         :(ep_experts * work.batch_size * work.speculative_factor,  llm.embeded_length),
+        "size"                          : ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += llm.n_routed_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    west_hbm_addr                       += ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     #Generate Memory Notations
-    for eid in range(llm.n_routed_experts):
+    for eid in range(ep_experts):
         prefix = f"moe_routed_{eid}_"
         num_tokens = SCORE[eid].item()
         if num_tokens == 0:
@@ -984,42 +993,44 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
         }
         pass
 
-    south_hbm_plan["moe_route_pos"] = {
-        "addr"                          : south_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
-        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
-        "is_index"                      : True,
-        "tensor"                        : P
-    }
-    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
-    south_hbm_addr                      = align_addr(south_hbm_addr)
+    if EP == 1:
+        south_hbm_plan["moe_route_pos"] = {
+            "addr"                          : south_hbm_addr,
+            "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
+            "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
+            "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
+            "is_index"                      : True,
+            "tensor"                        : P
+        }
+        south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+        south_hbm_addr                      = align_addr(south_hbm_addr)
 
-    moe_dispatch                        = MoEDispatch()
-    moe_dispatch.dtype                  = llm.dtype
-    moe_dispatch.num_tokens             = work.batch_size * work.speculative_factor
-    moe_dispatch.embedded_length        = llm.embeded_length
-    moe_dispatch.num_routed_experts     = llm.n_routed_experts
-    moe_dispatch.num_active_experts     = llm.n_activated_experts
-    moe_dispatch.nodis_enable           = 1
-    moe_dispatch.moed_numer             = work.numerical_check_enable
+        moe_dispatch                        = MoEDispatch()
+        moe_dispatch.dtype                  = llm.dtype
+        moe_dispatch.num_tokens             = work.batch_size * work.speculative_factor
+        moe_dispatch.embedded_length        = llm.embeded_length
+        moe_dispatch.num_routed_experts     = llm.n_routed_experts
+        moe_dispatch.num_active_experts     = llm.n_activated_experts
+        moe_dispatch.nodis_enable           = 1
+        moe_dispatch.moed_numer             = work.numerical_check_enable
 
-    kernel_flow["moe_dispatch"] = {
-        "type"                          : "moed",
-        "input"                         : {"on": "west",    "name": "moe_norm"},
-        "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
-        "info"                          : {"merged_output" : {"on": "west",    "name": "moe_dispatch_buffer"}},
-        "output_pos"                    : {"on": "south",   "name": "moe_route_pos"},
-        "cfg"                           : moe_dispatch
-    }
+        kernel_flow["moe_dispatch"] = {
+            "type"                          : "moed",
+            "input"                         : {"on": "west",    "name": "moe_norm"},
+            "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
+            "info"                          : {"merged_output" : {"on": "west",    "name": "moe_dispatch_buffer"}},
+            "output_pos"                    : {"on": "south",   "name": "moe_route_pos"},
+            "cfg"                           : moe_dispatch
+        }
 
-    for eid in range(llm.n_routed_experts):
-        prefix = f"moe_routed_{eid}_"
-        num_tokens = SCORE[eid].item()
-        if num_tokens == 0:
-            continue
+        for eid in range(llm.n_routed_experts):
+            prefix = f"moe_routed_{eid}_"
+            num_tokens = SCORE[eid].item()
+            if num_tokens == 0:
+                continue
+                pass
+            kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
             pass
-        kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
         pass
 
     ###################################
@@ -1054,7 +1065,7 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     }
     west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
-    for eid in range(llm.n_routed_experts):
+    for eid in range(ep_experts):
         prefix = f"moe_routed_{eid}_"
         num_tokens = SCORE[eid].item()
         if num_tokens == 0:
@@ -1198,31 +1209,33 @@ def deepseek_decode_layer_plan(llm, work, arch, moe_distribution = 'Fair'):
     }
     west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
-    moe_combine                         = MoECombine()
-    moe_combine.dtype                   = llm.dtype
-    moe_combine.num_tokens              = work.batch_size * work.speculative_factor
-    moe_combine.embedded_length         = llm.embeded_length
-    moe_combine.num_routed_experts      = llm.n_routed_experts
-    moe_combine.num_active_experts      = llm.n_activated_experts
-    moe_combine.moec_numer              = work.numerical_check_enable
+    if EP == 1:
+        moe_combine                         = MoECombine()
+        moe_combine.dtype                   = llm.dtype
+        moe_combine.num_tokens              = work.batch_size * work.speculative_factor
+        moe_combine.embedded_length         = llm.embeded_length
+        moe_combine.num_routed_experts      = llm.n_routed_experts
+        moe_combine.num_active_experts      = llm.n_activated_experts
+        moe_combine.moec_numer              = work.numerical_check_enable
 
-    kernel_flow["moe_combine"] = {
-        "type"                          : "moec",
-        "input_val"                     : {"on": "south",   "name": "moe_route_val"},
-        "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
-        "input_pos"                     : {"on": "south",   "name": "moe_route_pos"},
-        "info"                          : {"merged_input" : {"on": "west",    "name": "moe_dispatch_buffer"}},
-        "output"                        : {"on": "west",    "name": "moe_route_output"},
-        "cfg"                           : moe_combine
-    }
+        kernel_flow["moe_combine"] = {
+            "type"                          : "moec",
+            "input_val"                     : {"on": "south",   "name": "moe_route_val"},
+            "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
+            "input_pos"                     : {"on": "south",   "name": "moe_route_pos"},
+            "info"                          : {"merged_input" : {"on": "west",    "name": "moe_dispatch_buffer"}},
+            "output"                        : {"on": "west",    "name": "moe_route_output"},
+            "cfg"                           : moe_combine
+        }
 
-    for eid in range(llm.n_routed_experts):
-        prefix = f"moe_routed_{eid}_"
-        num_tokens = SCORE[eid].item()
-        if num_tokens == 0:
-            continue
+        for eid in range(llm.n_routed_experts):
+            prefix = f"moe_routed_{eid}_"
+            num_tokens = SCORE[eid].item()
+            if num_tokens == 0:
+                continue
+                pass
+            kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
             pass
-        kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
         pass
 
     ############################################################

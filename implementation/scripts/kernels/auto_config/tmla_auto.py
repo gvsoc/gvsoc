@@ -54,6 +54,15 @@ def opt(tmla, arch):
     assert(seqlen_x % x_tile == 0)
     assert(seqlen_y % y_tile == 0)
 
+    if hasattr(tmla, 'use_flash_attn') and (tmla.use_flash_attn == True):
+        tmla.flatten_scale_x         = 1
+        tmla.flatten_scale_y         = 1
+        tmla.flatten_shape_x         = x_tile
+        tmla.flatten_shape_y         = y_tile
+        tmla.flatten_async           = 0
+        return tmla
+        pass
+
     #2. Determine Group Scale
     scale_y = seqlen_y // y_tile
     scale_x = seqlen_x // x_tile

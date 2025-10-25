@@ -139,7 +139,7 @@ class SoftHier(object):
         """
         # Check Configuration and Automatic Tiling/Scheduling
         app_path = self.kernel_root / "SummaGEMM"
-        runtime = 0
+        best_log = None
         result = {}
 
         # Naive check and do automatic parameterization
@@ -224,13 +224,30 @@ class SoftHier(object):
                 # print(f"[System Call] {cmd}")
                 assert os.system(cmd) == 0
 
+                # Select Log
+                test_log = f"{self.output_folder_trace}/{name}.{cfg.strategy}.log"
+                if best_log == None:
+                    best_log = test_log
+                else:
+                    best_log = test_log if (self.get_runtime_ns(best_log) > self.get_runtime_ns(test_log)) else best_log
+                    pass
+
                 # Anaylze Result
-                try_runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.{cfg.strategy}.log")
-                runtime = try_runtime if try_runtime > runtime else runtime
+                runtime = self.get_runtime_ns(best_log)
+                peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
+                gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+                achieved_flop_per_cycle = gemm_flop / runtime
+                redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
+                elem_size = 1 if cfg.dtype == 'fp8' else 2
+                arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size))
+                result["runtime"] = runtime
+                result["peak_flop_per_cycle"] = peak_flop_per_cycle
+                result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
+                result["redmule_uti"] = redmule_uti
+                result["arithmetic_intensity"] = arithmetic_intensity
                 pass
             pass
-        result["runtime"] = runtime
-        return result
+        if not dry_run: return result
         pass
 
     def norm(self, cfg, data, name, dry_run = False):
@@ -275,6 +292,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -327,6 +345,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -378,6 +397,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -430,6 +450,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -488,7 +509,18 @@ class SoftHier(object):
 
             # Anaylze Result
             result = {}
-            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
+            flat_attn_flop = 4 * cfg.q_sequence_length * cfg.speculative_length * cfg.kv_sequence_length * cfg.head_dimemsion * cfg.num_head * cfg.batch_size
+            achieved_flop_per_cycle = flat_attn_flop / runtime
+            redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
+            elem_size = 1 if cfg.dtype == 'fp8' else 2
+            arithmetic_intensity = flat_attn_flop / (elem_size * cfg.batch_size * (2 * cfg.num_head * cfg.q_sequence_length * cfg.speculative_length * cfg.head_dimemsion + 2 * cfg.num_head_group * cfg.kv_sequence_length * cfg.head_dimemsion))
+            result["runtime"] = runtime
+            result["peak_flop_per_cycle"] = peak_flop_per_cycle
+            result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
+            result["redmule_uti"] = redmule_uti
+            result["arithmetic_intensity"] = arithmetic_intensity
             return result
         pass
 
@@ -542,7 +574,20 @@ class SoftHier(object):
 
             # Anaylze Result
             result = {}
-            result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
+            seqlen_q = cfg.q_sequence_length * cfg.speculative_length * cfg.num_head
+            seqlen_c = cfg.kv_sequence_length
+            flat_mla_flop = 2 * cfg.batch_size * (seqlen_q * seqlen_c * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * seqlen_c * cfg.nope_head_dim)
+            achieved_flop_per_cycle = flat_mla_flop / runtime
+            redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
+            elem_size = 1 if cfg.dtype == 'fp8' else 2
+            arithmetic_intensity = flat_mla_flop / (elem_size * cfg.batch_size * ((seqlen_q + seqlen_c) * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * cfg.nope_head_dim))
+            result["runtime"] = runtime
+            result["peak_flop_per_cycle"] = peak_flop_per_cycle
+            result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
+            result["redmule_uti"] = redmule_uti
+            result["arithmetic_intensity"] = arithmetic_intensity
             return result
         pass
 
@@ -593,6 +638,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -645,6 +691,7 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
@@ -703,18 +750,23 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             result["runtime"] = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            result["redmule_uti"] = 0
             return result
         pass
 
     def split_concat(self, cfg, data, name, dry_run = False):
         #[TODO] Implementation
-        result = {"runtime" : 0}
-        return result
+        if not dry_run:
+            result = {"runtime" : 0}
+            result["redmule_uti"] = 0
+            return result
         pass
 
     def mla_ofdp(self, cfg, data, name, dry_run = False):
         #[TODO] Implementation
-        result = {"runtime" : 0}
-        return result
+        if not dry_run:
+            result = {"runtime" : 0}
+            result["redmule_uti"] = 0
+            return result
         pass
         

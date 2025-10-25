@@ -31,7 +31,7 @@ def show_colorful_bar(bar_name, percent: float):
         pass
     with Progress(
         TextColumn("[bold " + bar_color + "]{task.description}"),
-        BarColumn(bar_width=50),
+        BarColumn(bar_width=130),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         transient=False,  # keep the bar after completion
     ) as progress:
