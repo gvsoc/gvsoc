@@ -14,6 +14,7 @@
 | 📊 MoEGate (TopK Val&Idx of Score)  | `moeg`     |
 | 🧩 MoEDispatch                      | `moed`     |
 | 🧬 MoECombine                       | `moec`     |
+| 🤖 FlatMLA                          | `tmla`     |
 
 ---
 
