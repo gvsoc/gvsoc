@@ -36,6 +36,8 @@ typedef struct SummaGEMMInfo
     uint32_t                    cluster_in_group_id;
     uint32_t                    cluster_in_group_id_x;
     uint32_t                    cluster_in_group_id_y;
+    uint32_t                    cluster_for_rowwise;
+    uint32_t                    cluster_for_colwise;
 
     //Tiling information
     uint32_t                    M_iter;
@@ -48,6 +50,7 @@ typedef struct SummaGEMMInfo
     uint32_t                    store_n;
     uint32_t                    store_step;
     uint32_t                    store_id;
+    uint32_t                    store_id_offset;
     uint32_t                    store_active;
 
     //Addressing Information
@@ -133,6 +136,8 @@ SummaGEMMInfo SummaGEMMAnaylze(
     info.cluster_in_group_id_y  = pos.y % info.group.grid_y_dim;
     info.cluster_in_group_id    = info.cluster_in_group_id_x + info.group.this_grid_cluster_num_x * info.cluster_in_group_id_y;
     info.cluster_active         = info.group.this_grid_id < info.summa_groups ? 1 : 0;
+    info.cluster_for_rowwise    = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_x == (pos.y % info.group.grid_x_dim)))? 1 : 0;
+    info.cluster_for_colwise    = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_y == (pos.x % info.group.grid_y_dim)))? 1 : 0;
 
     info.M_iter                 = (M_size + info.summa_group_y * M_tile - 1) / (info.summa_group_y * M_tile);
     info.N_iter                 = info.group_splitN? (((N_size / info.summa_groups) + info.summa_group_x * N_tile - 1) / (info.summa_group_x * N_tile)) : (N_size + info.summa_group_x * N_tile - 1) / (info.summa_group_x * N_tile);
@@ -142,6 +147,7 @@ SummaGEMMInfo SummaGEMMAnaylze(
     info.store_n                = 0;
     info.store_step             = (info.summa_group_x + info.K_iter - 1) / info.K_iter;
     info.store_id               = info.summa_group_x;
+    info.store_id_offset        = pos.y % info.summa_group_x;
     info.store_active           = (info.group_reduction == 0) ? 1 : (info.group.this_grid_id == 0)? 1 : 0;
 #if GEMM_RESHA_X_FROM_ENABLE == 1
     info.X_tile_base_offset     = info.cluster_in_group_id_y * M_tile * K_size * DATA_TYPE_BYTE;
@@ -203,7 +209,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                 //Prefetching
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load X from west edge
 #if GEMM_RESHA_X_FROM_ENABLE == 1
@@ -250,7 +256,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                             flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         }
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load W from south edge
                         flex_dma_async_2d(
@@ -299,7 +305,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                     {
                         if (k < info->K_iter)
                         {
-                            if (info->cluster_in_group_id_x == 0)
+                            if (info->cluster_for_rowwise == 1)
                             {
                                 //load X from west edge
 #if GEMM_RESHA_X_FROM_ENABLE == 1
@@ -346,7 +352,7 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                                     flex_dma_async_wait_all(); // Wait for iDMA Finishing
                                 }
                             }
-                            if (info->cluster_in_group_id_y == 0)
+                            if (info->cluster_for_colwise == 1)
                             {
                                 //load W from south edge
                                 flex_dma_async_2d(
@@ -374,7 +380,10 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                         if (info->store_recorded == 1 && info->store_active == 1)
                         {
                             uint32_t start_id = (info->store_id < info->store_step)? 0 : info->store_id - info->store_step;
-                            if (info->cluster_in_group_id_x >= start_id && info->cluster_in_group_id_x < info->store_id)
+                            uint32_t bid = (start_id + info->store_id_offset) % info->summa_group_x;
+                            uint32_t eid = (info->store_id + info->store_id_offset) % info->summa_group_x;
+                            if (((info->cluster_in_group_id_x >= bid && info->cluster_in_group_id_x < eid) && eid > bid) || \
+                                ((info->cluster_in_group_id_x >= bid || info->cluster_in_group_id_x < eid) && eid <= bid))
                             {
                                 if (info->group_reduction == 1)
                                 {

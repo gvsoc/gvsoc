@@ -51,6 +51,8 @@ typedef struct FlatMLAInfo
     uint32_t                cluster_in_group_id;
     uint32_t                cluster_in_group_id_x;
     uint32_t                cluster_in_group_id_y;
+    uint32_t                cluster_for_rowwise;
+    uint32_t                cluster_for_colwise;
 
      //Spatz Information
     uint32_t                spatz_num;
@@ -192,6 +194,8 @@ FlatMLAInfo FlatMLA_analyze(
     info.cluster_in_group_id_x      = pos.x % info.group.grid_x_dim;
     info.cluster_in_group_id_y      = pos.y % info.group.grid_y_dim;
     info.cluster_in_group_id        = info.cluster_in_group_id_x + info.group.this_grid_cluster_num_x * info.cluster_in_group_id_y;
+    info.cluster_for_rowwise        = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_x == (pos.y % info.group.grid_x_dim)))? 1 : 0;
+    info.cluster_for_colwise        = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_y == (pos.x % info.group.grid_y_dim)))? 1 : 0;
 
     //Spatz information
     info.spatz_num                  = ARCH_SPATZ_ATTACED_CORES;
@@ -328,7 +332,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                     flex_dma_async_1d(info->L1_lr,info->L1_l,info->L1_l_size);
                     flex_dma_async_1d(info->L1_S1,zomem(0),info->L1_A_size);
                     flex_dma_async_wait_all(); // Wait for iDMA Finishing
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -348,7 +352,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -394,7 +398,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -414,7 +418,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -463,7 +467,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -483,7 +487,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -531,7 +535,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -551,7 +555,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -600,7 +604,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -620,7 +624,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -671,7 +675,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         if (c == 0)
                         {
@@ -700,7 +704,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         }
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -871,7 +875,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         if (c == 0)
                         {
@@ -900,7 +904,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         }
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -965,7 +969,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         if (c == 0)
                         {
@@ -994,7 +998,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         }
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1059,7 +1063,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         if (c == 0)
                         {
@@ -1088,7 +1092,7 @@ void FlatMLA_run(FlatMLAInfo * info){
                             flex_dma_async_wait_all(); // Wait for iDMA Finishing
                         }
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1168,7 +1172,7 @@ void FlatMLA_run(FlatMLAInfo * info){
      ********************************************************************/
     if (flex_is_dm_core())
     {
-        if (info->cluster_in_group_id_x == 0)
+        if (info->cluster_for_rowwise == 1)
         {
             if (store_enable)
             {
@@ -1286,7 +1290,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                     flex_dma_async_1d(info->L1_S2,zomem(0),info->L1_A_size);
                     flex_dma_async_1d(info->L1_m,zomem(0),info->L1_m_size);
                     flex_dma_async_wait_all(); // Wait for iDMA Finishing
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1306,7 +1310,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1353,7 +1357,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1373,7 +1377,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1402,7 +1406,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                     {
                         if (flex_is_dm_core())
                         {
-                            if (info->cluster_in_group_id_x == 0)
+                            if (info->cluster_for_rowwise == 1)
                             {
                                 //Reduction O
                                 flex_dma_async_reduction(
@@ -1449,7 +1453,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1469,7 +1473,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1516,7 +1520,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1536,7 +1540,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1582,7 +1586,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1602,7 +1606,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1649,7 +1653,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1669,7 +1673,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1726,7 +1730,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1746,7 +1750,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1819,7 +1823,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1839,7 +1843,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1894,7 +1898,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 {
                     flex_dma_async_1d(info->L1_m,zomem(0),info->L1_m_size);
                     flex_dma_async_wait_all(); // Wait for iDMA Finishing
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -1914,7 +1918,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -1987,7 +1991,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //load Q from west edge
                         flex_dma_async_2d(
@@ -2007,7 +2011,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2054,7 +2058,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2106,7 +2110,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2175,7 +2179,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2195,7 +2199,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2247,7 +2251,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2267,7 +2271,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2339,7 +2343,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2359,7 +2363,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2404,7 +2408,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2424,7 +2428,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2469,7 +2473,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2489,7 +2493,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2534,7 +2538,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_y == 0)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load from south edge
                         flex_dma_async_2d(
@@ -2554,7 +2558,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all(); // Wait for iDMA Finishing
                     }
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2599,7 +2603,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
                 }
                 if (flex_is_dm_core())
                 {
-                    if (info->cluster_in_group_id_x == 0)
+                    if (info->cluster_for_rowwise == 1)
                     {
                         //Reduction O
                         flex_dma_async_reduction(
@@ -2645,7 +2649,7 @@ void FlatMLA_ayncrun(FlatMLAInfo * info)
     flex_intra_cluster_sync();
     if (flex_is_dm_core())
     {
-        if (info->cluster_in_group_id_x == 0)
+        if (info->cluster_for_rowwise == 1)
         {
             //Reduction O
             flex_dma_async_reduction(
