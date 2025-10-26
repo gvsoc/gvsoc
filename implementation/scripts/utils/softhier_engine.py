@@ -68,18 +68,7 @@ class SoftHier(object):
         os.system(f"mkdir -p {self.output_folder}")
         self.arch = None
         self.arch_path = None
-        self.logout_option = " > "
-
-    def launch_softhier(self, pld_path = None, target = "runq"):
-        if pld_path is not None:
-            pld = Path(pld_path).resolve()
-            assert pld.exists()
-            cmd = f"pld={pld} make -C {self.softhier_root} {target}"
-        else:
-            cmd = f"make -C {self.softhier_root} {target}"
-            pass
-        print(f"[System Call] {cmd}")
-        pass
+        self.run_option = "runq"
 
     def get_runtime_ns(self, trace_file):
         pattern = r"\[Performance Counter\]: Execution period is [0-9]+ ns"
@@ -220,7 +209,7 @@ class SoftHier(object):
 
             if not dry_run:
                 # Execute SoftHier Simulation
-                cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.{cfg.strategy}.log 2>&1"
+                cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.{cfg.strategy}.log 2>&1"
                 # print(f"[System Call] {cmd}")
                 assert os.system(cmd) == 0
 
@@ -285,7 +274,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -338,7 +327,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -390,7 +379,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -443,7 +432,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -503,7 +492,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -568,7 +557,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -582,7 +571,7 @@ class SoftHier(object):
             achieved_flop_per_cycle = flat_mla_flop / runtime
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
-            arithmetic_intensity = flat_mla_flop / (elem_size * cfg.batch_size * ((seqlen_q + seqlen_c) * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * cfg.nope_head_dim))
+            arithmetic_intensity = flat_mla_flop / (elem_size * cfg.batch_size * ((seqlen_q + seqlen_c) * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_c * cfg.nope_head_dim + seqlen_q * cfg.nope_head_dim))
             result["runtime"] = runtime
             result["peak_flop_per_cycle"] = peak_flop_per_cycle
             result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
@@ -631,7 +620,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -684,7 +673,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"pld={moed_pld_elf} make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"pld={moed_pld_elf} make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 
@@ -743,7 +732,7 @@ class SoftHier(object):
 
         if not dry_run:
             # Execute SoftHier Simulation
-            cmd = f"pld={moec_pld_elf} make -C {self.softhier_root} runq > {self.output_folder_trace}/{name}.log 2>&1"
+            cmd = f"pld={moec_pld_elf} make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
             # print(f"[System Call] {cmd}")
             assert os.system(cmd) == 0
 

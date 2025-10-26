@@ -20,7 +20,14 @@ import io
 import re
 import math
 import numpy as np
+from cycler import cycler
 import matplotlib.pyplot as plt
+
+# create a big set of colors from a colormap
+custom_colors = plt.cm.tab20(np.linspace(0, 1, 20))  # 20 colors from 'tab20'
+
+# extend the global color cycle
+plt.rcParams['axes.prop_cycle'] = cycler(color=custom_colors)
 
 def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', scale_div = 1):
     runtime = []
@@ -165,7 +172,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
         title = f"Roofline (Peak: {peak_perf:g} TFLOPS, BW: {bandwidth:g} GB/s)"
     ax.set_title(title)
     ax.grid(True, which='both', linewidth=0.6, alpha=0.5)
-    ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.9)
+    ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.3)
 
     # helpful tick marks near the knee
     for decade in [1, 10, 100, 1000, 10000, 100000]:
@@ -186,6 +193,6 @@ def generate_polts(arch, results, save_root):
     plot_runtime_breakdown_and_utilization_curve(results, save_path, scale_div = 1000)
 
     # Generate Roofline Plot
-    save_path = save_dir / "roofline.pdf"
+    save_path = save_dir / "kernels_roofline.pdf"
     plot_kernel_roofline(arch, results, save_path)
     pass
