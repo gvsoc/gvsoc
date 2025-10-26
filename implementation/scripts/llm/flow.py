@@ -70,15 +70,15 @@ def align_addr(addr, align=0x10000):
     """
     return (addr + align - 1) & ~(align - 1)
 
-def shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan):
+def shape_kernel_flow(kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan):
     for kernel_name in kernel_flow:
         for k, v in kernel_flow[kernel_name].items():
             if k != "type" and k != "cfg"  and k != "info":
                 direction = v["on"]
-                if   direction == 'west':
-                    kernel_flow[kernel_name][k]['shape'] = west_hbm_plan[v["name"]]['shape']
-                elif direction == 'south':
-                    kernel_flow[kernel_name][k]['shape'] = south_hbm_plan[v["name"]]['shape']
+                if   direction == 'spaceA':
+                    kernel_flow[kernel_name][k]['shape'] = spaceA_hbm_plan[v["name"]]['shape']
+                elif direction == 'spaceB':
+                    kernel_flow[kernel_name][k]['shape'] = spaceB_hbm_plan[v["name"]]['shape']
                 else:
                     raise RuntimeError(f"HBM Direction {direction} currently not supported")
                     pass
@@ -87,17 +87,17 @@ def shape_kernel_flow(kernel_flow, west_hbm_plan, south_hbm_plan):
         pass
     pass
 
-def pack_data(kernel, west_hbm_plan, south_hbm_plan):
+def pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan):
     data_dist = {}
     for k, v in kernel.items():
         if k != "type" and k != "cfg" and k != "repeat":
             if k == "info" and "merged_output" in v:
                 direction = v["merged_output"]["on"]
                 tensor_name = v["merged_output"]["name"]
-                if   direction == 'west':
-                    data_dist["merged_output"] = west_hbm_plan[tensor_name]
-                elif direction == 'south':
-                    data_dist["merged_output"] = south_hbm_plan[tensor_name]
+                if   direction == 'spaceA':
+                    data_dist["merged_output"] = spaceA_hbm_plan[tensor_name]
+                elif direction == 'spaceB':
+                    data_dist["merged_output"] = spaceB_hbm_plan[tensor_name]
                 else:
                     raise RuntimeError(f"HBM Direction {direction} currently not supported")
                     pass
@@ -106,10 +106,10 @@ def pack_data(kernel, west_hbm_plan, south_hbm_plan):
             if k == "info" and "merged_input" in v:
                 direction = v["merged_input"]["on"]
                 tensor_name = v["merged_input"]["name"]
-                if   direction == 'west':
-                    data_dist["merged_input"] = west_hbm_plan[tensor_name]
-                elif direction == 'south':
-                    data_dist["merged_input"] = south_hbm_plan[tensor_name]
+                if   direction == 'spaceA':
+                    data_dist["merged_input"] = spaceA_hbm_plan[tensor_name]
+                elif direction == 'spaceB':
+                    data_dist["merged_input"] = spaceB_hbm_plan[tensor_name]
                 else:
                     raise RuntimeError(f"HBM Direction {direction} currently not supported")
                     pass
@@ -118,10 +118,10 @@ def pack_data(kernel, west_hbm_plan, south_hbm_plan):
             if k != "info":
                 direction = v["on"]
                 tensor_name = v["name"]
-                if   direction == 'west':
-                    data_dist[k] = west_hbm_plan[tensor_name]
-                elif direction == 'south':
-                    data_dist[k] = south_hbm_plan[tensor_name]
+                if   direction == 'spaceA':
+                    data_dist[k] = spaceA_hbm_plan[tensor_name]
+                elif direction == 'spaceB':
+                    data_dist[k] = spaceB_hbm_plan[tensor_name]
                 else:
                     raise RuntimeError(f"HBM Direction {direction} currently not supported")
                     pass
@@ -143,7 +143,7 @@ def push_results(kernel_results, name, kernel, res):
         pass
     pass
 
-def softhier_run_flow(chip, run_flow, west_hbm_plan, south_hbm_plan, run_name, dry_run=False):
+def softhier_run_flow(chip, run_flow, spaceA_hbm_plan, spaceB_hbm_plan, run_name, dry_run=False):
     pbar = tqdm(total=len(run_flow), desc=f"[{run_name}]")
     kernel_results = {}
     for name, kernel in run_flow.items():
@@ -151,73 +151,73 @@ def softhier_run_flow(chip, run_flow, west_hbm_plan, south_hbm_plan, run_name, d
         pbar.set_description(desc)
         if   (kernel["type"] == 'norm'):
             #Normalization
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.norm(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'gemm'):
             #GEMM
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.gemm_auto(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'flat_attn'):
             #FlatAttention
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.flat_attn_auto(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'rope'):
             #RoPE
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.rope(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'acti'):
             #Activation
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.acti(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'addi'):
             #Addition
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.addi(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'split_concat'):
             #Split and KVcace Concat
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.split_concat(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'flatmla'):
             #FlatMLA
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.flat_mla_auto(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'ofdp'):
             #MLA First O Down Porjection
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.mla_ofdp(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'moeg'):
             #MoE Gate TopK
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.moe_gate_topk(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'moed'):
             #MoE Token Dispatch
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.moe_dispatch(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'moec'):
             #MoE Token Combine
-            data = pack_data(kernel, west_hbm_plan, south_hbm_plan)
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
             cfg = kernel["cfg"]
             res = chip.moe_combine(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
@@ -230,10 +230,10 @@ def softhier_run_flow(chip, run_flow, west_hbm_plan, south_hbm_plan, run_name, d
     pbar.close()
     return kernel_results
 
-def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_plan, info = {}, kernel_flow_simple = None, dry_run=False):
+def softhier_launch(chip, launch_name, kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info = {}, kernel_flow_simple = None, dry_run=False):
     info['kernel_flow'] = kernel_flow
-    info['west_hbm_plan'] = west_hbm_plan
-    info['south_hbm_plan'] = south_hbm_plan
+    info['spaceA_hbm_plan'] = spaceA_hbm_plan
+    info['spaceB_hbm_plan'] = spaceB_hbm_plan
     if kernel_flow_simple != None:
         info['kernel_flow_simple'] = kernel_flow_simple
         cv.show_key_flow(kernel_flow_simple)
@@ -243,8 +243,8 @@ def softhier_launch(chip, launch_name, kernel_flow, west_hbm_plan, south_hbm_pla
         run_flow = kernel_flow
         pass
     chip.register_workload(launch_name, info)
-    view_onnx.create_onnx_graph(kernel_flow, west_hbm_plan, south_hbm_plan, chip.output_folder_info / "workload.onnx")
-    kernel_results = softhier_run_flow(chip, run_flow, west_hbm_plan, south_hbm_plan, launch_name, dry_run=dry_run)
+    view_onnx.create_onnx_graph(kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, chip.output_folder_info / "workload.onnx")
+    kernel_results = softhier_run_flow(chip, run_flow, spaceA_hbm_plan, spaceB_hbm_plan, launch_name, dry_run=dry_run)
     if kernel_results:
         chip.record_info({"Results" : kernel_results})
         ar.generate_polts(arch=chip.arch, results=kernel_results, save_root=chip.output_folder_info)
@@ -302,22 +302,22 @@ def flow():
 
     # LLM Layer Plan
     if work.prefill_enabled and llm.attention_type == 'MHA' and llm.ffn_type == 'MLP':
-        kernel_flow, west_hbm_plan, south_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
+        kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
         pass
 
     if work.decode_enabled and llm.attention_type == 'MLA'and llm.ffn_type == 'MoE':
-        kernel_flow, west_hbm_plan, south_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch, EP=64, use_flash_attn=True)
+        kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch, EP=64, use_flash_attn=True)
         info['kernel_flow'] = kernel_flow
-        info['west_hbm_plan'] = west_hbm_plan
-        info['south_hbm_plan'] = south_hbm_plan
-        deepseek.hbm_plan_summary(west_hbm_plan)
-        deepseek.hbm_plan_summary(south_hbm_plan)
+        info['spaceA_hbm_plan'] = spaceA_hbm_plan
+        info['spaceB_hbm_plan'] = spaceB_hbm_plan
+        deepseek.hbm_plan_summary(spaceA_hbm_plan)
+        deepseek.hbm_plan_summary(spaceB_hbm_plan)
         print_dict_as_table(work.__dict__)
         kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
-        softhier_launch(chip, f"{llm.model_name} decode DRY-RUN", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
-        Results = softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
-        print(f"[green][Kernel Runtime Breakdown][/green]")
-        cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
+        softhier_launch(chip, f"{llm.model_name} decode DRY-RUN", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
+        # Results = softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
+        # print(f"[green][Kernel Runtime Breakdown][/green]")
+        # cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
         pass
 
     pass

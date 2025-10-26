@@ -22,6 +22,7 @@ import sys
 import copy
 import torch
 import shutil
+import numpy as np
 import importlib.util
 from tqdm import tqdm
 from rich import print
@@ -253,8 +254,54 @@ def hbm_plan_summary(plan_in):
     cv.show_breakdown(plan, metric='size', unit='KiB', scale_div=1024)
     pass
 
+def total_size(hbm_plan):
+    size = 0
+    for k, v in hbm_plan.items():
+        size += v['size']
+        pass
+    return size
+    pass
 
+def reoffset(hbm_plan, offest):
+    for k in hbm_plan:
+        hbm_plan[k]['addr'] += offest
+        pass
+    return hbm_plan
+    pass
 
+def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
+    #1. Count the Number of HBM edges
+    edges_count = sum(1 for x in arch.hbm_chan_placement if x != 0)
+    assert(edges_count <= 2 and edges_count > 0), f"[Arch Error] we can not plan tensor with {edges_count} edges HBM: {arch.hbm_chan_placement}"
+    edges_idx = np.nonzero(np.array(arch.hbm_chan_placement))[0]
+
+    addr_start = [
+        arch.hbm_start_base,
+        arch.hbm_start_base + arch.hbm_node_addr_space * arch.num_cluster_y,
+        arch.hbm_start_base + arch.hbm_node_addr_space * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x,
+        arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
+    ]
+
+    #2. if only one edge
+    if edges_count == 1 :
+        edges_addr = addr_start[edges_idx[0]]
+        sizeA = total_size(spaceA_hbm_plan)
+        spaceA_start = edges_addr
+        spaceB_start = align_addr(spaceA_start + sizeA, align=0x100000)
+        spaceA_hbm_plan = reoffset(spaceA_hbm_plan, spaceA_start)
+        spaceB_hbm_plan = reoffset(spaceB_hbm_plan, spaceB_start)
+        pass
+
+    #3. if two edges
+    if edges_count == 2:
+        spaceA_start = addr_start[edges_idx[0]]
+        spaceB_start = addr_start[edges_idx[1]]
+        spaceA_hbm_plan = reoffset(spaceA_hbm_plan, spaceA_start)
+        spaceB_hbm_plan = reoffset(spaceB_hbm_plan, spaceB_start)
+        pass
+
+    return spaceA_hbm_plan, spaceB_hbm_plan
+    pass
 
 
 def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_flash_attn = False):
@@ -263,62 +310,62 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
     index_size                          = 4 #uint32_t
     kernel_flow                         = {}
-    west_hbm_plan                       = {}
-    south_hbm_plan                      = {}
-    west_hbm_addr                       = arch.hbm_start_base
-    south_hbm_addr                      = arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
+    spaceA_hbm_plan                     = {}
+    spaceB_hbm_plan                     = {}
+    spaceA_hbm_addr                     = 0
+    spaceB_hbm_addr                     = 0
 
-    south_hbm_plan["layer_input"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["layer_input"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
 
-    south_hbm_plan["cn_caches"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["cn_caches"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  llm.max_sequence_length,  llm.kv_lora_rank),
         "shape"                         :(work.batch_size * llm.max_sequence_length,  llm.kv_lora_rank),
         "size"                          : work.batch_size * llm.max_sequence_length * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * llm.max_sequence_length * llm.kv_lora_rank * elem_size
+    spaceB_hbm_addr                      += work.batch_size * llm.max_sequence_length * llm.kv_lora_rank * elem_size
 
-    south_hbm_plan["cr_caches"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["cr_caches"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  llm.max_sequence_length,  llm.rope_head_dim),
         "shape"                         :(work.batch_size * llm.max_sequence_length,  llm.rope_head_dim),
         "size"                          : work.batch_size * llm.max_sequence_length * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * llm.max_sequence_length * llm.rope_head_dim * elem_size
+    spaceB_hbm_addr                      += work.batch_size * llm.max_sequence_length * llm.rope_head_dim * elem_size
 
-    west_hbm_plan["position"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["position"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor),
         "shape"                         :(work.batch_size * work.speculative_factor,),
         "size"                          : work.batch_size * work.speculative_factor * index_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * index_size
-    west_hbm_addr                       = align_addr(west_hbm_addr)
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * index_size
+    spaceA_hbm_addr                       = align_addr(spaceA_hbm_addr)
 
 
     #################################
     #       1. Normalization        #
     #################################
 
-    west_hbm_plan["attn_norm"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_norm"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     attn_norm_cfg                       = RMSNorm()
     attn_norm_cfg.dtype                 = llm.dtype
@@ -328,8 +375,8 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_norm"] = {
         "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "attn_norm"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "output"                        : {"on": "spaceA",    "name": "attn_norm"},
         "cfg"                           : attn_norm_cfg
     }
 
@@ -338,22 +385,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       2. Latent Projection (C^Q, C^KV merged)         #
     #########################################################
 
-    south_hbm_plan["latent_qc_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["latent_qc_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  (llm.q_lora_rank + llm.kv_lora_rank)),
         "size"                          : llm.embeded_length * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
 
-    west_hbm_plan["attn_latqc"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_latqc"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  (llm.q_lora_rank + llm.kv_lora_rank)),
         "shape"                         :(work.batch_size * work.speculative_factor,  (llm.q_lora_rank + llm.kv_lora_rank)),
         "size"                          : work.batch_size * work.speculative_factor * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
 
     attn_latqc_proj                     = SummaGEMM()
     attn_latqc_proj.dtype               = llm.dtype
@@ -366,9 +413,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_latqc_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "latent_qc_weight"},
-        "output"                        : {"on": "west",    "name": "attn_latqc"},
+        "input"                         : {"on": "spaceA",    "name": "attn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "latent_qc_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_latqc"},
         "cfg"                           : attn_latqc_proj
     }
 
@@ -376,23 +423,23 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       3. Latent Projection CR         #
     #########################################
 
-    south_hbm_plan["latent_cr_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["latent_cr_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.rope_head_dim),
         "size"                          : llm.embeded_length * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.rope_head_dim * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.rope_head_dim * elem_size
 
 
-    south_hbm_plan["attn_latcr"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["attn_latcr"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.rope_head_dim),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.rope_head_dim),
         "size"                          : work.batch_size * work.speculative_factor * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.rope_head_dim * elem_size
+    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.rope_head_dim * elem_size
 
     attn_latcr_proj                     = SummaGEMM()
     attn_latcr_proj.dtype               = llm.dtype
@@ -405,9 +452,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_latcr_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "latent_cr_weight"},
-        "output"                        : {"on": "south",   "name": "attn_latcr"},
+        "input"                         : {"on": "spaceA",    "name": "attn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "latent_cr_weight"},
+        "output"                        : {"on": "spaceB",   "name": "attn_latcr"},
         "cfg"                           : attn_latcr_proj
     }
 
@@ -415,21 +462,21 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       4. CR RoPE         #
     ############################
 
-    west_hbm_plan["rope_c_cos_table"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["rope_c_cos_table"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.rope_head_dim // 2)),
         "size"                          : llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                      += llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size
+    spaceA_hbm_addr                      += llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size
 
-    west_hbm_plan["rope_c_sin_table"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["rope_c_sin_table"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.rope_head_dim // 2)),
         "size"                          : llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                      += llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size
+    spaceA_hbm_addr                      += llm.max_sequence_length * (llm.rope_head_dim // 2) * elem_size
 
     attn_rope_cr                        = RoPE()
     attn_rope_cr.dtype                  = llm.dtype
@@ -442,11 +489,11 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_rope_cr"] = {
         "type"                          : "rope",
-        "input"                         : {"on": "south",  "name": "attn_latcr"},
-        "output"                        : {"on": "south",  "name": "attn_latcr"},
-        "cos"                           : {"on": "west",   "name": "rope_c_cos_table"},
-        "sin"                           : {"on": "west",   "name": "rope_c_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
+        "input"                         : {"on": "spaceB",  "name": "attn_latcr"},
+        "output"                        : {"on": "spaceB",  "name": "attn_latcr"},
+        "cos"                           : {"on": "spaceA",   "name": "rope_c_cos_table"},
+        "sin"                           : {"on": "spaceA",   "name": "rope_c_sin_table"},
+        "position"                      : {"on": "spaceA",   "name": "position"},
         "cfg"                           : attn_rope_cr
     }
 
@@ -455,22 +502,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       5. Layout Remaping         #
     ####################################
 
-    west_hbm_plan["attn_latq"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_latq"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.q_lora_rank),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.q_lora_rank),
         "size"                          : work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size
 
     kernel_flow["attn_split_concat"] = {
         "type"                          : "split_concat",
-        "input1"                        : {"on": "west",    "name": "attn_latqc"},
-        "input2"                        : {"on": "south",   "name": "attn_latcr"},
-        "output1"                       : {"on": "west",    "name": "attn_latq"},
-        "output2"                       : {"on": "south",   "name": "cn_caches", "sequence_offset": work.kv_cache_length},
-        "output3"                       : {"on": "south",   "name": "cr_caches", "sequence_offset": work.kv_cache_length},
+        "input1"                        : {"on": "spaceA",    "name": "attn_latqc"},
+        "input2"                        : {"on": "spaceB",   "name": "attn_latcr"},
+        "output1"                       : {"on": "spaceA",    "name": "attn_latq"},
+        "output2"                       : {"on": "spaceB",   "name": "cn_caches", "sequence_offset": work.kv_cache_length},
+        "output3"                       : {"on": "spaceB",   "name": "cr_caches", "sequence_offset": work.kv_cache_length},
         "cfg"                           : None
     }
 
@@ -479,22 +526,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       6. QN Projection         #
     ##################################
 
-    south_hbm_plan["qn_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["qn_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.q_lora_rank,  llm.num_heads * llm.kv_lora_rank),
         "size"                          : llm.q_lora_rank * llm.num_heads * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.q_lora_rank * llm.num_heads * llm.kv_lora_rank * elem_size
+    spaceB_hbm_addr                      += llm.q_lora_rank * llm.num_heads * llm.kv_lora_rank * elem_size
 
-    west_hbm_plan["attn_qn"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_qn"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.kv_lora_rank),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.kv_lora_rank),
         "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
 
     attn_qn_proj                        = SummaGEMM()
     attn_qn_proj.dtype                  = llm.dtype
@@ -507,9 +554,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_qn_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_latq"},
-        "weight"                        : {"on": "south",   "name": "qn_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_qn"},
+        "input"                         : {"on": "spaceA",    "name": "attn_latq"},
+        "weight"                        : {"on": "spaceB",   "name": "qn_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_qn"},
         "cfg"                           : attn_qn_proj
     }
 
@@ -517,22 +564,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       7. QR Projection         #
     ##################################
 
-    south_hbm_plan["qr_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["qr_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.q_lora_rank,  llm.num_heads * llm.rope_head_dim),
         "size"                          : llm.q_lora_rank * llm.num_heads * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.q_lora_rank * llm.num_heads * llm.rope_head_dim * elem_size
+    spaceB_hbm_addr                      += llm.q_lora_rank * llm.num_heads * llm.rope_head_dim * elem_size
 
-    west_hbm_plan["attn_qr"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_qr"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.rope_head_dim),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.rope_head_dim),
         "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.rope_head_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.rope_head_dim * elem_size
 
     attn_qr_proj                        = SummaGEMM()
     attn_qr_proj.dtype                  = llm.dtype
@@ -545,9 +592,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_qr_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_latq"},
-        "weight"                        : {"on": "south",   "name": "qr_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_qr"},
+        "input"                         : {"on": "spaceA",    "name": "attn_latq"},
+        "weight"                        : {"on": "spaceB",   "name": "qr_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_qr"},
         "cfg"                           : attn_qr_proj
     }
 
@@ -555,21 +602,21 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       8. QR RoPE         #
     ############################
 
-    south_hbm_plan["rope_q_cos_table"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["rope_q_cos_table"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.rope_head_dim // 2)),
         "size"                          : llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size
+    spaceB_hbm_addr                      += llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size
 
-    south_hbm_plan["rope_q_sin_table"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["rope_q_sin_table"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.rope_head_dim // 2)),
         "size"                          : llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size
+    spaceB_hbm_addr                      += llm.max_sequence_length * (llm.num_heads * llm.rope_head_dim // 2) * elem_size
 
     attn_rope_qr                        = RoPE()
     attn_rope_qr.dtype                  = llm.dtype
@@ -582,11 +629,11 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_rope_qr"] = {
         "type"                          : "rope",
-        "input"                         : {"on": "west",   "name": "attn_qr"},
-        "output"                        : {"on": "west",   "name": "attn_qr"},
-        "cos"                           : {"on": "south",  "name": "rope_q_cos_table"},
-        "sin"                           : {"on": "south",  "name": "rope_q_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
+        "input"                         : {"on": "spaceA",   "name": "attn_qr"},
+        "output"                        : {"on": "spaceA",   "name": "attn_qr"},
+        "cos"                           : {"on": "spaceB",  "name": "rope_q_cos_table"},
+        "sin"                           : {"on": "spaceB",  "name": "rope_q_sin_table"},
+        "position"                      : {"on": "spaceA",   "name": "position"},
         "cfg"                           : attn_rope_qr
     }
 
@@ -594,14 +641,14 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       9. FlatMLA         #
     ############################
 
-    west_hbm_plan["attn_o"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_o"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.kv_lora_rank),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.kv_lora_rank),
         "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
 
     attn_flatmla                        = FlatMLA()
     attn_flatmla.dtype                  = llm.dtype
@@ -617,11 +664,11 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_flatmla"] = {
         "type"                          : "flatmla",
-        "qn"                            : {"on": "west",   "name": "attn_qn"},
-        "qr"                            : {"on": "west",   "name": "attn_qr"},
-        "cn"                            : {"on": "south",  "name": "cn_caches"},
-        "cr"                            : {"on": "south",  "name": "cr_caches"},
-        "o"                             : {"on": "west",   "name": "attn_o"},
+        "qn"                            : {"on": "spaceA",   "name": "attn_qn"},
+        "qr"                            : {"on": "spaceA",   "name": "attn_qr"},
+        "cn"                            : {"on": "spaceB",  "name": "cn_caches"},
+        "cr"                            : {"on": "spaceB",  "name": "cr_caches"},
+        "o"                             : {"on": "spaceA",   "name": "attn_o"},
         "cfg"                           : attn_flatmla
     }
 
@@ -629,28 +676,28 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       10. O First Down Projection         #
     #############################################
 
-    south_hbm_plan["o1_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["o1_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.kv_lora_rank,  llm.num_heads * llm.head_dimension),
         "size"                          : llm.kv_lora_rank * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.kv_lora_rank * llm.num_heads * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += llm.kv_lora_rank * llm.num_heads * llm.head_dimension * elem_size
 
-    west_hbm_plan["attn_o1"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_o1"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.head_dimension),
         "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size
 
     kernel_flow["attn_o1_proj"] = {
         "type"                          : "ofdp",
-        "input"                         : {"on": "west",    "name": "attn_o"},
-        "weight"                        : {"on": "south",   "name": "o1_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_o1"},
+        "input"                         : {"on": "spaceA",    "name": "attn_o"},
+        "weight"                        : {"on": "spaceB",   "name": "o1_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_o1"},
         "cfg"                           : None
     }
 
@@ -658,22 +705,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       11. O Final Down Projection         #
     #############################################
 
-    south_hbm_plan["o2_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["o2_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.num_heads * llm.head_dimension,  llm.embeded_length),
         "size"                          : llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size
 
-    west_hbm_plan["attn_o2"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_o2"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     attn_o2_proj                        = SummaGEMM()
     attn_o2_proj.dtype                  = llm.dtype
@@ -686,9 +733,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_o2_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_o1"},
-        "weight"                        : {"on": "south",   "name": "o2_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_o2"},
+        "input"                         : {"on": "spaceA",    "name": "attn_o1"},
+        "weight"                        : {"on": "spaceB",   "name": "o2_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_o2"},
         "cfg"                           : attn_o2_proj
     }
 
@@ -706,9 +753,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["attn_resnet"] = {
         "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "attn_o2"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "bias"                          : {"on": "spaceA",    "name": "attn_o2"},
+        "output"                        : {"on": "spaceB",   "name": "layer_input"},
         "cfg"                           : attn_resnet
     }
 
@@ -716,14 +763,14 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       13. Normalization        #
     ##################################
 
-    west_hbm_plan["moe_norm"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_norm"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     moe_norm_cfg                        = RMSNorm()
     moe_norm_cfg.dtype                  = llm.dtype
@@ -733,8 +780,8 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["moe_norm"] = {
         "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "moe_norm"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "output"                        : {"on": "spaceA",    "name": "moe_norm"},
         "cfg"                           : moe_norm_cfg
     }
 
@@ -746,22 +793,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
         prefix = f"moe_shared_{eid}_"
 
         #Up Projection
-        south_hbm_plan[f"{prefix}up_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}up_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
             "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+        spaceB_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
 
-        west_hbm_plan[f"{prefix}up"] = {
-            "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan[f"{prefix}up"] = {
+            "addr"                          : spaceA_hbm_addr,
             "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
             "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
             "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
         ffn_up_proj                         = SummaGEMM()
         ffn_up_proj.dtype                   = llm.dtype
@@ -774,29 +821,29 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}up"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": "moe_norm"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}up_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}up"},
+            "input"                         : {"on": "spaceA",    "name": "moe_norm"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}up_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}up"},
             "cfg"                           : ffn_up_proj
         }
 
         #Gate Projection
-        south_hbm_plan[f"{prefix}gate_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}gate_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
             "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+        spaceB_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
 
-        west_hbm_plan[f"{prefix}gate"] = {
-            "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan[f"{prefix}gate"] = {
+            "addr"                          : spaceA_hbm_addr,
             "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
             "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
             "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
         ffn_gate_proj                       = SummaGEMM()
         ffn_gate_proj.dtype                 = llm.dtype
@@ -809,21 +856,21 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}gate"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": "moe_norm"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}gate_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}gate"},
+            "input"                         : {"on": "spaceA",    "name": "moe_norm"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}gate_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}gate"},
             "cfg"                           : ffn_gate_proj
         }
 
         #Activation
-        west_hbm_plan[f"{prefix}acti"] = {
-            "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan[f"{prefix}acti"] = {
+            "addr"                          : spaceA_hbm_addr,
             "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
             "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
             "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
         ffn_acti                            = Activation()
         ffn_acti.dtype                      = llm.dtype
@@ -836,29 +883,29 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}acti"] = {
             "type"                          : "acti",
-            "input"                         : {"on": "west",    "name": f"{prefix}up"},
-            "gate"                          : {"on": "west",    "name": f"{prefix}gate"},
-            "output"                        : {"on": "west",    "name": f"{prefix}acti"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}up"},
+            "gate"                          : {"on": "spaceA",    "name": f"{prefix}gate"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}acti"},
             "cfg"                           : ffn_acti
         }
 
         #Down Projection
-        south_hbm_plan[f"{prefix}down_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}down_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.moe_inter_dim,  llm.embeded_length),
             "size"                          : llm.moe_inter_dim * llm.embeded_length * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
+        spaceB_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
 
-        west_hbm_plan[f"{prefix}down"] = {
-            "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan[f"{prefix}down"] = {
+            "addr"                          : spaceA_hbm_addr,
             "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
             "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
             "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
             "tensor"                        : None
         }
-        west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
         ffn_down_proj                       = SummaGEMM()
         ffn_down_proj.dtype                 = llm.dtype
@@ -871,9 +918,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}down"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": f"{prefix}acti"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}down_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}down"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}acti"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}down_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}down"},
             "cfg"                           : ffn_gate_proj
         }
         pass
@@ -882,22 +929,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       15. MoE Route Gating        #
     #####################################
 
-    south_hbm_plan["moe_rgate_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["moe_rgate_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.n_routed_experts),
         "size"                          : llm.embeded_length * llm.n_routed_experts * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.n_routed_experts * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.n_routed_experts * elem_size
 
-    west_hbm_plan["moe_rgate"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_rgate"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_routed_experts),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_routed_experts),
         "size"                          : work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size
 
     moe_rgate_proj                      = SummaGEMM()
     moe_rgate_proj.dtype                = llm.dtype
@@ -910,9 +957,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["moe_rgate_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "moe_norm"},
-        "weight"                        : {"on": "south",   "name": "moe_rgate_weight"},
-        "output"                        : {"on": "west",    "name": "moe_rgate"},
+        "input"                         : {"on": "spaceA",    "name": "moe_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "moe_rgate_weight"},
+        "output"                        : {"on": "spaceA",    "name": "moe_rgate"},
         "cfg"                           : moe_rgate_proj
     }
 
@@ -926,26 +973,26 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     SCORE       = SCORE[::EP]
     ep_experts  = llm.n_routed_experts // EP
 
-    south_hbm_plan["moe_route_val"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["moe_route_val"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
         "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size
-    south_hbm_addr                      = align_addr(south_hbm_addr)
+    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size
+    spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
-    south_hbm_plan["moe_route_idx"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["moe_route_idx"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
         "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
         "is_index"                      : True,
         "tensor"                        : D
     }
-    south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
-    south_hbm_addr                      = align_addr(south_hbm_addr)
+    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+    spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
     moe_rgate_topk                      = MoEGate()
     moe_rgate_topk.dtype                = llm.dtype
@@ -956,9 +1003,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["moe_rgate_topk"] = {
         "type"                          : "moeg",
-        "input"                         : {"on": "west",    "name": "moe_rgate"},
-        "output_val"                    : {"on": "south",   "name": "moe_route_val"},
-        "output_idx"                    : {"on": "south",   "name": "moe_route_idx"},
+        "input"                         : {"on": "spaceA",    "name": "moe_rgate"},
+        "output_val"                    : {"on": "spaceB",   "name": "moe_route_val"},
+        "output_idx"                    : {"on": "spaceB",   "name": "moe_route_idx"},
         "cfg"                           : moe_rgate_topk
     }
 
@@ -966,14 +1013,14 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       17. MoE Dispatch        #
     #################################
 
-    west_hbm_plan["moe_dispatch_buffer"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_dispatch_buffer"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(ep_experts,  work.batch_size * work.speculative_factor,  llm.embeded_length),
         "shape"                         :(ep_experts * work.batch_size * work.speculative_factor,  llm.embeded_length),
         "size"                          : ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     #Generate Memory Notations
     for eid in range(ep_experts):
@@ -983,8 +1030,8 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
             continue
             pass
 
-        west_hbm_plan[f"{prefix}input"] = {
-            "addr"                          : west_hbm_plan["moe_dispatch_buffer"]["addr"] + eid * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        spaceA_hbm_plan[f"{prefix}input"] = {
+            "addr"                          : spaceA_hbm_plan["moe_dispatch_buffer"]["addr"] + eid * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
             "view"                          :(num_tokens,  llm.embeded_length),
             "shape"                         :(num_tokens,  llm.embeded_length),
             "size"                          : num_tokens * llm.embeded_length * elem_size,
@@ -994,16 +1041,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
         pass
 
     if EP == 1:
-        south_hbm_plan["moe_route_pos"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan["moe_route_pos"] = {
+            "addr"                          : spaceB_hbm_addr,
             "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
             "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
             "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
             "is_index"                      : True,
             "tensor"                        : P
         }
-        south_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
-        south_hbm_addr                      = align_addr(south_hbm_addr)
+        spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+        spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
         moe_dispatch                        = MoEDispatch()
         moe_dispatch.dtype                  = llm.dtype
@@ -1016,10 +1063,10 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow["moe_dispatch"] = {
             "type"                          : "moed",
-            "input"                         : {"on": "west",    "name": "moe_norm"},
-            "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
-            "info"                          : {"merged_output" : {"on": "west",    "name": "moe_dispatch_buffer"}},
-            "output_pos"                    : {"on": "south",   "name": "moe_route_pos"},
+            "input"                         : {"on": "spaceA",    "name": "moe_norm"},
+            "input_idx"                     : {"on": "spaceB",   "name": "moe_route_idx"},
+            "info"                          : {"merged_output" : {"on": "spaceA",    "name": "moe_dispatch_buffer"}},
+            "output_pos"                    : {"on": "spaceB",   "name": "moe_route_pos"},
             "cfg"                           : moe_dispatch
         }
 
@@ -1029,7 +1076,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
             if num_tokens == 0:
                 continue
                 pass
-            kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
+            kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "spaceA",    "name": f"{prefix}input"}
             pass
         pass
 
@@ -1038,32 +1085,32 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     ###################################
 
     #Shared Memory Spaces
-    west_hbm_plan["moe_routed_up"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_routed_up"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
-    west_hbm_plan["moe_routed_gate"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_routed_gate"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
-    west_hbm_plan["moe_routed_acti"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_routed_acti"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
         "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
 
     for eid in range(ep_experts):
         prefix = f"moe_routed_{eid}_"
@@ -1073,16 +1120,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
             pass
 
         #Up Projection
-        south_hbm_plan[f"{prefix}up_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}up_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
             "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+        spaceB_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
 
-        west_hbm_plan[f"{prefix}up"] = {
-            "addr"                          : west_hbm_plan["moe_routed_up"]["addr"],
+        spaceA_hbm_plan[f"{prefix}up"] = {
+            "addr"                          : spaceA_hbm_plan["moe_routed_up"]["addr"],
             "view"                          :(num_tokens,  llm.moe_inter_dim),
             "shape"                         :(num_tokens,  llm.moe_inter_dim),
             "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
@@ -1101,23 +1148,23 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}up"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": f"{prefix}input"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}up_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}up"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}input"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}up_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}up"},
             "cfg"                           : ffn_up_proj
         }
 
         #Gate Projection
-        south_hbm_plan[f"{prefix}gate_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}gate_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.embeded_length,  llm.moe_inter_dim),
             "size"                          : llm.embeded_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
+        spaceB_hbm_addr                      += llm.embeded_length * llm.moe_inter_dim * elem_size
 
-        west_hbm_plan[f"{prefix}gate"] = {
-            "addr"                          : west_hbm_plan["moe_routed_gate"]["addr"],
+        spaceA_hbm_plan[f"{prefix}gate"] = {
+            "addr"                          : spaceA_hbm_plan["moe_routed_gate"]["addr"],
             "view"                          :(num_tokens,  llm.moe_inter_dim),
             "shape"                         :(num_tokens,  llm.moe_inter_dim),
             "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
@@ -1136,15 +1183,15 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}gate"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": f"{prefix}input"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}gate_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}gate"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}input"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}gate_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}gate"},
             "cfg"                           : ffn_gate_proj
         }
 
         #Activation
-        west_hbm_plan[f"{prefix}acti"] = {
-            "addr"                          : west_hbm_plan["moe_routed_acti"]["addr"],
+        spaceA_hbm_plan[f"{prefix}acti"] = {
+            "addr"                          : spaceA_hbm_plan["moe_routed_acti"]["addr"],
             "view"                          :(num_tokens,  llm.moe_inter_dim),
             "shape"                         :(num_tokens,  llm.moe_inter_dim),
             "size"                          : num_tokens * llm.moe_inter_dim * elem_size,
@@ -1163,20 +1210,20 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}acti"] = {
             "type"                          : "acti",
-            "input"                         : {"on": "west",    "name": f"{prefix}up"},
-            "gate"                          : {"on": "west",    "name": f"{prefix}gate"},
-            "output"                        : {"on": "west",    "name": f"{prefix}acti"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}up"},
+            "gate"                          : {"on": "spaceA",    "name": f"{prefix}gate"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}acti"},
             "cfg"                           : ffn_acti
         }
 
         #Down Projection
-        south_hbm_plan[f"{prefix}down_proj_weight"] = {
-            "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan[f"{prefix}down_proj_weight"] = {
+            "addr"                          : spaceB_hbm_addr,
             "shape"                         :(llm.moe_inter_dim,  llm.embeded_length),
             "size"                          : llm.moe_inter_dim * llm.embeded_length * elem_size,
             "tensor"                        : None
         }
-        south_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
+        spaceB_hbm_addr                      += llm.moe_inter_dim * llm.embeded_length * elem_size
 
         ffn_down_proj                       = SummaGEMM()
         ffn_down_proj.dtype                 = llm.dtype
@@ -1189,9 +1236,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow[f"{prefix}down"] = {
             "type"                          : "gemm",
-            "input"                         : {"on": "west",    "name": f"{prefix}acti"},
-            "weight"                        : {"on": "south",   "name": f"{prefix}down_proj_weight"},
-            "output"                        : {"on": "west",    "name": f"{prefix}input"},
+            "input"                         : {"on": "spaceA",    "name": f"{prefix}acti"},
+            "weight"                        : {"on": "spaceB",   "name": f"{prefix}down_proj_weight"},
+            "output"                        : {"on": "spaceA",    "name": f"{prefix}input"},
             "cfg"                           : ffn_gate_proj
         }
         pass
@@ -1200,14 +1247,14 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       19. MoE Combine        #
     ################################
 
-    west_hbm_plan["moe_route_output"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_route_output"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     if EP == 1:
         moe_combine                         = MoECombine()
@@ -1220,11 +1267,11 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         kernel_flow["moe_combine"] = {
             "type"                          : "moec",
-            "input_val"                     : {"on": "south",   "name": "moe_route_val"},
-            "input_idx"                     : {"on": "south",   "name": "moe_route_idx"},
-            "input_pos"                     : {"on": "south",   "name": "moe_route_pos"},
-            "info"                          : {"merged_input" : {"on": "west",    "name": "moe_dispatch_buffer"}},
-            "output"                        : {"on": "west",    "name": "moe_route_output"},
+            "input_val"                     : {"on": "spaceB",   "name": "moe_route_val"},
+            "input_idx"                     : {"on": "spaceB",   "name": "moe_route_idx"},
+            "input_pos"                     : {"on": "spaceB",   "name": "moe_route_pos"},
+            "info"                          : {"merged_input" : {"on": "spaceA",    "name": "moe_dispatch_buffer"}},
+            "output"                        : {"on": "spaceA",    "name": "moe_route_output"},
             "cfg"                           : moe_combine
         }
 
@@ -1234,7 +1281,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
             if num_tokens == 0:
                 continue
                 pass
-            kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "west",    "name": f"{prefix}input"}
+            kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "spaceA",    "name": f"{prefix}input"}
             pass
         pass
 
@@ -1242,14 +1289,14 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       20. Merge Shared and Routed Experts Results        #
     ############################################################
 
-    west_hbm_plan["moe_o"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["moe_o"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
         "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
         "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
 
     moe_share_add_route                = Activation()
     moe_share_add_route.dtype          = llm.dtype
@@ -1262,9 +1309,9 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["moe_share_add_route"] = {
         "type"                          : "addi",
-        "input"                         : {"on": "west",    "name": "moe_shared_0_down"},
-        "bias"                          : {"on": "west",    "name": "moe_route_output"},
-        "output"                        : {"on": "west",    "name": "moe_o"},
+        "input"                         : {"on": "spaceA",    "name": "moe_shared_0_down"},
+        "bias"                          : {"on": "spaceA",    "name": "moe_route_output"},
+        "output"                        : {"on": "spaceA",    "name": "moe_o"},
         "cfg"                           : moe_share_add_route
     }
 
@@ -1283,11 +1330,12 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     kernel_flow["moe_resnet"] = {
         "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "moe_o"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "bias"                          : {"on": "spaceA",    "name": "moe_o"},
+        "output"                        : {"on": "spaceB",   "name": "layer_input"},
         "cfg"                           : moe_resnet
     }
 
-    return kernel_flow, west_hbm_plan, south_hbm_plan
+    spaceA_hbm_plan, spaceB_hbm_plan = reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan)
+    return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
     pass

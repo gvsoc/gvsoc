@@ -154,20 +154,20 @@ def test():
                 info = {"llm": llm, "work": work}
 
                 # Generate flow
-                kernel_flow, west_hbm_plan, south_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch)
+                kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch)
                 info['kernel_flow'] = kernel_flow
-                info['west_hbm_plan'] = west_hbm_plan
-                info['south_hbm_plan'] = south_hbm_plan
-                deepseek.hbm_plan_summary(west_hbm_plan)
-                deepseek.hbm_plan_summary(south_hbm_plan)
+                info['spaceA_hbm_plan'] = spaceA_hbm_plan
+                info['spaceB_hbm_plan'] = spaceB_hbm_plan
+                deepseek.hbm_plan_summary(spaceA_hbm_plan)
+                deepseek.hbm_plan_summary(spaceB_hbm_plan)
                 print_dict_as_table(work.__dict__)
                 kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
 
                 # Dry Run
-                flow.softhier_launch(chip, f"DRY-RUN b={batch_size} kv={kv_cache_length} sp={speculative_factor}", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
+                flow.softhier_launch(chip, f"DRY-RUN b={batch_size} kv={kv_cache_length} sp={speculative_factor}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
 
                 # Full Run
-                Results = flow.softhier_launch(chip, f"{llm.model_name} decode b{batch_size} kv{kv_cache_length} sp{speculative_factor}", kernel_flow, west_hbm_plan, south_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
+                Results = flow.softhier_launch(chip, f"{llm.model_name} decode b{batch_size} kv{kv_cache_length} sp{speculative_factor}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
                 print(f"[green][Kernel Runtime Breakdown][/green]")
                 cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
             pass

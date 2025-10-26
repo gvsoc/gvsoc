@@ -19,7 +19,7 @@
 import onnx
 from onnx import helper, TensorProto
 
-def analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan):
+def analyze_to_onnx(kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan):
     nodes_dict = {}
     tensor_map = {}
     for kernel_name in kernel_flow:
@@ -82,7 +82,7 @@ def analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan):
     return tensor_map, nodes_dict
     pass
 
-def create_onnx_tensors(tensor_map, west_hbm_plan, south_hbm_plan, onnx_dtype=TensorProto.FLOAT16):
+def create_onnx_tensors(tensor_map, spaceA_hbm_plan, spaceB_hbm_plan, onnx_dtype=TensorProto.FLOAT16):
     #1. map rename to actual name
     remap = {}
     for k, v in tensor_map.items():
@@ -104,12 +104,12 @@ def create_onnx_tensors(tensor_map, west_hbm_plan, south_hbm_plan, onnx_dtype=Te
         real_name = remap_info['real name']
 
         # Get HBM plan information
-        if real_name in west_hbm_plan:
-            plan_info = west_hbm_plan[real_name]
-            direction = 'West'
+        if real_name in spaceA_hbm_plan:
+            plan_info = spaceA_hbm_plan[real_name]
+            direction = 'spaceA'
         else:
-            plan_info = south_hbm_plan[real_name]
-            direction = 'South'
+            plan_info = spaceB_hbm_plan[real_name]
+            direction = 'spaceB'
             pass
 
         # Create onnx tensors
@@ -140,10 +140,10 @@ def create_onnx_node_list(nodes_dict):
     return node_list
     pass
 
-def create_onnx_graph(kernel_flow, west_hbm_plan, south_hbm_plan, save_path):
+def create_onnx_graph(kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, save_path):
     #1. analyze flow
-    tensor_map, nodes_dict = analyze_to_onnx(kernel_flow, west_hbm_plan, south_hbm_plan)
-    tensor_dict = create_onnx_tensors(tensor_map, west_hbm_plan, south_hbm_plan)
+    tensor_map, nodes_dict = analyze_to_onnx(kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan)
+    tensor_dict = create_onnx_tensors(tensor_map, spaceA_hbm_plan, spaceB_hbm_plan)
     node_list = create_onnx_node_list(nodes_dict)
 
     #2. build graph, model and onnx plot

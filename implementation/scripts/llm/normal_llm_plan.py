@@ -79,46 +79,95 @@ def hbm_plan_summary(plan):
     cv.show_breakdown(plan, metric='size', unit='KiB', scale_div=1024)
     pass
 
+def total_size(hbm_plan):
+    size = 0
+    for k, v in hbm_plan.items():
+        size += v['size']
+        pass
+    return size
+    pass
+
+def reoffset(hbm_plan, offest):
+    for k in hbm_plan:
+        hbm_plan[k]['addr'] += offest
+        pass
+    return hbm_plan
+    pass
+
+def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
+    #1. Count the Number of HBM edges
+    edges_count = sum(1 for x in arch.hbm_chan_placement if x != 0)
+    assert(edges_count <= 2 and edges_count > 0), f"[Arch Error] we can not plan tensor with {edges_count} edges HBM: {arch.hbm_chan_placement}"
+    edges_idx = np.nonzero(np.array(arch.hbm_chan_placement))[0]
+
+    addr_start = [
+        arch.hbm_start_base,
+        arch.hbm_start_base + arch.hbm_node_addr_space * arch.num_cluster_y,
+        arch.hbm_start_base + arch.hbm_node_addr_space * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x,
+        arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
+    ]
+
+    #2. if only one edge
+    if edges_count == 1 :
+        edges_addr = addr_start[edges_idx[0]]
+        sizeA = total_size(spaceA_hbm_plan)
+        spaceA_start = edges_addr
+        spaceB_start = align_addr(spaceA_start + sizeA, align=0x100000)
+        spaceA_hbm_plan = reoffset(spaceA_hbm_plan, spaceA_start)
+        spaceB_hbm_plan = reoffset(spaceB_hbm_plan, spaceB_start)
+        pass
+
+    #3. if two edges
+    if edges_count == 2:
+        spaceA_start = addr_start[edges_idx[0]]
+        spaceB_start = addr_start[edges_idx[1]]
+        spaceA_hbm_plan = reoffset(spaceA_hbm_plan, spaceA_start)
+        spaceB_hbm_plan = reoffset(spaceB_hbm_plan, spaceB_start)
+        pass
+
+    return spaceA_hbm_plan, spaceB_hbm_plan
+    pass
+
 def normal_llm_prefill_layer_plan(llm, work, arch):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
     index_size                          = 4 #uint32_t
     kernel_flow                         = {}
-    west_hbm_plan                       = {}
-    south_hbm_plan                      = {}
-    west_hbm_addr                       = arch.hbm_start_base
-    south_hbm_addr                      = arch.hbm_start_base + arch.hbm_node_addr_space * 2 * arch.num_cluster_y + arch.hbm_node_addr_space * arch.num_cluster_x
+    spaceA_hbm_plan                     = {}
+    spaceB_hbm_plan                     = {}
+    spaceA_hbm_addr                     = 0
+    spaceB_hbm_addr                     = 0
 
-    south_hbm_plan["layer_input"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["layer_input"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
         "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
 
-    west_hbm_plan["position"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["position"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token,),
         "size"                          : work.batch_size * work.prefill_input_token * index_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * index_size
-    west_hbm_addr                       = align_addr(west_hbm_addr)
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * index_size
+    spaceA_hbm_addr                       = align_addr(spaceA_hbm_addr)
 
 
 
     #################################
     #       1. Normalization        #
     #################################
-    west_hbm_plan["attn_norm"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_norm"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
         "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
 
     attn_norm_cfg                       = RMSNorm()
     attn_norm_cfg.dtype                 = llm.dtype
@@ -128,8 +177,8 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_norm"] = {
         "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "attn_norm"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "output"                        : {"on": "spaceA",    "name": "attn_norm"},
         "cfg"                           : attn_norm_cfg
     }
 
@@ -137,22 +186,22 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     #################################
     #       2. Q Projection         #
     #################################
-    south_hbm_plan["q_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["q_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.num_heads * llm.head_dimension),
         "size"                          : llm.embeded_length * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.num_heads * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.num_heads * llm.head_dimension * elem_size
 
-    west_hbm_plan["attn_q"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_q"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
 
     attn_q_proj                         = SummaGEMM()
     attn_q_proj.dtype                   = llm.dtype
@@ -166,9 +215,9 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_q_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "q_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_q"},
+        "input"                         : {"on": "spaceA",    "name": "attn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "q_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_q"},
         "cfg"                           : attn_q_proj
     }
 
@@ -177,22 +226,22 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     #################################
     #       3. KV Projection        #
     #################################
-    south_hbm_plan["k_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["k_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.head_groups * llm.head_dimension),
         "size"                          : llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
 
-    south_hbm_plan["attn_k"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["attn_k"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
 
     attn_k_proj                         = SummaGEMM()
     attn_k_proj.dtype                   = llm.dtype
@@ -206,29 +255,29 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_k_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "k_proj_weight"},
-        "output"                        : {"on": "south",   "name": "attn_k"},
+        "input"                         : {"on": "spaceA",    "name": "attn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "k_proj_weight"},
+        "output"                        : {"on": "spaceB",   "name": "attn_k"},
         "cfg"                           : attn_k_proj
     }
 
 
-    south_hbm_plan["v_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["v_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.head_groups * llm.head_dimension),
         "size"                          : llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.head_groups * llm.head_dimension * elem_size
 
-    south_hbm_plan["attn_v"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["attn_v"] = {
+        "addr"                          : spaceB_hbm_addr,
         "view"                          :(work.batch_size * llm.head_groups,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.head_groups,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
+    spaceB_hbm_addr                      += work.batch_size * work.prefill_input_token * llm.head_groups * llm.head_dimension * elem_size
 
     attn_v_proj                         = SummaGEMM()
     attn_v_proj.dtype                   = llm.dtype
@@ -242,9 +291,9 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_v_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_norm"},
-        "weight"                        : {"on": "south",   "name": "v_proj_weight"},
-        "output"                        : {"on": "south",   "name": "attn_v"},
+        "input"                         : {"on": "spaceA",    "name": "attn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "v_proj_weight"},
+        "output"                        : {"on": "spaceB",   "name": "attn_v"},
         "cfg"                           : attn_v_proj
     }
 
@@ -254,21 +303,21 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     #########################
     if llm.qk_rope_enable:
         ## Cosine and Sine Table
-        south_hbm_plan["rope_q_cos_table"] = {
-        "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan["rope_q_cos_table"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.head_dimension // 2)),
         "size"                          : llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size,
         "tensor"                        : None
         }
-        south_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
+        spaceB_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
 
-        south_hbm_plan["rope_q_sin_table"] = {
-        "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan["rope_q_sin_table"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.num_heads * llm.head_dimension // 2)),
         "size"                          : llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size,
         "tensor"                        : None
         }
-        south_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
+        spaceB_hbm_addr                  += llm.max_sequence_length * (llm.num_heads * llm.head_dimension // 2) * elem_size
 
         attn_rope_q                     = RoPE()
         attn_rope_q.dtype               = llm.dtype
@@ -281,29 +330,29 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
         kernel_flow["attn_rope_q"] = {
         "type"                          : "rope",
-        "input"                         : {"on": "west",   "name": "attn_q"},
-        "output"                        : {"on": "west",   "name": "attn_q"},
-        "cos"                           : {"on": "south",  "name": "rope_q_cos_table"},
-        "sin"                           : {"on": "south",  "name": "rope_q_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
+        "input"                         : {"on": "spaceA",   "name": "attn_q"},
+        "output"                        : {"on": "spaceA",   "name": "attn_q"},
+        "cos"                           : {"on": "spaceB",  "name": "rope_q_cos_table"},
+        "sin"                           : {"on": "spaceB",  "name": "rope_q_sin_table"},
+        "position"                      : {"on": "spaceA",   "name": "position"},
         "cfg"                           : attn_rope_q
         }
 
-        west_hbm_plan["rope_k_cos_table"] = {
-        "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan["rope_k_cos_table"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.head_groups * llm.head_dimension // 2)),
         "size"                          : llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size,
         "tensor"                        : None
         }
-        west_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
+        spaceA_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
 
-        west_hbm_plan["rope_k_sin_table"] = {
-        "addr"                          : west_hbm_addr,
+        spaceA_hbm_plan["rope_k_sin_table"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(llm.max_sequence_length,  (llm.head_groups * llm.head_dimension // 2)),
         "size"                          : llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size,
         "tensor"                        : None
         }
-        west_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
+        spaceA_hbm_addr                   += llm.max_sequence_length * (llm.head_groups * llm.head_dimension // 2) * elem_size
 
         attn_rope_k                     = RoPE()
         attn_rope_k.dtype               = llm.dtype
@@ -316,11 +365,11 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
         kernel_flow["attn_rope_k"] = {
         "type"                          : "rope",
-        "input"                         : {"on": "south",  "name": "attn_k"},
-        "output"                        : {"on": "south",  "name": "attn_k"},
-        "cos"                           : {"on": "west",   "name": "rope_k_cos_table"},
-        "sin"                           : {"on": "west",   "name": "rope_k_sin_table"},
-        "position"                      : {"on": "west",   "name": "position"},
+        "input"                         : {"on": "spaceB",  "name": "attn_k"},
+        "output"                        : {"on": "spaceB",  "name": "attn_k"},
+        "cos"                           : {"on": "spaceA",   "name": "rope_k_cos_table"},
+        "sin"                           : {"on": "spaceA",   "name": "rope_k_sin_table"},
+        "position"                      : {"on": "spaceA",   "name": "position"},
         "cfg"                           : attn_rope_k
         }
         pass
@@ -328,14 +377,14 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     #############################
     #       5. Attention        #
     #############################
-    west_hbm_plan["attn_o"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_o"] = {
+        "addr"                          : spaceA_hbm_addr,
         "view"                          :(work.batch_size * llm.num_heads,  work.prefill_input_token,  llm.head_dimension),
         "shape"                         :(work.batch_size * work.prefill_input_token * llm.num_heads,  llm.head_dimension),
         "size"                          : work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.num_heads * llm.head_dimension * elem_size
 
     attn_mha                            = FlatAttetion()
     attn_mha.dtype                      = llm.dtype
@@ -351,10 +400,10 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_mha"] = {
         "type"                          : "flat_attn",
-        "q"                             : {"on": "west",    "name": "attn_q"},
-        "k"                             : {"on": "south",   "name": "attn_k"},
-        "v"                             : {"on": "south",   "name": "attn_v"},
-        "o"                             : {"on": "west",    "name": "attn_o"},
+        "q"                             : {"on": "spaceA",    "name": "attn_q"},
+        "k"                             : {"on": "spaceB",   "name": "attn_k"},
+        "v"                             : {"on": "spaceB",   "name": "attn_v"},
+        "o"                             : {"on": "spaceA",    "name": "attn_o"},
         "cfg"                           : attn_mha
     }
 
@@ -362,21 +411,21 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     #############################
     #       6. O Projection     #
     #############################
-    south_hbm_plan["o_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["o_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.num_heads * llm.head_dimension,  llm.embeded_length),
         "size"                          : llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += llm.num_heads * llm.head_dimension * llm.embeded_length * elem_size
 
-    west_hbm_plan["attn_a"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["attn_a"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
         "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
 
     attn_o_proj                         = SummaGEMM()
     attn_o_proj.dtype                   = llm.dtype
@@ -390,9 +439,9 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_o_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "attn_o"},
-        "weight"                        : {"on": "south",   "name": "o_proj_weight"},
-        "output"                        : {"on": "west",    "name": "attn_a"},
+        "input"                         : {"on": "spaceA",    "name": "attn_o"},
+        "weight"                        : {"on": "spaceB",   "name": "o_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "attn_a"},
         "cfg"                           : attn_o_proj
     }
 
@@ -410,22 +459,22 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["attn_resnet"] = {
         "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "attn_a"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "bias"                          : {"on": "spaceA",    "name": "attn_a"},
+        "output"                        : {"on": "spaceB",   "name": "layer_input"},
         "cfg"                           : attn_resnet
     }
 
     #################################
     #       8. Normalization        #
     #################################
-    west_hbm_plan["ffn_norm"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["ffn_norm"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
         "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
 
     ffn_norm_cfg                        = RMSNorm()
     ffn_norm_cfg.dtype                  = llm.dtype
@@ -435,29 +484,29 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_norm"] = {
         "type"                          : "norm",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "output"                        : {"on": "west",    "name": "ffn_norm"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_norm"},
         "cfg"                           : ffn_norm_cfg
     }
 
     #####################################
     #       9. FFN Up Projection        #
     #####################################
-    south_hbm_plan["up_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["up_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
         "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
 
-    west_hbm_plan["ffn_up"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["ffn_up"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
         "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
 
     ffn_up_proj                         = SummaGEMM()
     ffn_up_proj.dtype                   = llm.dtype
@@ -470,30 +519,30 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_up_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_norm"},
-        "weight"                        : {"on": "south",   "name": "up_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_up"},
+        "input"                         : {"on": "spaceA",    "name": "ffn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "up_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_up"},
         "cfg"                           : ffn_up_proj
     }
 
     #####################################
     #       10. FFN Gate Projection     #
     #####################################
-    south_hbm_plan["gate_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["gate_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
         "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
+    spaceB_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
 
-    west_hbm_plan["ffn_gate"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["ffn_gate"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
         "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
 
     ffn_gate_proj                       = SummaGEMM()
     ffn_gate_proj.dtype                 = llm.dtype
@@ -506,31 +555,31 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_gate_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_norm"},
-        "weight"                        : {"on": "south",   "name": "gate_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_gate"},
+        "input"                         : {"on": "spaceA",    "name": "ffn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "gate_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_gate"},
         "cfg"                           : ffn_gate_proj
     }
 
     #################################
     #       11. FFN Activation      #
     #################################
-    west_hbm_plan["ffn_acti"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["ffn_acti"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
         "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
 
     if llm.mlp_acti_bias_enable:
-        south_hbm_plan["ffn_acti_bias"] = {
-        "addr"                          : south_hbm_addr,
+        spaceB_hbm_plan["ffn_acti_bias"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token,  llm.mlp_inter_dim),
         "size"                          : work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size,
         "tensor"                        : None
         }
-        south_hbm_addr                  += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
+        spaceB_hbm_addr                  += work.batch_size * work.prefill_input_token * llm.mlp_inter_dim * elem_size
         pass
 
     ffn_acti                            = Activation()
@@ -544,34 +593,34 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_acti"] = {
         "type"                          : "acti",
-        "input"                         : {"on": "west",    "name": "ffn_up"},
-        "gate"                          : {"on": "west",    "name": "ffn_gate"},
-        "output"                        : {"on": "west",    "name": "ffn_acti"},
+        "input"                         : {"on": "spaceA",    "name": "ffn_up"},
+        "gate"                          : {"on": "spaceA",    "name": "ffn_gate"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_acti"},
         "cfg"                           : ffn_acti
     }
 
     if llm.mlp_acti_bias_enable:
-        kernel_flow["ffn_acti"]["bias"] = {"on": "south",   "name": "ffn_acti_bias"}
+        kernel_flow["ffn_acti"]["bias"] = {"on": "spaceB",   "name": "ffn_acti_bias"}
         pass
 
     #####################################
     #       12. FFN Down Projection     #
     #####################################
-    south_hbm_plan["down_proj_weight"] = {
-        "addr"                          : south_hbm_addr,
+    spaceB_hbm_plan["down_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
         "shape"                         :(llm.mlp_inter_dim,  llm.embeded_length),
         "size"                          : llm.mlp_inter_dim * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    south_hbm_addr                      += llm.mlp_inter_dim * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += llm.mlp_inter_dim * llm.embeded_length * elem_size
 
-    west_hbm_plan["ffn_o"] = {
-        "addr"                          : west_hbm_addr,
+    spaceA_hbm_plan["ffn_o"] = {
+        "addr"                          : spaceA_hbm_addr,
         "shape"                         :(work.batch_size * work.prefill_input_token, llm.embeded_length),
         "size"                          : work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    west_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * work.prefill_input_token * llm.embeded_length * elem_size
 
     ffn_down_proj                       = SummaGEMM()
     ffn_down_proj.dtype                 = llm.dtype
@@ -584,9 +633,9 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_down_proj"] = {
         "type"                          : "gemm",
-        "input"                         : {"on": "west",    "name": "ffn_acti"},
-        "weight"                        : {"on": "south",   "name": "down_proj_weight"},
-        "output"                        : {"on": "west",    "name": "ffn_o"},
+        "input"                         : {"on": "spaceA",    "name": "ffn_acti"},
+        "weight"                        : {"on": "spaceB",   "name": "down_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_o"},
         "cfg"                           : ffn_down_proj
     }
 
@@ -604,11 +653,12 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 
     kernel_flow["ffn_resnet"] = {
         "type"                          : "addi",
-        "input"                         : {"on": "south",   "name": "layer_input"},
-        "bias"                          : {"on": "west",    "name": "ffn_o"},
-        "output"                        : {"on": "south",   "name": "layer_input"},
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "bias"                          : {"on": "spaceA",    "name": "ffn_o"},
+        "output"                        : {"on": "spaceB",   "name": "layer_input"},
         "cfg"                           : ffn_resnet
     }
     
-    return kernel_flow, west_hbm_plan, south_hbm_plan
+    spaceA_hbm_plan, spaceB_hbm_plan = reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan)
+    return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
     pass
