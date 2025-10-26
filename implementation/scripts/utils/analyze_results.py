@@ -23,8 +23,8 @@ import numpy as np
 from cycler import cycler
 import matplotlib.pyplot as plt
 
-# create a big set of colors from a colormap
-custom_colors = plt.cm.tab20(np.linspace(0, 1, 20))  # 20 colors from 'tab20'
+# 30 colors sampled evenly from tab20
+custom_colors = plt.cm.tab20(np.linspace(0, 1, 30))
 
 # extend the global color cycle
 plt.rcParams['axes.prop_cycle'] = cycler(color=custom_colors)
@@ -81,6 +81,11 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
 
     plt.title(f'Runtime Breakdown with Utilisation Curve')
     plt.savefig(save_path, bbox_inches="tight")
+
+    # Record to results
+    for i in range(len(kernels)):
+        results[kernels[i]]['pct'] = runtime_pct[i]
+        pass
     pass
 
 def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=False):
@@ -89,6 +94,9 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     results = {}
     for k, v in raw_results.items():
         if "achieved_flop_per_cycle" in v and "arithmetic_intensity" in v:
+            if "pct" in v:
+                k = f"{k} [{v['pct']:.1f}%]"
+                pass
             results[k] = {"TFLOPS": v['achieved_flop_per_cycle'] / 1000, "AI": v['arithmetic_intensity']}
             pass
         pass
@@ -145,7 +153,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     ax.plot(xs, ys_mem, linestyle='--', linewidth=1.5, label=f"Memory roof: {bandwidth:g} GB/s")
 
     # compute roof: y = peak_perf (horizontal)
-    ax.plot(xs, [peak_perf, peak_perf], linestyle='--', linewidth=1.5, label=f"Compute roof: {peak_perf:g} TFLOPS")
+    ax.plot(xs, [peak_perf, peak_perf], linestyle='--', linewidth=1.5, label=f"Compute roof: {peak_perf:.1f} TFLOPS")
 
     # --- knee marker ---
     if AI_knee > 0 and math.isfinite(AI_knee):
@@ -169,7 +177,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     ax.set_xlabel("Arithmetic Intensity (FLOPs/byte)")
     ax.set_ylabel("Performance (TFLOPS)")
     if title is None:
-        title = f"Roofline (Peak: {peak_perf:g} TFLOPS, BW: {bandwidth:g} GB/s)"
+        title = f"Roofline (Peak: {peak_perf:.1f} TFLOPS, BW: {bandwidth:g} GB/s)"
     ax.set_title(title)
     ax.grid(True, which='both', linewidth=0.6, alpha=0.5)
     ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.3)
