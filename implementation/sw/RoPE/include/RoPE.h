@@ -61,7 +61,8 @@ RoPEInfo RoPEAnaylze(
     info.position_address       = position_address;
     info.token_embedded_length  = token_embedded_length;
     info.num_total_token        = num_total_token;
-    info.start_token            = flex_get_cluster_id();
+    FlexPosition pos            = get_pos(flex_get_cluster_id());
+    info.start_token            = pos.x * ARCH_NUM_CLUSTER_Y + pos.y;
     info.L1_I                   = local(0);
     info.L1_C                   = info.L1_I + DATA_TYPE_BYTE * info.token_embedded_length;
     info.L1_S                   = info.L1_C + DATA_TYPE_BYTE * (info.token_embedded_length / 2);

@@ -59,7 +59,8 @@ MoEDispatchInfo MoEDispatchAnaylze(
     info.num_routed_experts             = num_routed_experts;
     info.num_active_experts             = num_active_experts;
     info.token_per_cluster              = token_per_cluster;
-    info.start_token                    = flex_get_cluster_id() * info.token_per_cluster;
+    FlexPosition pos                    = get_pos(flex_get_cluster_id());
+    info.start_token                    = (pos.x * ARCH_NUM_CLUSTER_Y + pos.y) * info.token_per_cluster;
     info.L1_I                           = local(0);
     info.L1_D                           = info.L1_I + info.embedded_length * DATA_TYPE_BYTE;
     info.L1_P                           = info.L1_D + info.token_per_cluster * info.num_active_experts * sizeof(int);

@@ -37,7 +37,8 @@ RMSNormInfo Dsv3RMSNormAnaylze(
     info.Output                 = output_address;
     info.token_embedded_length  = token_embedded_length;
     info.num_total_token        = num_total_token;
-    info.start_token            = flex_get_cluster_id();
+    FlexPosition pos            = get_pos(flex_get_cluster_id());
+    info.start_token            = pos.x * ARCH_NUM_CLUSTER_Y + pos.y;
     info.L1_I                   = local(0);
     info.L1_D                   = info.L1_I + DATA_TYPE_BYTE * info.token_embedded_length;
     info.L1_Area                = info.L1_D + DATA_TYPE_BYTE;

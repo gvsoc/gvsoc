@@ -60,7 +60,8 @@ ActivationInfo ActivationAnaylze(
     info.num_total_token        = num_total_token;
     info.gate_enable            = gate_enable;
     info.bias_enable            = bias_enable;
-    info.start_token            = flex_get_cluster_id();
+    FlexPosition pos            = get_pos(flex_get_cluster_id());
+    info.start_token            = pos.x * ARCH_NUM_CLUSTER_Y + pos.y;
     info.L1_I                   = local(0);
     info.L1_G                   = info.L1_I + DATA_TYPE_BYTE * info.token_embedded_length;
     info.L1_B                   = info.L1_G + DATA_TYPE_BYTE * info.token_embedded_length;
