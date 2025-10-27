@@ -753,9 +753,58 @@ class SoftHier(object):
 
     def mla_ofdp(self, cfg, data, name, dry_run = False):
         #[TODO] Implementation
+        # Check Configuration and Automatic Tiling/Scheduling
+        app_path = self.kernel_root / "SummaGEMM"
+
+        # Naive check and do automatic parameterization
+        cfg, repeat = gemm_optimizer.ofdp_opt(cfg, self.arch)
+        self.record_info({f"{name}" : cfg}, subdir="kernels")
+
+        # Generate Configuration
+        gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
+        kc.generate_config_C_header("GEMM", cfg, gemm_cfg_h, cfg.dtype, cfg.summa_numer)
+
+        # Generate Preload C Header File
+        gemm_pld_h = self.kernel_root / "SummaGEMM" / "include" / "preload.h"
+        X_addr = data["input"]["addr"]
+        W_addr = data["weight"]["addr"]
+        Z_eaddr = data["output"]["addr"]
+        Z_gaddr = Z_eaddr
+        with open(gemm_pld_h, 'w') as file:
+            file.write('#ifndef _GEMM_PRELOAD_H_\n')
+            file.write('#define _GEMM_PRELOAD_H_\n\n')
+            file.write(f'#define {"X_addr".upper()} ((uint64_t){X_addr: #x})\n')
+            file.write(f'#define {"Z_eaddr".upper()} ((uint64_t){Z_eaddr: #x})\n')
+            file.write(f'#define {"W_addr".upper()} ((uint64_t){W_addr: #x})\n')
+            file.write(f'#define {"Z_gaddr".upper()} ((uint64_t){Z_gaddr: #x})\n')
+            file.write('\n#endif // _GEMM_PRELOAD_H_\n')
+            file.close()
+
+        # Compile SW
+        cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}_sw.log 2>&1"
+        # print(f"[System Call] {cmd}")
+        assert os.system(cmd) == 0
+
         if not dry_run:
-            result = {"runtime" : 0}
-            result["redmule_uti"] = 0
+            # Execute SoftHier Simulation
+            cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.log 2>&1"
+            # print(f"[System Call] {cmd}")
+            assert os.system(cmd) == 0
+
+            # Anaylze Result
+            result = {}
+            runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log") * repeat
+            peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
+            gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+            achieved_flop_per_cycle = gemm_flop / runtime
+            redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
+            elem_size = 1 if cfg.dtype == 'fp8' else 2
+            arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size * cfg.ofdp_splitk_num))
+            result["runtime"] = runtime
+            result["peak_flop_per_cycle"] = peak_flop_per_cycle
+            result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
+            result["redmule_uti"] = redmule_uti
+            result["arithmetic_intensity"] = arithmetic_intensity
             return result
         pass
         

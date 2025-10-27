@@ -693,12 +693,22 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     }
     spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size
 
+    attn_o1_proj                        = SummaGEMM()
+    attn_o1_proj.dtype                  = llm.dtype
+    attn_o1_proj.m_size                 = work.batch_size * work.speculative_factor
+    attn_o1_proj.n_size                 = llm.head_dimension
+    attn_o1_proj.k_size                 = llm.num_heads * llm.kv_lora_rank
+    attn_o1_proj.ofdp_splitk_num        = llm.num_heads
+    attn_o1_proj.resha_x_from_enable    = 0
+    attn_o1_proj.resha_z_to_enable      = 0
+    attn_o1_proj.summa_numer            = work.numerical_check_enable
+
     kernel_flow["attn_o1_proj"] = {
         "type"                          : "ofdp",
         "input"                         : {"on": "spaceA",    "name": "attn_o"},
         "weight"                        : {"on": "spaceB",   "name": "o1_proj_weight"},
         "output"                        : {"on": "spaceA",    "name": "attn_o1"},
-        "cfg"                           : None
+        "cfg"                           : attn_o1_proj
     }
 
     #############################################

@@ -141,7 +141,7 @@ SummaGEMMInfo SummaGEMMAnaylze(
 
     info.M_iter                 = (M_size + info.summa_group_y * M_tile - 1) / (info.summa_group_y * M_tile);
     info.N_iter                 = info.group_splitN? (((N_size / info.summa_groups) + info.summa_group_x * N_tile - 1) / (info.summa_group_x * N_tile)) : (N_size + info.summa_group_x * N_tile - 1) / (info.summa_group_x * N_tile);
-    info.K_iter                 = (info.group_reduction && info.group_splitK)? (((K_size / info.summa_groups) + K_tile - 1) / K_tile) : ((K_size + K_tile - 1) / K_tile);
+    info.K_iter                 = info.group_splitK? (((K_size / (info.summa_groups * info.group_splitK)) + K_tile - 1) / K_tile) : ((K_size + K_tile - 1) / K_tile);
     info.store_recorded         = 0;
     info.store_m                = 0;
     info.store_n                = 0;

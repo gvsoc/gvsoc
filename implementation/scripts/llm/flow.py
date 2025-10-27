@@ -315,9 +315,9 @@ def flow():
         print_dict_as_table(work.__dict__)
         kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
         softhier_launch(chip, f"{llm.model_name} decode DRY-RUN", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
-        # Results = softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
-        # print(f"[green][Kernel Runtime Breakdown][/green]")
-        # cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
+        Results = softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
+        print(f"[green][Kernel Runtime Breakdown][/green]")
+        cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
         pass
 
     pass

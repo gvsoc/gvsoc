@@ -165,3 +165,65 @@ def opt(gemm, arch):
 
     return gemm_list
     pass
+
+
+def ofdp_opt(gemm, arch):
+    #1. Find Tile Size
+    m_tile = 4 * arch.redmule_ce_height
+    n_tile = 4 * arch.redmule_ce_height
+    m_tile = gemm.m_size if gemm.m_size < m_tile else m_tile
+    n_tile = gemm.n_size if gemm.n_size < n_tile else n_tile
+    assert(gemm.m_size % m_tile == 0)
+    assert(gemm.n_size % n_tile == 0)
+
+    #2. Determine Group Scale
+    scale_y = gemm.m_size // m_tile
+    scale_x = gemm.n_size // n_tile
+    try:
+        is_power_of_two("scale_x", scale_x)
+    except AssertionError as e:
+        #Rescale to the next closet power of 2 number
+        scale_x = next_power_of_2(scale_x)
+        assert(gemm.n_size % scale_x == 0)
+        n_tile = gemm.n_size // scale_x
+    try:
+        is_power_of_two("scale_y", scale_y)
+    except AssertionError as e:
+        #Rescale to the next closet power of 2 number
+        scale_y = next_power_of_2(scale_y)
+        assert(gemm.m_size % scale_y == 0)
+        m_tile = gemm.m_size // scale_y
+    scale_y = arch.num_cluster_y if scale_y > arch.num_cluster_y else scale_y
+    scale_x = arch.num_cluster_x if scale_x > arch.num_cluster_x else scale_x
+
+
+    #3. Determine Split K
+    elem_size = 1 if gemm.dtype == 'fp8' else 2
+    group_number = (arch.num_cluster_y * arch.num_cluster_x) // (scale_y * scale_x)
+    group_number = gemm.ofdp_splitk_num if gemm.ofdp_splitk_num < group_number else group_number
+    k_splited_size = gemm.k_size // gemm.ofdp_splitk_num
+    k_tile = 4 * arch.redmule_ce_height if k_splited_size > (4 * arch.redmule_ce_height) else k_splited_size
+    repeat = (gemm.ofdp_splitk_num + group_number - 1) // group_number
+    group_reduce = 0
+    group_splitk = repeat
+    group_splitn = 0
+    group_gap_x = k_splited_size * elem_size
+    group_gap_w = gemm.n_size * elem_size
+    group_gap_z = k_splited_size * elem_size
+
+    # Finalize Configuration
+    gemm.m_tile                  = m_tile
+    gemm.n_tile                  = n_tile
+    gemm.k_tile                  = k_tile
+    gemm.summa_scale_x           = scale_x
+    gemm.summa_scale_y           = scale_y
+    gemm.summa_group_number      = group_number
+    gemm.summa_group_reduce      = group_reduce
+    gemm.summa_group_splitk      = group_splitk
+    gemm.summa_group_splitn      = group_splitn
+    gemm.summa_group_gap_x       = group_gap_x
+    gemm.summa_group_gap_w       = group_gap_w
+    gemm.summa_group_gap_z       = group_gap_z
+
+    return gemm, repeat
+    pass

@@ -23,7 +23,7 @@ class Workload:
         #Basic Configuration
         self.prefill_enabled            = 0
         self.decode_enabled             = 1
-        self.batch_size                 = 32
+        self.batch_size                 = 1
         self.numerical_check_enable     = 0
 
         #Decode Configuration
