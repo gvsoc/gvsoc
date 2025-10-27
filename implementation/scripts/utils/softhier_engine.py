@@ -50,7 +50,7 @@ sw_dict = {
 
 class SoftHier(object):
     """docstring for SoftHier"""
-    def __init__(self, softhier_root, kernel_root, output_root):
+    def __init__(self, softhier_root, kernel_root, output_root, tag=None):
         super(SoftHier, self).__init__()
         self.softhier_root = Path(softhier_root).resolve()
         self.kernel_root = Path(kernel_root).resolve()
@@ -64,7 +64,14 @@ class SoftHier(object):
         if not self.output_root.exists():
             raise RuntimeError(f"Output Root Not Exist at : {output_root}")
             pass
-        self.output_folder = self.output_root / ("llm_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+        tag_name = ("llm_" + datetime.now().strftime("%Y%m%d_%H%M%S")) if tag == None else tag
+        output_name = tag_name
+        name_cnt = 1
+        while (self.output_root / output_name).exists():
+            output_name = tag_name + f"_{name_cnt}"
+            name_cnt += 1
+            pass
+        self.output_folder = self.output_root / output_name
         os.system(f"mkdir -p {self.output_folder}")
         self.arch = None
         self.arch_path = None
@@ -103,6 +110,7 @@ class SoftHier(object):
             pass
         self.arch_path = Path(arch_path).resolve()
         self.arch = arch
+        self.arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
         self.output_folder_hwcfg = self.output_folder / "softhier_config"
         os.system(f"mkdir -p {self.output_folder_hwcfg}")
         os.system(f"cp {self.arch_path} {self.output_folder_hwcfg}")
@@ -223,9 +231,10 @@ class SoftHier(object):
 
                 # Anaylze Result
                 runtime = self.get_runtime_ns(best_log)
+                cycles = runtime * self.arch.cycles_per_ns
                 peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
                 gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
-                achieved_flop_per_cycle = gemm_flop / runtime
+                achieved_flop_per_cycle = gemm_flop / cycles
                 redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
                 elem_size = 1 if cfg.dtype == 'fp8' else 2
                 arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size))
@@ -499,9 +508,10 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
             flat_attn_flop = 4 * cfg.q_sequence_length * cfg.speculative_length * cfg.kv_sequence_length * cfg.head_dimemsion * cfg.num_head * cfg.batch_size
-            achieved_flop_per_cycle = flat_attn_flop / runtime
+            achieved_flop_per_cycle = flat_attn_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
             arithmetic_intensity = flat_attn_flop / (elem_size * cfg.batch_size * (2 * cfg.num_head * cfg.q_sequence_length * cfg.speculative_length * cfg.head_dimemsion + 2 * cfg.num_head_group * cfg.kv_sequence_length * cfg.head_dimemsion))
@@ -564,11 +574,12 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
+            cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
             seqlen_q = cfg.q_sequence_length * cfg.speculative_length * cfg.num_head
             seqlen_c = cfg.kv_sequence_length
             flat_mla_flop = 2 * cfg.batch_size * (seqlen_q * seqlen_c * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * seqlen_c * cfg.nope_head_dim)
-            achieved_flop_per_cycle = flat_mla_flop / runtime
+            achieved_flop_per_cycle = flat_mla_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
             arithmetic_intensity = flat_mla_flop / (elem_size * cfg.batch_size * ((seqlen_q + seqlen_c) * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_c * cfg.nope_head_dim + seqlen_q * cfg.nope_head_dim))
@@ -794,9 +805,10 @@ class SoftHier(object):
             # Anaylze Result
             result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log") * repeat
+            cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
             gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
-            achieved_flop_per_cycle = gemm_flop / runtime
+            achieved_flop_per_cycle = gemm_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
             arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size * cfg.ofdp_splitk_num))

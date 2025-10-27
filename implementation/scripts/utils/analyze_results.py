@@ -116,7 +116,7 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
 
 def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=False):
     # [TODO] Too many hard-coded metrics calculation
-    peak_perf = 2 * arch.num_cluster_x * arch.num_cluster_y * arch.redmule_ce_height * arch.redmule_ce_width / 1024 #TFLOPs
+    peak_perf = 2 * arch.num_cluster_x * arch.num_cluster_y * arch.redmule_ce_height * arch.redmule_ce_width * arch.cycles_per_ns / 1024 #TFLOPs
     bandwidth = 64 * sum(arch.hbm_chan_placement) #GB/s
     results = {}
     for k, v in raw_results.items():
@@ -124,7 +124,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
             if "pct" in v:
                 k = f"{k} [{v['pct']:.1f}%]"
                 pass
-            results[k] = {"TFLOPS": v['achieved_flop_per_cycle'] / 1024, "AI": v['arithmetic_intensity']}
+            results[k] = {"TFLOPS": v['achieved_flop_per_cycle'] * arch.cycles_per_ns / 1024, "AI": v['arithmetic_intensity']}
             pass
         pass
     """
@@ -228,6 +228,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
 
 def generate_polts(arch, results, save_root):
     # Create Save Path
+    arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
     save_dir = save_root / "plots"
     os.system(f"mkdir -p {save_dir}")
 
@@ -248,6 +249,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     import_module_from_path(args.arch_path)
     arch = FlexClusterArch()
+    arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
     with open(args.result_path, 'r') as f:
         results = yaml.safe_load(f)
     plot_runtime_breakdown_and_utilization_curve(results, save_path=None, scale_div = 1000)

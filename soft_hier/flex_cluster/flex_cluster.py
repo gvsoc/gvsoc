@@ -335,7 +335,8 @@ class FlexClusterBoard(gvsoc.systree.Component):
     def __init__(self, parent, name, parser, options):
         super(FlexClusterBoard, self).__init__(parent, name, options=options)
 
-        clock = Clock_domain(self, 'clock', frequency=1000000000)
+        arch  = FlexClusterArch()
+        clock = Clock_domain(self, 'clock', frequency=(1000000000 if not hasattr(arch, 'frequence') else arch.frequence))
 
         flex_cluster_system = FlexClusterSystem(self, 'chip', parser)
 
