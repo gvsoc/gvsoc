@@ -93,7 +93,7 @@ class SoftHier(object):
         for k, v in info_dict.items():
             file_name  = prefix / f"{k}.yaml"
             with open(file_name, "w") as f:
-                yaml.dump(v, f)
+                yaml.dump(v, f, sort_keys=False)
             pass
         pass
 
