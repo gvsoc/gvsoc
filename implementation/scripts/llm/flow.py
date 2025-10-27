@@ -296,6 +296,8 @@ def flow():
     llm = Model()
     work = Workload()
     info = {"llm": llm, "work": work}
+    assert((work.prefill_enabled == 1 and work.decode_enabled == 0) or (work.prefill_enabled == 0 and work.decode_enabled == 1))
+    llm_mode = "prefill" if work.prefill_enabled == 1 else "decode" if work.decode_enabled == 1 else "unknown"
 
     # SoftHier Initialization
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
@@ -305,8 +307,8 @@ def flow():
         kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
         pass
 
-    if work.decode_enabled and llm.attention_type == 'MLA'and llm.ffn_type == 'MoE':
-        kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_decode_layer_plan(llm, work, arch, EP=1)
+    if llm.attention_type == 'MLA'and llm.ffn_type == 'MoE':
+        kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch, EP=1)
         info['kernel_flow'] = kernel_flow
         info['spaceA_hbm_plan'] = spaceA_hbm_plan
         info['spaceB_hbm_plan'] = spaceB_hbm_plan
@@ -314,8 +316,8 @@ def flow():
         deepseek.hbm_plan_summary(spaceB_hbm_plan)
         print_dict_as_table(work.__dict__)
         kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
-        softhier_launch(chip, f"{llm.model_name} decode DRY-RUN", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
-        Results = softhier_launch(chip, f"{llm.model_name} decode", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
+        softhier_launch(chip, f"{llm.model_name} {llm_mode} DRY-RUN", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
+        Results = softhier_launch(chip, f"{llm.model_name} {llm_mode}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple)
         print(f"[green][Kernel Runtime Breakdown][/green]")
         cv.show_breakdown(Results, metric='runtime', unit='us', scale_div=1000)
         pass

@@ -304,7 +304,7 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
     pass
 
 
-def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_flash_attn = False):
+def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_flash_attn = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -315,14 +315,27 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     spaceA_hbm_addr                     = 0
     spaceB_hbm_addr                     = 0
 
+    if work.prefill_enabled:
+        sequence_length                 = work.prefill_input_token
+        kv_cached_length                = 0
+        q_sequence_length               = work.prefill_input_token
+        speculative_length              = 1
+    else:
+        sequence_length                 = work.speculative_factor
+        kv_cached_length                = work.kv_cache_length
+        q_sequence_length               = 1
+        speculative_length              = work.speculative_factor
+        pass
+
+
     spaceB_hbm_plan["layer_input"] = {
         "addr"                          : spaceB_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length,  llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
 
     spaceB_hbm_plan["cn_caches"] = {
@@ -345,12 +358,12 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["position"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor),
-        "shape"                         :(work.batch_size * work.speculative_factor,),
-        "size"                          : work.batch_size * work.speculative_factor * index_size,
+        "view"                          :(work.batch_size,  sequence_length),
+        "shape"                         :(work.batch_size * sequence_length,),
+        "size"                          : work.batch_size * sequence_length * index_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * index_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * index_size
     spaceA_hbm_addr                       = align_addr(spaceA_hbm_addr)
 
 
@@ -360,16 +373,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_norm"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length,  llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     attn_norm_cfg                       = RMSNorm()
     attn_norm_cfg.dtype                 = llm.dtype
-    attn_norm_cfg.m_size                = work.batch_size * work.speculative_factor
+    attn_norm_cfg.m_size                = work.batch_size * sequence_length
     attn_norm_cfg.n_size                = llm.embeded_length
     attn_norm_cfg.norm_numer            = work.numerical_check_enable
 
@@ -395,16 +408,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_latqc"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  (llm.q_lora_rank + llm.kv_lora_rank)),
-        "shape"                         :(work.batch_size * work.speculative_factor,  (llm.q_lora_rank + llm.kv_lora_rank)),
-        "size"                          : work.batch_size * work.speculative_factor * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  (llm.q_lora_rank + llm.kv_lora_rank)),
+        "shape"                         :(work.batch_size * sequence_length,  (llm.q_lora_rank + llm.kv_lora_rank)),
+        "size"                          : work.batch_size * sequence_length * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * (llm.q_lora_rank + llm.kv_lora_rank) * elem_size
 
     attn_latqc_proj                     = SummaGEMM()
     attn_latqc_proj.dtype               = llm.dtype
-    attn_latqc_proj.m_size              = work.batch_size * work.speculative_factor
+    attn_latqc_proj.m_size              = work.batch_size * sequence_length
     attn_latqc_proj.n_size              = llm.q_lora_rank + llm.kv_lora_rank
     attn_latqc_proj.k_size              = llm.embeded_length
     attn_latqc_proj.resha_x_from_enable = 0
@@ -434,16 +447,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceB_hbm_plan["attn_latcr"] = {
         "addr"                          : spaceB_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.rope_head_dim),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.rope_head_dim),
-        "size"                          : work.batch_size * work.speculative_factor * llm.rope_head_dim * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.rope_head_dim),
+        "shape"                         :(work.batch_size * sequence_length,  llm.rope_head_dim),
+        "size"                          : work.batch_size * sequence_length * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.rope_head_dim * elem_size
+    spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.rope_head_dim * elem_size
 
     attn_latcr_proj                     = SummaGEMM()
     attn_latcr_proj.dtype               = llm.dtype
-    attn_latcr_proj.m_size              = work.batch_size * work.speculative_factor
+    attn_latcr_proj.m_size              = work.batch_size * sequence_length
     attn_latcr_proj.n_size              = llm.rope_head_dim
     attn_latcr_proj.k_size              = llm.embeded_length
     attn_latcr_proj.resha_x_from_enable = 0
@@ -480,10 +493,10 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     attn_rope_cr                        = RoPE()
     attn_rope_cr.dtype                  = llm.dtype
-    attn_rope_cr.m_size                 = work.batch_size * work.speculative_factor
+    attn_rope_cr.m_size                 = work.batch_size * sequence_length
     attn_rope_cr.n_size                 = llm.rope_head_dim
     attn_rope_cr.maximun_seqlen         = llm.max_sequence_length
-    attn_rope_cr.contiguous_length      = work.speculative_factor
+    attn_rope_cr.contiguous_length      = sequence_length
     attn_rope_cr.view_enable            = 0
     attn_rope_cr.rope_numer             = work.numerical_check_enable
 
@@ -504,20 +517,20 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_latq"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.q_lora_rank),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.q_lora_rank),
-        "size"                          : work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.q_lora_rank),
+        "shape"                         :(work.batch_size * sequence_length,  llm.q_lora_rank),
+        "size"                          : work.batch_size * sequence_length * llm.q_lora_rank * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.q_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.q_lora_rank * elem_size
 
     kernel_flow["attn_split_concat"] = {
         "type"                          : "split_concat",
         "input1"                        : {"on": "spaceA",    "name": "attn_latqc"},
         "input2"                        : {"on": "spaceB",   "name": "attn_latcr"},
         "output1"                       : {"on": "spaceA",    "name": "attn_latq"},
-        "output2"                       : {"on": "spaceB",   "name": "cn_caches", "sequence_offset": work.kv_cache_length},
-        "output3"                       : {"on": "spaceB",   "name": "cr_caches", "sequence_offset": work.kv_cache_length},
+        "output2"                       : {"on": "spaceB",   "name": "cn_caches", "sequence_offset": kv_cached_length},
+        "output3"                       : {"on": "spaceB",   "name": "cr_caches", "sequence_offset": kv_cached_length},
         "cfg"                           : None
     }
 
@@ -536,16 +549,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_qn"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.kv_lora_rank),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.kv_lora_rank),
-        "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.num_heads,  llm.kv_lora_rank),
+        "shape"                         :(work.batch_size * sequence_length,  llm.num_heads * llm.kv_lora_rank),
+        "size"                          : work.batch_size * sequence_length * llm.num_heads * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.num_heads * llm.kv_lora_rank * elem_size
 
     attn_qn_proj                        = SummaGEMM()
     attn_qn_proj.dtype                  = llm.dtype
-    attn_qn_proj.m_size                 = work.batch_size * work.speculative_factor
+    attn_qn_proj.m_size                 = work.batch_size * sequence_length
     attn_qn_proj.n_size                 = llm.num_heads * llm.kv_lora_rank
     attn_qn_proj.k_size                 = llm.q_lora_rank
     attn_qn_proj.resha_x_from_enable    = 0
@@ -574,16 +587,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_qr"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.rope_head_dim),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.rope_head_dim),
-        "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.rope_head_dim * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.num_heads,  llm.rope_head_dim),
+        "shape"                         :(work.batch_size * sequence_length,  llm.num_heads * llm.rope_head_dim),
+        "size"                          : work.batch_size * sequence_length * llm.num_heads * llm.rope_head_dim * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.rope_head_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.num_heads * llm.rope_head_dim * elem_size
 
     attn_qr_proj                        = SummaGEMM()
     attn_qr_proj.dtype                  = llm.dtype
-    attn_qr_proj.m_size                 = work.batch_size * work.speculative_factor
+    attn_qr_proj.m_size                 = work.batch_size * sequence_length
     attn_qr_proj.n_size                 = llm.num_heads * llm.rope_head_dim
     attn_qr_proj.k_size                 = llm.q_lora_rank
     attn_qr_proj.resha_x_from_enable    = 0
@@ -620,10 +633,10 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     attn_rope_qr                        = RoPE()
     attn_rope_qr.dtype                  = llm.dtype
-    attn_rope_qr.m_size                 = work.batch_size * work.speculative_factor
+    attn_rope_qr.m_size                 = work.batch_size * sequence_length
     attn_rope_qr.n_size                 = llm.num_heads * llm.rope_head_dim
     attn_rope_qr.maximun_seqlen         = llm.max_sequence_length
-    attn_rope_qr.contiguous_length      = work.speculative_factor
+    attn_rope_qr.contiguous_length      = sequence_length
     attn_rope_qr.view_enable            = 0
     attn_rope_qr.rope_numer             = work.numerical_check_enable
 
@@ -643,18 +656,18 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_o"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.kv_lora_rank),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.kv_lora_rank),
-        "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.num_heads,  llm.kv_lora_rank),
+        "shape"                         :(work.batch_size * sequence_length,  llm.num_heads * llm.kv_lora_rank),
+        "size"                          : work.batch_size * sequence_length * llm.num_heads * llm.kv_lora_rank * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.kv_lora_rank * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.num_heads * llm.kv_lora_rank * elem_size
 
     attn_flatmla                        = FlatMLA()
     attn_flatmla.dtype                  = llm.dtype
-    attn_flatmla.kv_sequence_length     = work.kv_cache_length + work.speculative_factor
-    attn_flatmla.q_sequence_length      = 1
-    attn_flatmla.speculative_length     = work.speculative_factor
+    attn_flatmla.kv_sequence_length     = kv_cached_length + sequence_length
+    attn_flatmla.q_sequence_length      = q_sequence_length
+    attn_flatmla.speculative_length     = speculative_length
     attn_flatmla.nope_head_dim          = llm.kv_lora_rank
     attn_flatmla.rope_head_dim          = llm.rope_head_dim
     attn_flatmla.num_head               = llm.num_heads
@@ -686,16 +699,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_o1"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.num_heads,  llm.head_dimension),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.num_heads * llm.head_dimension),
-        "size"                          : work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.num_heads,  llm.head_dimension),
+        "shape"                         :(work.batch_size * sequence_length,  llm.num_heads * llm.head_dimension),
+        "size"                          : work.batch_size * sequence_length * llm.num_heads * llm.head_dimension * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.num_heads * llm.head_dimension * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.num_heads * llm.head_dimension * elem_size
 
     attn_o1_proj                        = SummaGEMM()
     attn_o1_proj.dtype                  = llm.dtype
-    attn_o1_proj.m_size                 = work.batch_size * work.speculative_factor
+    attn_o1_proj.m_size                 = work.batch_size * sequence_length
     attn_o1_proj.n_size                 = llm.head_dimension
     attn_o1_proj.k_size                 = llm.num_heads * llm.kv_lora_rank
     attn_o1_proj.ofdp_splitk_num        = llm.num_heads
@@ -725,16 +738,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["attn_o2"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length,  llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     attn_o2_proj                        = SummaGEMM()
     attn_o2_proj.dtype                  = llm.dtype
-    attn_o2_proj.m_size                 = work.batch_size * work.speculative_factor
+    attn_o2_proj.m_size                 = work.batch_size * sequence_length
     attn_o2_proj.n_size                 = llm.embeded_length
     attn_o2_proj.k_size                 = llm.num_heads * llm.head_dimension
     attn_o2_proj.resha_x_from_enable    = 0
@@ -755,7 +768,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     attn_resnet                         = Activation()
     attn_resnet.dtype                   = llm.dtype
     attn_resnet.algo                    = 'none'
-    attn_resnet.m_size                  = work.batch_size * work.speculative_factor
+    attn_resnet.m_size                  = work.batch_size * sequence_length
     attn_resnet.n_size                  = llm.embeded_length
     attn_resnet.gate_enable             = 0
     attn_resnet.bias_enable             = 1
@@ -775,16 +788,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["moe_norm"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length, llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     moe_norm_cfg                        = RMSNorm()
     moe_norm_cfg.dtype                  = llm.dtype
-    moe_norm_cfg.m_size                 = work.batch_size * work.speculative_factor
+    moe_norm_cfg.m_size                 = work.batch_size * sequence_length
     moe_norm_cfg.n_size                 = llm.embeded_length
     moe_norm_cfg.norm_numer             = work.numerical_check_enable
 
@@ -813,16 +826,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         spaceA_hbm_plan[f"{prefix}up"] = {
             "addr"                          : spaceA_hbm_addr,
-            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
-            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "view"                          :(work.batch_size,  sequence_length,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
         ffn_up_proj                         = SummaGEMM()
         ffn_up_proj.dtype                   = llm.dtype
-        ffn_up_proj.m_size                  = work.batch_size * work.speculative_factor
+        ffn_up_proj.m_size                  = work.batch_size * sequence_length
         ffn_up_proj.n_size                  = llm.moe_inter_dim
         ffn_up_proj.k_size                  = llm.embeded_length
         ffn_up_proj.resha_x_from_enable     = 0
@@ -848,16 +861,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         spaceA_hbm_plan[f"{prefix}gate"] = {
             "addr"                          : spaceA_hbm_addr,
-            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
-            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "view"                          :(work.batch_size,  sequence_length,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
         ffn_gate_proj                       = SummaGEMM()
         ffn_gate_proj.dtype                 = llm.dtype
-        ffn_gate_proj.m_size                = work.batch_size * work.speculative_factor
+        ffn_gate_proj.m_size                = work.batch_size * sequence_length
         ffn_gate_proj.n_size                = llm.moe_inter_dim
         ffn_gate_proj.k_size                = llm.embeded_length
         ffn_gate_proj.resha_x_from_enable   = 0
@@ -875,17 +888,17 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
         #Activation
         spaceA_hbm_plan[f"{prefix}acti"] = {
             "addr"                          : spaceA_hbm_addr,
-            "view"                          :(work.batch_size,  work.speculative_factor,  llm.moe_inter_dim),
-            "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-            "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+            "view"                          :(work.batch_size,  sequence_length,  llm.moe_inter_dim),
+            "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+            "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
             "tensor"                        : None
         }
-        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+        spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
         ffn_acti                            = Activation()
         ffn_acti.dtype                      = llm.dtype
         ffn_acti.algo                       = llm.moe_acti_algo
-        ffn_acti.m_size                     = work.batch_size * work.speculative_factor
+        ffn_acti.m_size                     = work.batch_size * sequence_length
         ffn_acti.n_size                     = llm.moe_inter_dim
         ffn_acti.gate_enable                = 1
         ffn_acti.bias_enable                = 0
@@ -910,16 +923,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
         spaceA_hbm_plan[f"{prefix}down"] = {
             "addr"                          : spaceA_hbm_addr,
-            "view"                          :(work.batch_size,  work.speculative_factor,  llm.embeded_length),
-            "shape"                         :(work.batch_size * work.speculative_factor,  llm.embeded_length),
-            "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+            "view"                          :(work.batch_size,  sequence_length,  llm.embeded_length),
+            "shape"                         :(work.batch_size * sequence_length,  llm.embeded_length),
+            "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
             "tensor"                        : None
         }
-        spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+        spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
         ffn_down_proj                       = SummaGEMM()
         ffn_down_proj.dtype                 = llm.dtype
-        ffn_down_proj.m_size                = work.batch_size * work.speculative_factor
+        ffn_down_proj.m_size                = work.batch_size * sequence_length
         ffn_down_proj.n_size                = llm.embeded_length
         ffn_down_proj.k_size                = llm.moe_inter_dim
         ffn_down_proj.resha_x_from_enable   = 0
@@ -949,16 +962,16 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["moe_rgate"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_routed_experts),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_routed_experts),
-        "size"                          : work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.n_routed_experts),
+        "shape"                         :(work.batch_size * sequence_length,  llm.n_routed_experts),
+        "size"                          : work.batch_size * sequence_length * llm.n_routed_experts * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.n_routed_experts * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.n_routed_experts * elem_size
 
     moe_rgate_proj                      = SummaGEMM()
     moe_rgate_proj.dtype                = llm.dtype
-    moe_rgate_proj.m_size               = work.batch_size * work.speculative_factor
+    moe_rgate_proj.m_size               = work.batch_size * sequence_length
     moe_rgate_proj.n_size               = llm.n_routed_experts
     moe_rgate_proj.k_size               = llm.embeded_length
     moe_rgate_proj.resha_x_from_enable  = 0
@@ -977,7 +990,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #       16. MoE Route TopK        #
     ###################################
 
-    D, P, SCORE = gen_moe_gate_index(work.batch_size * work.speculative_factor * EP, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
+    D, P, SCORE = gen_moe_gate_index(work.batch_size * sequence_length * EP, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
     D           = D[::EP]
     P           = P[::EP]
     SCORE       = SCORE[::EP]
@@ -985,28 +998,28 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceB_hbm_plan["moe_route_val"] = {
         "addr"                          : spaceB_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
-        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.n_activated_experts),
+        "shape"                         :(work.batch_size * sequence_length,  llm.n_activated_experts),
+        "size"                          : work.batch_size * sequence_length * llm.n_activated_experts * elem_size,
         "tensor"                        : None
     }
-    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * elem_size
+    spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.n_activated_experts * elem_size
     spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
     spaceB_hbm_plan["moe_route_idx"] = {
         "addr"                          : spaceB_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
-        "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
+        "view"                          :(work.batch_size,  sequence_length,  llm.n_activated_experts),
+        "shape"                         :(work.batch_size * sequence_length,  llm.n_activated_experts),
+        "size"                          : work.batch_size * sequence_length * llm.n_activated_experts * index_size,
         "is_index"                      : True,
         "tensor"                        : D
     }
-    spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+    spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.n_activated_experts * index_size
     spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
     moe_rgate_topk                      = MoEGate()
     moe_rgate_topk.dtype                = llm.dtype
-    moe_rgate_topk.num_tokens           = work.batch_size * work.speculative_factor
+    moe_rgate_topk.num_tokens           = work.batch_size * sequence_length
     moe_rgate_topk.num_routed_experts   = llm.n_routed_experts
     moe_rgate_topk.num_active_experts   = llm.n_activated_experts
     moe_rgate_topk.moeg_numer           = work.numerical_check_enable
@@ -1025,12 +1038,12 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["moe_dispatch_buffer"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(ep_experts,  work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "shape"                         :(ep_experts * work.batch_size * work.speculative_factor,  llm.embeded_length),
-        "size"                          : ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(ep_experts,  work.batch_size * sequence_length,  llm.embeded_length),
+        "shape"                         :(ep_experts * work.batch_size * sequence_length,  llm.embeded_length),
+        "size"                          : ep_experts * work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += ep_experts * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += ep_experts * work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     #Generate Memory Notations
     for eid in range(ep_experts):
@@ -1041,7 +1054,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
             pass
 
         spaceA_hbm_plan[f"{prefix}input"] = {
-            "addr"                          : spaceA_hbm_plan["moe_dispatch_buffer"]["addr"] + eid * work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+            "addr"                          : spaceA_hbm_plan["moe_dispatch_buffer"]["addr"] + eid * work.batch_size * sequence_length * llm.embeded_length * elem_size,
             "view"                          :(num_tokens,  llm.embeded_length),
             "shape"                         :(num_tokens,  llm.embeded_length),
             "size"                          : num_tokens * llm.embeded_length * elem_size,
@@ -1053,18 +1066,18 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     if EP == 1:
         spaceB_hbm_plan["moe_route_pos"] = {
             "addr"                          : spaceB_hbm_addr,
-            "view"                          :(work.batch_size,  work.speculative_factor,  llm.n_activated_experts),
-            "shape"                         :(work.batch_size * work.speculative_factor,  llm.n_activated_experts),
-            "size"                          : work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size,
+            "view"                          :(work.batch_size,  sequence_length,  llm.n_activated_experts),
+            "shape"                         :(work.batch_size * sequence_length,  llm.n_activated_experts),
+            "size"                          : work.batch_size * sequence_length * llm.n_activated_experts * index_size,
             "is_index"                      : True,
             "tensor"                        : P
         }
-        spaceB_hbm_addr                      += work.batch_size * work.speculative_factor * llm.n_activated_experts * index_size
+        spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.n_activated_experts * index_size
         spaceB_hbm_addr                      = align_addr(spaceB_hbm_addr)
 
         moe_dispatch                        = MoEDispatch()
         moe_dispatch.dtype                  = llm.dtype
-        moe_dispatch.num_tokens             = work.batch_size * work.speculative_factor
+        moe_dispatch.num_tokens             = work.batch_size * sequence_length
         moe_dispatch.embedded_length        = llm.embeded_length
         moe_dispatch.num_routed_experts     = llm.n_routed_experts
         moe_dispatch.num_active_experts     = llm.n_activated_experts
@@ -1097,30 +1110,30 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     #Shared Memory Spaces
     spaceA_hbm_plan["moe_routed_up"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "view"                          :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
     spaceA_hbm_plan["moe_routed_gate"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "view"                          :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
     spaceA_hbm_plan["moe_routed_acti"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "shape"                         :(work.batch_size * work.speculative_factor,  llm.moe_inter_dim),
-        "size"                          : work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size,
+        "view"                          :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "shape"                         :(work.batch_size * sequence_length,  llm.moe_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.moe_inter_dim * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.moe_inter_dim * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.moe_inter_dim * elem_size
 
     for eid in range(ep_experts):
         prefix = f"moe_routed_{eid}_"
@@ -1259,17 +1272,17 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["moe_route_output"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length, llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     if EP == 1:
         moe_combine                         = MoECombine()
         moe_combine.dtype                   = llm.dtype
-        moe_combine.num_tokens              = work.batch_size * work.speculative_factor
+        moe_combine.num_tokens              = work.batch_size * sequence_length
         moe_combine.embedded_length         = llm.embeded_length
         moe_combine.num_routed_experts      = llm.n_routed_experts
         moe_combine.num_active_experts      = llm.n_activated_experts
@@ -1301,17 +1314,17 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
 
     spaceA_hbm_plan["moe_o"] = {
         "addr"                          : spaceA_hbm_addr,
-        "view"                          :(work.batch_size,  work.speculative_factor, llm.embeded_length),
-        "shape"                         :(work.batch_size * work.speculative_factor, llm.embeded_length),
-        "size"                          : work.batch_size * work.speculative_factor * llm.embeded_length * elem_size,
+        "view"                          :(work.batch_size,  sequence_length, llm.embeded_length),
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
         "tensor"                        : None
     }
-    spaceA_hbm_addr                       += work.batch_size * work.speculative_factor * llm.embeded_length * elem_size
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
     moe_share_add_route                = Activation()
     moe_share_add_route.dtype          = llm.dtype
     moe_share_add_route.algo           = 'none'
-    moe_share_add_route.m_size         = work.batch_size * work.speculative_factor
+    moe_share_add_route.m_size         = work.batch_size * sequence_length
     moe_share_add_route.n_size         = llm.embeded_length
     moe_share_add_route.gate_enable    = 0
     moe_share_add_route.bias_enable    = 1
@@ -1332,7 +1345,7 @@ def deepseek_decode_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair',
     moe_resnet                          = Activation()
     moe_resnet.dtype                    = llm.dtype
     moe_resnet.algo                     = 'none'
-    moe_resnet.m_size                   = work.batch_size * work.speculative_factor
+    moe_resnet.m_size                   = work.batch_size * sequence_length
     moe_resnet.n_size                   = llm.embeded_length
     moe_resnet.gate_enable              = 0
     moe_resnet.bias_enable              = 1
