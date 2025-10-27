@@ -19,12 +19,35 @@ import os
 import io
 import re
 import math
+import yaml
+import argparse
+import itertools
 import numpy as np
+import importlib.util
 from cycler import cycler
 import matplotlib.pyplot as plt
 
-# 30 colors sampled evenly from tab20
-custom_colors = plt.cm.tab20(np.linspace(0, 1, 30))
+def import_module_from_path(module_path):
+    """
+    Dynamically import a module from an absolute path and mimic `from module import *`.
+    """
+    module_name = os.path.splitext(os.path.basename(module_path))[0]  # Extract the file name without extension
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None:
+        raise ImportError(f"Cannot find a module at path: {module_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Mimic `from module import *`
+    globals().update(vars(module))
+    return module
+
+# Sample evenly from tab20c and tab20b, then concatenate
+custom_colors = np.vstack([
+    plt.cm.tab20b(np.linspace(0, 1, 20)),
+    plt.cm.tab20c(np.linspace(0, 1, 20))
+])
 
 # extend the global color cycle
 plt.rcParams['axes.prop_cycle'] = cycler(color=custom_colors)
@@ -80,7 +103,10 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
     ax1.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False)
 
     plt.title(f'Runtime Breakdown with Utilisation Curve')
-    plt.savefig(save_path, bbox_inches="tight")
+    if save_path == None:
+        plt.show()
+    else:
+        plt.savefig(save_path, bbox_inches="tight")
 
     # Record to results
     for i in range(len(kernels)):
@@ -89,7 +115,8 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
     pass
 
 def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=False):
-    peak_perf = 2 * arch.num_cluster_x * arch.num_cluster_y * arch.redmule_ce_height * arch.redmule_ce_width / 1000 #TFLOPs
+    # [TODO] Too many hard-coded metrics calculation
+    peak_perf = 2 * arch.num_cluster_x * arch.num_cluster_y * arch.redmule_ce_height * arch.redmule_ce_width / 1024 #TFLOPs
     bandwidth = 64 * sum(arch.hbm_chan_placement) #GB/s
     results = {}
     for k, v in raw_results.items():
@@ -97,7 +124,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
             if "pct" in v:
                 k = f"{k} [{v['pct']:.1f}%]"
                 pass
-            results[k] = {"TFLOPS": v['achieved_flop_per_cycle'] / 1000, "AI": v['arithmetic_intensity']}
+            results[k] = {"TFLOPS": v['achieved_flop_per_cycle'] / 1024, "AI": v['arithmetic_intensity']}
             pass
         pass
     """
@@ -144,7 +171,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     y_min = 10 ** math.floor(math.log10(min(y_vals + [mem_slope * x_min, 0.1])))
     y_max = 10 ** math.ceil (math.log10(max(y_vals + [peak_perf, mem_slope * x_max])))
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.5))
+    fig, ax = plt.subplots(figsize=(8.5, 5.5))
 
     # --- rooflines ---
     # memory roof: y = mem_slope * x
@@ -157,14 +184,19 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
 
     # --- knee marker ---
     if AI_knee > 0 and math.isfinite(AI_knee):
-        ax.plot([AI_knee], [peak_perf], marker='o')
+        ax.plot([AI_knee], [peak_perf], marker='^')
         ax.text(AI_knee, peak_perf, "  knee", va='bottom', ha='left', fontsize=9)
 
     # --- plot kernels ---
+    color_cycle = list(plt.cm.tab10.colors)
+    marker_cycle = ['x', 'o', '*', '>', 's', '^', 'D', 'v', 'P']
+    style_combinations = itertools.product(marker_cycle, color_cycle)
+    styles = itertools.cycle(style_combinations)
     for name, d in results.items():
+        marker, color = next(styles)
         ai = max(1e-12, float(d["AI"]))
         tflops = max(1e-12, float(d["TFLOPS"]))
-        ax.scatter([ai], [tflops], s=50, marker='o', label=name)
+        ax.scatter([ai], [tflops], s=60, color=color, marker=marker, label=name, alpha=0.7)
         if annotate:
             # small offset in log space for readability
             ax.text(ai * 1.05, tflops * 1.05, name, fontsize=9)
@@ -180,7 +212,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
         title = f"Roofline (Peak: {peak_perf:.1f} TFLOPS, BW: {bandwidth:g} GB/s)"
     ax.set_title(title)
     ax.grid(True, which='both', linewidth=0.6, alpha=0.5)
-    ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.3)
+    ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.3, bbox_to_anchor=(1.05, 1))
 
     # helpful tick marks near the knee
     for decade in [1, 10, 100, 1000, 10000, 100000]:
@@ -188,7 +220,10 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
             ax.axvline(decade, linewidth=0.25, alpha=0.2)
 
     plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
+    if save_path == None:
+        plt.show()
+    else:
+        plt.savefig(save_path, bbox_inches="tight")
     pass
 
 def generate_polts(arch, results, save_root):
@@ -204,3 +239,16 @@ def generate_polts(arch, results, save_root):
     save_path = save_dir / "kernels_roofline.pdf"
     plot_kernel_roofline(arch, results, save_path)
     pass
+
+if __name__ == '__main__':
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description="Plot Results")
+    parser.add_argument("result_path", type=str, help="Path to SoftHier Root Directory")
+    parser.add_argument("arch_path", type=str, help="Path to SoftHier Root Directory")
+    args = parser.parse_args()
+    import_module_from_path(args.arch_path)
+    arch = FlexClusterArch()
+    with open(args.result_path, 'r') as f:
+        results = yaml.safe_load(f)
+    plot_runtime_breakdown_and_utilization_curve(results, save_path=None, scale_div = 1000)
+    plot_kernel_roofline(arch, results, save_path=None)
