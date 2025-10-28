@@ -64,13 +64,8 @@ class SoftHier(object):
         if not self.output_root.exists():
             raise RuntimeError(f"Output Root Not Exist at : {output_root}")
             pass
-        tag_name = ("llm_" + datetime.now().strftime("%Y%m%d_%H%M%S")) if tag == None else tag
-        output_name = tag_name
-        name_cnt = 1
-        while (self.output_root / output_name).exists():
-            output_name = tag_name + f"_{name_cnt}"
-            name_cnt += 1
-            pass
+        prefix = "llm_" if tag == None else f"{tag}_"
+        output_name = prefix + datetime.now().strftime("%Y%m%d_%H%M%S")
         self.output_folder = self.output_root / output_name
         os.system(f"mkdir -p {self.output_folder}")
         self.arch = None
