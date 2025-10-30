@@ -81,6 +81,9 @@ def gen_moe_gate_index(num_tokens, num_routed_experts, num_active_experts, moe_d
         idx = torch.randperm(x.size(0))
         x_shuffled = x[idx]
         D = x.view(num_tokens, num_active_experts).to(torch.int32)
+    elif moe_distribution == 'Identical':
+        x = torch.arange(num_tokens * num_active_experts) % num_active_experts
+        D = x.view(num_tokens, num_active_experts).to(torch.int32)
     else:
         raise RuntimeError(f"MoE Distribution {moe_distribution} currently not supported")
         pass
