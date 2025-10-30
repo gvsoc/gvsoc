@@ -117,7 +117,9 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
 def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=False):
     # [TODO] Too many hard-coded metrics calculation
     peak_perf = 2 * arch.num_cluster_x * arch.num_cluster_y * arch.redmule_ce_height * arch.redmule_ce_width * arch.cycles_per_ns / 1024 #TFLOPs
-    bandwidth = 64 * sum(arch.hbm_chan_placement) #GB/s
+    peak_perf_format = f"{peak_perf:.0f}" if peak_perf > 10 else f"{peak_perf:.1f}" if peak_perf > 0 else f"{peak_perf:g}"
+    bandwidth = arch.bandwidth_GBps_per_hbm_channel * sum(arch.hbm_chan_placement) #GB/s
+    bandwidth_TBps = bandwidth / 1024
     results = {}
     for k, v in raw_results.items():
         if "achieved_flop_per_cycle" in v and "arithmetic_intensity" in v:
@@ -177,10 +179,10 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     # memory roof: y = mem_slope * x
     xs = [x_min, x_max]
     ys_mem = [mem_slope * x for x in xs]
-    ax.plot(xs, ys_mem, linestyle='--', linewidth=1.5, label=f"Memory roof: {bandwidth:g} GB/s")
+    ax.plot(xs, ys_mem, linestyle='--', linewidth=1.5, label=f"Memory roof: {bandwidth_TBps:.2f} TB/s")
 
     # compute roof: y = peak_perf (horizontal)
-    ax.plot(xs, [peak_perf, peak_perf], linestyle='--', linewidth=1.5, label=f"Compute roof: {peak_perf:.1f} TFLOPS")
+    ax.plot(xs, [peak_perf, peak_perf], linestyle='--', linewidth=1.5, label=f"Compute roof: {peak_perf_format} TFLOPS")
 
     # --- knee marker ---
     if AI_knee > 0 and math.isfinite(AI_knee):
@@ -209,7 +211,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     ax.set_xlabel("Arithmetic Intensity (FLOPs/byte)")
     ax.set_ylabel("Performance (TFLOPS)")
     if title is None:
-        title = f"Roofline (Peak: {peak_perf:.1f} TFLOPS, BW: {bandwidth:g} GB/s)"
+        title = f"Roofline (Peak: {peak_perf_format} TFLOPS, BW: {bandwidth_TBps:.2f} TB/s)"
     ax.set_title(title)
     ax.grid(True, which='both', linewidth=0.6, alpha=0.5)
     ax.legend(loc='upper left', fontsize=9, ncol=1, framealpha=0.3, bbox_to_anchor=(1.05, 1))
@@ -229,6 +231,7 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
 def generate_polts(arch, results, save_root):
     # Create Save Path
     arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
+    arch.bandwidth_GBps_per_hbm_channel = 64 if not hasattr(arch, 'hbm_type') else 53.78 if arch.hbm_type == 'hbm2-3360' else 64
     save_dir = save_root / "plots"
     os.system(f"mkdir -p {save_dir}")
 
@@ -250,6 +253,7 @@ if __name__ == '__main__':
     import_module_from_path(args.arch_path)
     arch = FlexClusterArch()
     arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
+    arch.bandwidth_GBps_per_hbm_channel = 64 if not hasattr(arch, 'hbm_type') else 53.78 if arch.hbm_type == 'hbm2-3360' else 64
     with open(args.result_path, 'r') as f:
         results = yaml.safe_load(f)
     plot_runtime_breakdown_and_utilization_curve(results, save_path=None, scale_div = 1000)
