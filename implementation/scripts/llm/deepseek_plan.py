@@ -307,11 +307,12 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
     pass
 
 
-def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o2_proj_TP = 1, use_flash_attn = False):
+def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o2_proj_TP = 1, c2c_flow = None, use_flash_attn = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
     index_size                          = 4 #uint32_t
+    c2c_flow                            = {}
     kernel_flow                         = {}
     spaceA_hbm_plan                     = {}
     spaceB_hbm_plan                     = {}
@@ -766,6 +767,22 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
         attn_o2_proj.resha_x_from_enable= 0
         attn_o2_proj.resha_z_to_enable  = 0
         attn_o2_proj.summa_numer        = work.numerical_check_enable
+
+        # Add C2C Flow
+        c2c_flow['attn_o2_proj_TP_AtoA'] = {
+            "type"                          : "AtoA",
+            "parallelism"                   : attn_o2_proj_TP,
+            "length"                        : llm.num_heads * llm.head_dimension,
+            "num_tokens"                    : work.batch_size * sequence_length,
+            "elem_size"                     : elem_size
+        }
+        c2c_flow['attn_o2_proj_TP_Ared'] = {
+            "type"                          : "Ared",
+            "parallelism"                   : attn_o2_proj_TP,
+            "length"                        : llm.num_heads * llm.head_dimension,
+            "num_tokens"                    : work.batch_size * sequence_length,
+            "elem_size"                     : elem_size
+        }
         pass
 
     kernel_flow["attn_o2_proj"] = {
@@ -1004,11 +1021,15 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
     #       16. MoE Route TopK        #
     ###################################
 
-    D, P, SCORE = gen_moe_gate_index(work.batch_size * sequence_length * EP, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
-    D           = D[::EP]
-    P           = P[::EP]
-    SCORE       = SCORE[::EP]
-    ep_experts  = llm.n_routed_experts // EP
+    D_all, P_all, SCORE = gen_moe_gate_index(work.batch_size * sequence_length * EP, llm.n_routed_experts, llm.n_activated_experts, moe_distribution = moe_distribution)
+
+    #Find the most heavy workload
+    EP_tokens           = [sum(SCORE[e::EP]) for e in range(EP)]
+    max_eid             = EP_tokens.index(max(EP_tokens))
+    D                   = D_all[max_eid::EP]
+    P                   = P_all[max_eid::EP]
+    SCORE               = SCORE[max_eid::EP]
+    ep_experts          = llm.n_routed_experts // EP
 
     spaceB_hbm_plan["moe_route_val"] = {
         "addr"                          : spaceB_hbm_addr,
@@ -1115,6 +1136,16 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
                 pass
             kernel_flow["moe_dispatch"][f"output_{eid}"] = {"on": "spaceA",    "name": f"{prefix}input"}
             pass
+    else:
+        c2c_flow['moe_dispatch'] = {
+            "type"                          : "Disp",
+            "parallelism"                   : EP,
+            "embeded_length"                : llm.embeded_length,
+            "num_tokens"                    : work.batch_size * sequence_length,
+            "num_routed_experts"            : llm.num_routed_experts,
+            "index"                         : D_all,
+            "elem_size"                     : elem_size
+        }
         pass
 
     ###################################
@@ -1320,6 +1351,16 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
                 pass
             kernel_flow["moe_combine"][f"input_{eid}"] = {"on": "spaceA",    "name": f"{prefix}input"}
             pass
+    else:
+        c2c_flow['moe_combine'] = {
+            "type"                          : "Comb",
+            "parallelism"                   : EP,
+            "embeded_length"                : llm.embeded_length,
+            "num_tokens"                    : work.batch_size * sequence_length,
+            "num_routed_experts"            : llm.num_routed_experts,
+            "index"                         : D_all,
+            "elem_size"                     : elem_size
+        }
         pass
 
     ############################################################
