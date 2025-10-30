@@ -142,7 +142,7 @@ def test():
     for ep in eps:
         for sq in sqs:
             # Default
-            batch_size = 1
+            batch_size = 8
             prefill_input_token = sq
             expert_parallelsim = ep
 
