@@ -663,3 +663,244 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
     spaceA_hbm_plan, spaceB_hbm_plan = reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan)
     return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
     pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def FFN_layer_plan(llm, work, arch):
+
+    #Basic Settings
+    elem_size                           = 1 if llm.dtype == 'fp8' else 2
+    index_size                          = 4 #uint32_t
+    sequence_length                     = work.prefill_input_token if work.prefill_enabled == 1 else work.speculative_factor
+    kernel_flow                         = {}
+    spaceA_hbm_plan                     = {}
+    spaceB_hbm_plan                     = {}
+    spaceA_hbm_addr                     = 0
+    spaceB_hbm_addr                     = 0
+
+    spaceB_hbm_plan["layer_input"] = {
+        "addr"                          : spaceB_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    spaceB_hbm_addr                      += work.batch_size * sequence_length * llm.embeded_length * elem_size
+
+
+    #################################
+    #       8. Normalization        #
+    #################################
+    spaceA_hbm_plan["ffn_norm"] = {
+        "addr"                          : spaceA_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
+
+    ffn_norm_cfg                        = RMSNorm()
+    ffn_norm_cfg.dtype                  = llm.dtype
+    ffn_norm_cfg.m_size                 = work.batch_size * sequence_length
+    ffn_norm_cfg.n_size                 = llm.embeded_length
+    ffn_norm_cfg.norm_numer             = work.numerical_check_enable
+
+    kernel_flow["ffn_norm"] = {
+        "type"                          : "norm",
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_norm"},
+        "cfg"                           : ffn_norm_cfg
+    }
+
+    #####################################
+    #       9. FFN Up Projection        #
+    #####################################
+    spaceB_hbm_plan["up_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
+        "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
+        "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    spaceB_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
+
+    spaceA_hbm_plan["ffn_up"] = {
+        "addr"                          : spaceA_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length,  llm.mlp_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size
+
+    ffn_up_proj                         = SummaGEMM()
+    ffn_up_proj.dtype                   = llm.dtype
+    ffn_up_proj.m_size                  = work.batch_size * sequence_length
+    ffn_up_proj.n_size                  = llm.mlp_inter_dim
+    ffn_up_proj.k_size                  = llm.embeded_length
+    ffn_up_proj.resha_x_from_enable     = 0
+    ffn_up_proj.resha_z_to_enable       = 0
+    ffn_up_proj.summa_numer             = work.numerical_check_enable
+
+    kernel_flow["ffn_up_proj"] = {
+        "type"                          : "gemm",
+        "input"                         : {"on": "spaceA",    "name": "ffn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "up_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_up"},
+        "cfg"                           : ffn_up_proj
+    }
+
+    #####################################
+    #       10. FFN Gate Projection     #
+    #####################################
+    spaceB_hbm_plan["gate_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
+        "shape"                         :(llm.embeded_length,  llm.mlp_inter_dim),
+        "size"                          : llm.embeded_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    spaceB_hbm_addr                      += llm.embeded_length * llm.mlp_inter_dim * elem_size
+
+    spaceA_hbm_plan["ffn_gate"] = {
+        "addr"                          : spaceA_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length,  llm.mlp_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size
+
+    ffn_gate_proj                       = SummaGEMM()
+    ffn_gate_proj.dtype                 = llm.dtype
+    ffn_gate_proj.m_size                = work.batch_size * sequence_length
+    ffn_gate_proj.n_size                = llm.mlp_inter_dim
+    ffn_gate_proj.k_size                = llm.embeded_length
+    ffn_gate_proj.resha_x_from_enable   = 0
+    ffn_gate_proj.resha_z_to_enable     = 0
+    ffn_gate_proj.summa_numer           = work.numerical_check_enable
+
+    kernel_flow["ffn_gate_proj"] = {
+        "type"                          : "gemm",
+        "input"                         : {"on": "spaceA",    "name": "ffn_norm"},
+        "weight"                        : {"on": "spaceB",   "name": "gate_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_gate"},
+        "cfg"                           : ffn_gate_proj
+    }
+
+    #################################
+    #       11. FFN Activation      #
+    #################################
+    spaceA_hbm_plan["ffn_acti"] = {
+        "addr"                          : spaceA_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length,  llm.mlp_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+    }
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size
+
+    if llm.mlp_acti_bias_enable:
+        spaceB_hbm_plan["ffn_acti_bias"] = {
+        "addr"                          : spaceB_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length,  llm.mlp_inter_dim),
+        "size"                          : work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size,
+        "tensor"                        : None
+        }
+        spaceB_hbm_addr                  += work.batch_size * sequence_length * llm.mlp_inter_dim * elem_size
+        pass
+
+    ffn_acti                            = Activation()
+    ffn_acti.dtype                      = llm.dtype
+    ffn_acti.algo                       = llm.mlp_acti_algo
+    ffn_acti.m_size                     = work.batch_size * sequence_length
+    ffn_acti.n_size                     = llm.mlp_inter_dim
+    ffn_acti.gate_enable                = 1
+    ffn_acti.bias_enable                = llm.mlp_acti_bias_enable
+    ffn_acti.acti_numer                 = work.numerical_check_enable
+
+    kernel_flow["ffn_acti"] = {
+        "type"                          : "acti",
+        "input"                         : {"on": "spaceA",    "name": "ffn_up"},
+        "gate"                          : {"on": "spaceA",    "name": "ffn_gate"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_acti"},
+        "cfg"                           : ffn_acti
+    }
+
+    if llm.mlp_acti_bias_enable:
+        kernel_flow["ffn_acti"]["bias"] = {"on": "spaceB",   "name": "ffn_acti_bias"}
+        pass
+
+    #####################################
+    #       12. FFN Down Projection     #
+    #####################################
+    spaceB_hbm_plan["down_proj_weight"] = {
+        "addr"                          : spaceB_hbm_addr,
+        "shape"                         :(llm.mlp_inter_dim,  llm.embeded_length),
+        "size"                          : llm.mlp_inter_dim * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    spaceB_hbm_addr                      += llm.mlp_inter_dim * llm.embeded_length * elem_size
+
+    spaceA_hbm_plan["ffn_o"] = {
+        "addr"                          : spaceA_hbm_addr,
+        "shape"                         :(work.batch_size * sequence_length, llm.embeded_length),
+        "size"                          : work.batch_size * sequence_length * llm.embeded_length * elem_size,
+        "tensor"                        : None
+    }
+    spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
+
+    ffn_down_proj                       = SummaGEMM()
+    ffn_down_proj.dtype                 = llm.dtype
+    ffn_down_proj.m_size                = work.batch_size * sequence_length
+    ffn_down_proj.n_size                = llm.embeded_length
+    ffn_down_proj.k_size                = llm.mlp_inter_dim
+    ffn_down_proj.resha_x_from_enable   = 0
+    ffn_down_proj.resha_z_to_enable     = 0
+    ffn_down_proj.summa_numer           = work.numerical_check_enable
+
+    kernel_flow["ffn_down_proj"] = {
+        "type"                          : "gemm",
+        "input"                         : {"on": "spaceA",    "name": "ffn_acti"},
+        "weight"                        : {"on": "spaceB",   "name": "down_proj_weight"},
+        "output"                        : {"on": "spaceA",    "name": "ffn_o"},
+        "cfg"                           : ffn_down_proj
+    }
+
+    #################################
+    #       13. ResNet Addition     #
+    #################################
+    ffn_resnet                          = Activation()
+    ffn_resnet.dtype                    = llm.dtype
+    ffn_resnet.algo                     = 'none'
+    ffn_resnet.m_size                   = work.batch_size * sequence_length
+    ffn_resnet.n_size                   = llm.embeded_length
+    ffn_resnet.gate_enable              = 0
+    ffn_resnet.bias_enable              = 1
+    ffn_resnet.acti_numer               = work.numerical_check_enable
+
+    kernel_flow["ffn_resnet"] = {
+        "type"                          : "addi",
+        "input"                         : {"on": "spaceB",   "name": "layer_input"},
+        "bias"                          : {"on": "spaceA",    "name": "ffn_o"},
+        "output"                        : {"on": "spaceB",   "name": "layer_input"},
+        "cfg"                           : ffn_resnet
+    }
+
+    spaceA_hbm_plan, spaceB_hbm_plan = reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan)
+    return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
+    pass
