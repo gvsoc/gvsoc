@@ -157,7 +157,7 @@ def test():
             info = {"llm": llm, "work": work}
 
             # Generate flow
-            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch, EP=expert_parallelsim, moe_distribution='Identical', attn_o2_proj_TP=expert_parallelsim)
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch, EP=expert_parallelsim, moe_distribution='Identical', attn_o2_proj_TP=expert_parallelsim, attn_qn_proj_TP=expert_parallelsim)
             info['kernel_flow'] = kernel_flow
             info['spaceA_hbm_plan'] = spaceA_hbm_plan
             info['spaceB_hbm_plan'] = spaceB_hbm_plan

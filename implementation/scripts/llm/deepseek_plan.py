@@ -307,7 +307,7 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
     pass
 
 
-def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o2_proj_TP = 1, c2c_flow = None, use_flash_attn = False):
+def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_qn_proj_TP = 1, attn_o2_proj_TP = 1, c2c_flow = None, use_flash_attn = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -560,14 +560,44 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
     }
     spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.num_heads * llm.kv_lora_rank * elem_size
 
-    attn_qn_proj                        = SummaGEMM()
-    attn_qn_proj.dtype                  = llm.dtype
-    attn_qn_proj.m_size                 = work.batch_size * sequence_length
-    attn_qn_proj.n_size                 = llm.num_heads * llm.kv_lora_rank
-    attn_qn_proj.k_size                 = llm.q_lora_rank
-    attn_qn_proj.resha_x_from_enable    = 0
-    attn_qn_proj.resha_z_to_enable      = 0
-    attn_qn_proj.summa_numer            = work.numerical_check_enable
+    if attn_qn_proj_TP == 1:
+        attn_qn_proj                        = SummaGEMM()
+        attn_qn_proj.dtype                  = llm.dtype
+        attn_qn_proj.m_size                 = work.batch_size * sequence_length
+        attn_qn_proj.n_size                 = llm.num_heads * llm.kv_lora_rank
+        attn_qn_proj.k_size                 = llm.q_lora_rank
+        attn_qn_proj.resha_x_from_enable    = 0
+        attn_qn_proj.resha_z_to_enable      = 0
+        attn_qn_proj.summa_numer            = work.numerical_check_enable
+    else:
+        attn_qn_proj                        = SummaGEMM()
+        attn_qn_proj.dtype                  = llm.dtype
+        attn_qn_proj.m_size                 = work.batch_size * sequence_length * attn_qn_proj_TP
+        attn_qn_proj.n_size                 = (llm.num_heads * llm.kv_lora_rank + attn_qn_proj_TP - 1) // attn_qn_proj_TP
+        attn_qn_proj.k_size                 = llm.q_lora_rank
+        attn_qn_proj.resha_x_from_enable    = 0
+        attn_qn_proj.resha_z_to_enable      = 0
+        attn_qn_proj.summa_numer            = work.numerical_check_enable
+
+        #Add C2C Flow
+        c2c_flow['attn_qn_proj_TP_All_Gather'] = {
+            "type"                          : "All_Gather",
+            "parallelism"                   : attn_qn_proj_TP,
+            "m_size"                        : work.batch_size * sequence_length,
+            "n_size"                        : llm.q_lora_rank,
+            "to"                            : "m",
+            "elem_size"                     : elem_size
+        }
+        c2c_flow['attn_qn_proj_TP_All_to_All'] = {
+            "type"                          : "All_to_All",
+            "parallelism"                   : attn_qn_proj_TP,
+            "m_size"                        : work.batch_size * sequence_length * attn_qn_proj_TP,
+            "n_size"                        : (llm.num_heads * llm.kv_lora_rank + attn_qn_proj_TP - 1) // attn_qn_proj_TP,
+            "from"                          : "m",
+            "to"                            : "n",
+            "elem_size"                     : elem_size
+        }
+        pass
 
     kernel_flow["attn_qn_proj"] = {
         "type"                          : "gemm",
@@ -769,18 +799,21 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o
         attn_o2_proj.summa_numer        = work.numerical_check_enable
 
         # Add C2C Flow
-        c2c_flow['attn_o2_proj_TP_AtoA'] = {
-            "type"                          : "AtoA",
+        c2c_flow['attn_o2_proj_TP_All_to_All'] = {
+            "type"                          : "All_to_All",
             "parallelism"                   : attn_o2_proj_TP,
-            "length"                        : llm.num_heads * llm.head_dimension,
-            "num_tokens"                    : work.batch_size * sequence_length,
+            "m_size"                        : work.batch_size * sequence_length,
+            "n_size"                        : llm.num_heads * llm.head_dimension,
+            "from"                          : "n",
+            "to"                            : "m",
             "elem_size"                     : elem_size
         }
-        c2c_flow['attn_o2_proj_TP_Ared'] = {
-            "type"                          : "Ared",
+        c2c_flow['attn_o2_proj_TP_Reduce_Scatter'] = {
+            "type"                          : "Reduce_Scatter",
             "parallelism"                   : attn_o2_proj_TP,
-            "length"                        : llm.num_heads * llm.head_dimension,
-            "num_tokens"                    : work.batch_size * sequence_length,
+            "m_size"                        : work.batch_size * sequence_length * attn_o2_proj_TP,
+            "n_size"                        : llm.embeded_length,
+            "on"                            : "m",
             "elem_size"                     : elem_size
         }
         pass
