@@ -1175,7 +1175,7 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_q
             "parallelism"                   : EP,
             "embeded_length"                : llm.embeded_length,
             "num_tokens"                    : work.batch_size * sequence_length,
-            "num_routed_experts"            : llm.num_routed_experts,
+            "num_routed_experts"            : llm.n_routed_experts,
             "index"                         : D_all,
             "elem_size"                     : elem_size
         }
@@ -1390,7 +1390,7 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_q
             "parallelism"                   : EP,
             "embeded_length"                : llm.embeded_length,
             "num_tokens"                    : work.batch_size * sequence_length,
-            "num_routed_experts"            : llm.num_routed_experts,
+            "num_routed_experts"            : llm.n_routed_experts,
             "index"                         : D_all,
             "elem_size"                     : elem_size
         }
