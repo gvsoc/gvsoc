@@ -131,7 +131,7 @@ def test():
     # Initialize Configuration
     normal_llm.init(args.module_paths)
     deepseek.init(args.module_paths)
-    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_dsv3_fp8_decode_fast")
+    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_dsv3_fp8_decode_fast_tpep16")
 
     # Test Parameter Initialization
     arch, llm, work = test_initialization()
@@ -141,14 +141,14 @@ def test():
 
     # Step1: Increase Batch Size
     kvs = [32, 128, 1024, 4096, 64, 256, 512, 2048]
-    eps = [16, 1, 64]
+    sps = [2, 4]
     for kv in kvs:
-        for ep in eps:
+        for sp in sps:
             # Default
             batch_size = 1
             kv_cache_length = kv
-            expert_parallelsim = ep
-            speculative_factor = 2
+            expert_parallelsim = 16
+            speculative_factor = sp
 
             # Configuration
             work.batch_size = batch_size
@@ -157,7 +157,7 @@ def test():
             info = {"llm": llm, "work": work}
 
             # Generate flow
-            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch, EP=expert_parallelsim, moe_distribution='Identical')
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch, EP=expert_parallelsim, moe_distribution='Identical', attn_o2_proj_TP=expert_parallelsim)
             info['kernel_flow'] = kernel_flow
             info['spaceA_hbm_plan'] = spaceA_hbm_plan
             info['spaceB_hbm_plan'] = spaceB_hbm_plan

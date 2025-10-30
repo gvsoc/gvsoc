@@ -307,7 +307,7 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
     pass
 
 
-def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_flash_attn = False):
+def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_o2_proj_TP = 1, use_flash_attn = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -748,14 +748,25 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', use_fl
     }
     spaceA_hbm_addr                       += work.batch_size * sequence_length * llm.embeded_length * elem_size
 
-    attn_o2_proj                        = SummaGEMM()
-    attn_o2_proj.dtype                  = llm.dtype
-    attn_o2_proj.m_size                 = work.batch_size * sequence_length
-    attn_o2_proj.n_size                 = llm.embeded_length
-    attn_o2_proj.k_size                 = llm.num_heads * llm.head_dimension
-    attn_o2_proj.resha_x_from_enable    = 0
-    attn_o2_proj.resha_z_to_enable      = 0
-    attn_o2_proj.summa_numer            = work.numerical_check_enable
+    if attn_o2_proj_TP == 1:
+        attn_o2_proj                    = SummaGEMM()
+        attn_o2_proj.dtype              = llm.dtype
+        attn_o2_proj.m_size             = work.batch_size * sequence_length
+        attn_o2_proj.n_size             = llm.embeded_length
+        attn_o2_proj.k_size             = llm.num_heads * llm.head_dimension
+        attn_o2_proj.resha_x_from_enable= 0
+        attn_o2_proj.resha_z_to_enable  = 0
+        attn_o2_proj.summa_numer        = work.numerical_check_enable
+    else:
+        attn_o2_proj                    = SummaGEMM()
+        attn_o2_proj.dtype              = llm.dtype
+        attn_o2_proj.m_size             = work.batch_size * sequence_length * attn_o2_proj_TP
+        attn_o2_proj.n_size             = llm.embeded_length
+        attn_o2_proj.k_size             = (llm.num_heads * llm.head_dimension + attn_o2_proj_TP - 1) // attn_o2_proj_TP
+        attn_o2_proj.resha_x_from_enable= 0
+        attn_o2_proj.resha_z_to_enable  = 0
+        attn_o2_proj.summa_numer        = work.numerical_check_enable
+        pass
 
     kernel_flow["attn_o2_proj"] = {
         "type"                          : "gemm",
