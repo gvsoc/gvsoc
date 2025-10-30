@@ -52,7 +52,7 @@ SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
 update:
 	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
-	cd core && git add models/cpu engine && git diff --cached > ../soft_hier/gvsoc_core.patch
+	cd core && git add models/cpu models/memory/dramsys.* engine && git diff --cached > ../soft_hier/gvsoc_core.patch
 
 drmasys_apply_patch:
 	git submodule update --init --recursive

@@ -3157,3 +3157,39 @@ index e4cb6c51..4db4b1a3 100644
 +//       regfile(top, *this), mmu(*this), pmp(*this), exception(*this), spatz(*this), memcheck(top, *this), top(top)
 +// {
 +// }
+diff --git a/models/memory/dramsys.cpp b/models/memory/dramsys.cpp
+index e8903045..fb3271ed 100644
+--- a/models/memory/dramsys.cpp
++++ b/models/memory/dramsys.cpp
+@@ -126,6 +126,7 @@ ddr::ddr(vp::ComponentConf &config)
+     else if (dram_type == "ddr4") simulationJson_path = resources_path + "/ddr4-example.json";
+     else if (dram_type == "lpddr4") simulationJson_path = resources_path + "/lpddr4-example.json";
+     else if (dram_type == "hbm2") simulationJson_path = resources_path + "/hbm2-example.json";
++    else if (dram_type == "hbm2-3360") simulationJson_path = resources_path + "/hbm2-3360-example.json";
+     else simulationJson_path = resources_path + "/hbm2-example.json";
+ 
+ 
+diff --git a/models/memory/dramsys.py b/models/memory/dramsys.py
+index 7d46b922..853383cd 100644
+--- a/models/memory/dramsys.py
++++ b/models/memory/dramsys.py
+@@ -18,13 +18,16 @@ import gvsoc.systree as st
+ 
+ class Dramsys(st.Component):
+ 
+-    def __init__(self, parent, name):
++    def __init__(self, parent, name, dram_type = 'hbm2'):
+ 
+         super(Dramsys, self).__init__(parent, name)
+ 
++        #Sanity Check
++        assert(dram_type in ['ddr3', 'ddr4', 'lpddr4', 'hbm2', 'hbm2-3360']), f"[Dramsys Error] Not support DRAM type : {dram_type}"
++
+         self.set_component('memory.dramsys')
+ 
+         self.add_properties({
+             'require_systemc': True,
+-            'dram-type': 'hbm2',
++            'dram-type': dram_type,
+         })
+\ No newline at end of file

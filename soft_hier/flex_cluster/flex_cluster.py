@@ -79,6 +79,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         if not hasattr(arch, 'hbm_node_aliase_start_bit'): arch.hbm_node_aliase_start_bit = 48
         if not hasattr(arch, 'hbm_ctrl_xor_scrambling'): arch.hbm_ctrl_xor_scrambling = 0
         if not hasattr(arch, 'hbm_ctrl_red_scrambling'): arch.hbm_ctrl_red_scrambling = 0
+        if not hasattr(arch, 'hbm_type'): arch.hbm_type = 'hbm2'
 
         #############
         # Assertion #
@@ -162,22 +163,22 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #HBM channels
         hbm_chan_list_west = []
         for hbm_ch in range(arch.hbm_chan_placement[0]):
-            hbm_chan_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}'))
+            hbm_chan_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}', dram_type=arch.hbm_type))
             pass
 
         hbm_chan_list_north = []
         for hbm_ch in range(arch.hbm_chan_placement[1]):
-            hbm_chan_list_north.append(memory.dramsys.Dramsys(self, f'north_hbm_chan_{hbm_ch}'))
+            hbm_chan_list_north.append(memory.dramsys.Dramsys(self, f'north_hbm_chan_{hbm_ch}', dram_type=arch.hbm_type))
             pass
 
         hbm_chan_list_east = []
         for hbm_ch in range(arch.hbm_chan_placement[2]):
-            hbm_chan_list_east.append(memory.dramsys.Dramsys(self, f'east_hbm_chan_{hbm_ch}'))
+            hbm_chan_list_east.append(memory.dramsys.Dramsys(self, f'east_hbm_chan_{hbm_ch}', dram_type=arch.hbm_type))
             pass
 
         hbm_chan_list_south = []
         for hbm_ch in range(arch.hbm_chan_placement[3]):
-            hbm_chan_list_south.append(memory.dramsys.Dramsys(self, f'south_hbm_chan_{hbm_ch}'))
+            hbm_chan_list_south.append(memory.dramsys.Dramsys(self, f'south_hbm_chan_{hbm_ch}', dram_type=arch.hbm_type))
             pass
 
         #HBM controllers
