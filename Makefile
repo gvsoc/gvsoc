@@ -249,3 +249,18 @@ pfto_spatz:
 
 clean_trace:
 	rm *_trace.json
+
+
+######################################################################
+## 				Make Targets for C2C Platform 						##
+######################################################################
+
+c2c-cfg:
+	rm -rf pulp/pulp/c2c_platform
+	cp -rf soft_hier/c2c_platform pulp/pulp/c2c_platform
+
+c2c-hw: c2c-cfg
+	make TARGETS=pulp.c2c_platform.c2c_platform all
+
+c2c-run:
+	./install/bin/gvsoc --target=pulp.c2c_platform.c2c_platform run --trace=ctrl --trace=endpoint

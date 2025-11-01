@@ -307,7 +307,7 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
     pass
 
 
-def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_qn_proj_TP = 1, attn_o2_proj_TP = 1, c2c_flow = None, use_flash_attn = False):
+def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_qn_proj_TP = 1, attn_o2_proj_TP = 1, use_flash_attn = False, gen_c2c_flow = False):
 
     #Basic Settings
     elem_size                           = 1 if llm.dtype == 'fp8' else 2
@@ -1448,5 +1448,9 @@ def deepseek_layer_plan(llm, work, arch, EP=1, moe_distribution = 'Fair', attn_q
     }
 
     spaceA_hbm_plan, spaceB_hbm_plan = reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan)
-    return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
+    if gen_c2c_flow:
+        return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, c2c_flow
+    else:
+        return kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan
+        pass
     pass
