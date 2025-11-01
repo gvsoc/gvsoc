@@ -17,7 +17,8 @@ TARGETS ?= rv64 \
     snitch:core_type=fast \
     pulp.snitch.snitch_cluster_single \
     chimera \
-    snitch_testbench
+    snitch_testbench \
+    magia
 
 ifndef BUILDDIR
 ifdef GVSOC_WORKDIR

@@ -2,22 +2,8 @@ BENDER_VERSION = 0.28.1
 UBUNTU_VERSION = 22.04
 TIMEOUT ?= 60
 
-TEST_TARGETS ?= \
-    pulp-open \
-    chimera \
-    snitch \
-    snitch:core_type=fast \
-    snitch_cluster_single \
-    siracusa \
-    rv64 \
-    occamy \
-    spatz \
-    ara \
-    snitch_spatz \
-    snitch_testbench
-
 GVTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
-GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit summary
+GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --dump-all --max-timeout $(TIMEOUT) run table junit summary
 
 
 
@@ -144,13 +130,34 @@ test.build.ara: test.checkout.ara
 	cd tests/ara-rtl/apps && make riscv_tests GCC_INSTALL_DIR=$(RISCV_GCC) LLVM_INSTALL_DIR=$(ARA_LLVM)
 
 
+#
+# Magia SDK
+#
+
+test.clean.magia:
+	rm -rf tests/magia-sdk
+
+test.checkout.magia:
+	@if [ ! -d "tests/magia-sdk" ]; then \
+		git clone "git@github.com:haugoug/magia-sdk.git" "tests/magia-sdk"; \
+	fi
+	cd "tests/magia-sdk" && \
+	git fetch --all && \
+	git checkout f663315d4c2ce521a5dd4ae9d08b24f2b957f100
+
+test.build.magia: test.checkout.magia
+	rm -rf $(CURDIR)/tests/magia-sdk/build
+	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=2 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile2
+	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=4 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile4
+	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=8 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile8
 
 
-test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara
 
-test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara
+test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara test.clean.magia
 
-test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara
+test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara test.checkout.magia
+
+test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara test.build.magia
 
 test.run:
 	$(GVTEST_CMD)
