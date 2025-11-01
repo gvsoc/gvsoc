@@ -16,3 +16,5 @@ tests/junit-reports/
 tests/pulp-sdk/
 tests/snitch/
 tests/spatz-rtl/
+tests/magia-sdk/
+tests/riscv-tests/
