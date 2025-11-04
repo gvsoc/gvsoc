@@ -21,7 +21,7 @@ class Router(gvsoc.systree.Component):
         super(Router, self).__init__(parent, name)
         self.add_property('num_port', num_port)
         self.add_property('rx_depth', rx_depth)
-        self.add_sources('pulp/c2c_platform/router.cpp')
+        self.add_sources(['pulp/c2c_platform/router.cpp'])
 
     def i_PORT_INPUT(self, i: int) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'in_{i}', signature='io')

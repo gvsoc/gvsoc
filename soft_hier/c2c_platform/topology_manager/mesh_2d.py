@@ -26,14 +26,19 @@ port_map = {
     "south"     : 4,
 }
 
+route_algo = {
+    "xy"        : 0,
+}
+
 class Mesh2D(gvsoc.systree.Component):
-    def __init__(self, parent, name, x_dim, y_dim, x_pos, y_pos):
+    def __init__(self, parent, name, x_dim, y_dim, x_pos = 0, y_pos = 0, ralgo = 0):
         super(Mesh2D, self).__init__(parent, name)
         self.add_property('x_dim', x_dim)
         self.add_property('y_dim', y_dim)
         self.add_property('x_pos', x_pos)
         self.add_property('y_pos', y_pos)
-        self.add_sources('pulp/c2c_platform/topology_manager/mesh_2d.cpp')
+        self.add_property('ralgo', ralgo)
+        self.add_sources(['pulp/c2c_platform/topology_manager/mesh_2d.cpp'])
 
     def i_TOP_INPUT(self) -> gvsoc.systree.SlaveItf:
         return gvsoc.systree.SlaveItf(self, f'in', signature='io')
@@ -56,7 +61,7 @@ class Mesh2D(gvsoc.systree.Component):
         for x in range(cfg.num_chip_x):
             top_list.append([])
             for y in range(cfg.num_chip_y):
-                top = Mesh2D(parent, f"top_{x}_{y}"
+                top = Mesh2D(parent, f"top_{x}_{y}",
                     x_dim = cfg.num_chip_x,
                     y_dim = cfg.num_chip_y,
                     x_pos = x,
@@ -86,7 +91,7 @@ class Mesh2D(gvsoc.systree.Component):
         for x in range(cfg.num_chip_x):
             for y in range(cfg.num_chip_y):
                 eid = self.pos2id((x,y), cfg)
-                d2dlink_e2r = D2DLink(self, f"d2dlink_{x}_{y}_e2r",
+                d2dlink_e2r = D2DLink(parent, f"d2dlink_{x}_{y}_e2r",
                     link_id=eid,
                     fifo_depth_rx=cfg.link_depth_rx,
                     fifo_depth_tx=cfg.link_depth_tx,
@@ -94,7 +99,7 @@ class Mesh2D(gvsoc.systree.Component):
                     flit_granularity_byte=cfg.flit_granularity_byte,
                     link_latency_ns=cfg.local_latency_ns,
                     link_bandwidth_GBps=cfg.link_bandwidth_GBps)
-                d2dlink_r2e = D2DLink(self, f"d2dlink_{x}_{y}_r2e",
+                d2dlink_r2e = D2DLink(parent, f"d2dlink_{x}_{y}_r2e",
                     link_id=eid,
                     fifo_depth_rx=cfg.link_depth_rx,
                     fifo_depth_tx=cfg.link_depth_tx,
@@ -115,7 +120,7 @@ class Mesh2D(gvsoc.systree.Component):
                 eid = self.pos2id((x,y), cfg)
                 # to west
                 if x > 0:
-                    d2dlink = D2DLink(self, f"d2dlink_{x}_{y}_west",
+                    d2dlink = D2DLink(parent, f"d2dlink_{x}_{y}_west",
                         link_id=eid,
                         fifo_depth_rx=cfg.link_depth_rx,
                         fifo_depth_tx=cfg.link_depth_tx,
@@ -128,7 +133,7 @@ class Mesh2D(gvsoc.systree.Component):
                     pass
                 # to south
                 if y > 0:
-                    d2dlink = D2DLink(self, f"d2dlink_{x}_{y}_south",
+                    d2dlink = D2DLink(parent, f"d2dlink_{x}_{y}_south",
                         link_id=eid,
                         fifo_depth_rx=cfg.link_depth_rx,
                         fifo_depth_tx=cfg.link_depth_tx,
@@ -141,7 +146,7 @@ class Mesh2D(gvsoc.systree.Component):
                     pass
                 # to east
                 if x < (cfg.num_chip_x - 1):
-                    d2dlink = D2DLink(self, f"d2dlink_{x}_{y}_east",
+                    d2dlink = D2DLink(parent, f"d2dlink_{x}_{y}_east",
                         link_id=eid,
                         fifo_depth_rx=cfg.link_depth_rx,
                         fifo_depth_tx=cfg.link_depth_tx,
@@ -154,7 +159,7 @@ class Mesh2D(gvsoc.systree.Component):
                     pass
                 # to north
                 if y < (cfg.num_chip_y - 1):
-                    d2dlink = D2DLink(self, f"d2dlink_{x}_{y}_north",
+                    d2dlink = D2DLink(parent, f"d2dlink_{x}_{y}_north",
                         link_id=eid,
                         fifo_depth_rx=cfg.link_depth_rx,
                         fifo_depth_tx=cfg.link_depth_tx,

@@ -38,7 +38,7 @@ private:
     static vp::IoReqStatus req(vp::Block *__this, vp::IoReq *req, int port);
     static void grant(vp::Block *__this, vp::IoReq *req);
     static void response(vp::Block *__this, vp::IoReq *req);
-    vp::IoReq * new_req(vp::IoReq *req);
+    vp::IoReq * new_req(vp::IoReq *req, int port);
     vp::IoReq * del_req(vp::IoReq *req);
     int get_routing_port(vp::IoReq *req);
     int process_rx_port(int port);
@@ -76,7 +76,7 @@ Router::Router(vp::ComponentConf &config)
         this->new_master_port("out_" + std::to_string(i), &this->output_itf[i]);
         this->output_itf[i].set_grant_meth(&Router::grant);
         this->output_itf[i].set_resp_meth(&Router::response);
-        this->input_itf[i]->set_req_meth_muxed(&Router::req, i);
+        this->input_itf[i].set_req_meth_muxed(&Router::req, i);
         this->output_stall_list.push_back(0);
         this->input_stall_req.push_back(NULL);
     }
@@ -103,7 +103,7 @@ vp::IoReqStatus Router::req(vp::Block *__this, vp::IoReq *req, int port)
 int Router::get_routing_port(vp::IoReq *req)
 {
     int source_port = *(int *)req->arg_get(C2CPlatform::REQ_PORT_ID);
-    vp::IoReq * tmp_req = _this->new_req(req, source_port);
+    vp::IoReq * tmp_req = this->new_req(req, source_port);
     vp::IoReqStatus result = this->top_ift.req(tmp_req);
     if (result != vp::IO_REQ_OK)
     {
@@ -146,7 +146,7 @@ int Router::process_rx_port(int port)
                         this->output_stall_list[rid] = 1;
                         this->trace.msg(vp::Trace::LEVEL_TRACE, "[Router] Output port %d is stalled\n", rid);
                     } else {
-                        _this->trace.fatal("[Router] Error: Output port %d is still stalled but we are trying to send a new request\n", rid);
+                        this->trace.fatal("[Router] Error: Output port %d is still stalled but we are trying to send a new request\n", rid);
                     }
                 }
 
@@ -171,7 +171,7 @@ int Router::process_rx_port(int port)
     if (this->input_stall_req[port] != NULL && this->rx_fifo[port].size() < this->rx_depth)
     {
         //Push to rx fifo
-        vp::IoReq * tmp_req = _this->new_req(this->input_stall_req[port], port);
+        vp::IoReq * tmp_req = this->new_req(this->input_stall_req[port], port);
         this->rx_fifo[port].push_back(tmp_req);
 
         //Response request
@@ -191,8 +191,8 @@ void Router::routing_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
     int last_forward_port = _this->rrb_port;
     for (int i = 0; i < _this->num_port; ++i)
     {
-        pid = (i + _this->rrb_port) % _this->num_port;
-        res = _this->process_rx_port(pid);
+        int pid = (i + _this->rrb_port) % _this->num_port;
+        int res = _this->process_rx_port(pid);
         if (res)
         {
             last_forward_port = pid;
@@ -202,7 +202,7 @@ void Router::routing_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 
     //Check if there still exist requests in rx fifos
     int num_rx_req = 0;
-    for (int x : _this->rx_fifo) {
+    for (auto x : _this->rx_fifo) {
         num_rx_req += x.size();
     }
     if (num_rx_req > 0) {

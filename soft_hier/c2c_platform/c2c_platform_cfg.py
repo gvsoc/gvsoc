@@ -21,7 +21,9 @@ class C2CPlatformCFG:
     def __init__(self):
 
         # Platform
-        self.num_chip               = 16
+        self.num_chip               = 4
+        self.use_trace_file         = 0
+        self.trace_file_base        = ''
 
         # Links
         self.link_latency_ns        = 256
@@ -32,5 +34,10 @@ class C2CPlatformCFG:
         self.link_credit_bar        = 10
         self.flit_granularity_byte  = 64
 
-        # Topology
-        self.topology               = "self-link"
+        # Topology - SelfLink
+        # self.topology               = "self-link"
+
+        # Topology - Mesh2D
+        self.topology               = "mesh2d"
+        self.num_chip_x             = 2
+        self.num_chip_y             = 2

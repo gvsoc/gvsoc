@@ -29,14 +29,18 @@ class Endpoint(gvsoc.systree.Component):
 
         self.add_property('endpoint_id',            endpoint_id)
         self.add_property('endpoint_type',          endpoint_type)
-        if os.path.exists(trace_file):
-            # If it exists, use the absolute path
-            self.add_property('use_trace_file',     1)
-            self.add_property('trace_file',         os.path.abspath(trace_file))
+        if len(trace_file) > 0:
+            if os.path.exists(trace_file):
+                # If it exists, use the absolute path
+                self.add_property('use_trace_file',     1)
+                self.add_property('trace_file',         os.path.abspath(trace_file))
+            else:
+                raise RuntimeError(f"Trace file {trace_file} does not exist")
+            pass
         else:
             self.add_property('use_trace_file',     0)
+            self.add_property('trace_file',         trace_file)
         self.add_property('num_tx_flit',            num_tx_flit)
-        self.add_property('num_rx_flit',            num_tx_flit)
         self.add_property('flit_granularity_byte',  flit_granularity_byte)
 
         self.add_sources(['pulp/c2c_platform/endpoint.cpp'])
