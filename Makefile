@@ -19,7 +19,8 @@ TARGETS ?= rv64 \
     pulp.snitch.snitch_cluster_single \
     chimera \
     snitch_testbench \
-    magia
+    magia \
+	mempool
 
 ifndef BUILDDIR
 ifdef GVSOC_WORKDIR
