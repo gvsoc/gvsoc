@@ -16,6 +16,8 @@ import os
 # limitations under the License.
 #
 
+import os
+import subprocess
 import gvsoc.systree
 
 class Endpoint(gvsoc.systree.Component):
@@ -34,6 +36,9 @@ class Endpoint(gvsoc.systree.Component):
                 # If it exists, use the absolute path
                 self.add_property('use_trace_file',     1)
                 self.add_property('trace_file',         os.path.abspath(trace_file))
+                # Get the number of lines in the trace file
+                num_lines = int(subprocess.check_output(['wc', '-l', trace_file]).split()[0])
+                num_tx_flit = num_lines
             else:
                 raise RuntimeError(f"Trace file {trace_file} does not exist")
             pass

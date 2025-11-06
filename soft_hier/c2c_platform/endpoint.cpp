@@ -21,6 +21,10 @@
 #include <vp/vp.hpp>
 #include <vp/itf/io.hpp>
 #include <queue>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
 #include "c2c_platform.hpp"
 
 class Endpoint : public vp::Component
@@ -59,6 +63,8 @@ private:
     int64_t                     start_timestamp;
     int64_t                     end_timestamp;
     std::queue<int>             ack_queue;
+    // handle to trace file if needed
+    std::ifstream *             trace_file_handle;
 };
 
 Endpoint::Endpoint(vp::ComponentConf &config)
@@ -79,6 +85,15 @@ Endpoint::Endpoint(vp::ComponentConf &config)
     this->use_trace_file        = this->get_js_config()->get("use_trace_file")->get_int();
     this->num_tx_flit           = this->get_js_config()->get("num_tx_flit")->get_int();
     this->flit_granularity_byte = this->get_js_config()->get("flit_granularity_byte")->get_int();
+    this->trace_file_handle     = NULL;
+    if (this->use_trace_file)
+    {
+        this->trace_file_handle = new std::ifstream(this->get_js_config()->get("trace_file")->get_str());
+        if (!this->trace_file_handle->is_open())
+        {
+            this->trace.fatal("Error: cannot open trace file %s\n", this->get_js_config()->get("trace_file")->get_str().c_str());
+        }
+    }
     this->cnt_tx_flit           = 0;
     this->cnt_rx_flit           = 0;
     this->tx_stalled            = 0;
@@ -116,7 +131,7 @@ vp::IoReqStatus Endpoint::dummy_recv(vp::IoReq *req)
 
     if(REQ_IS_LAST == 1)
     {
-        this->ack_queue.push(REQ_DEST_ID);
+        this->ack_queue.push(REQ_SOUR_ID);
         this->event_enqueue(this->tx_fsm_event, 1);
     }
 
@@ -144,6 +159,25 @@ void Endpoint::dummy_send()
 {
     int REQ_SOUR_ID     = this->endpoint_id;
     int REQ_DEST_ID     = this->endpoint_id;
+    if (this->use_trace_file)
+    {
+        // Read dest_id from trace file
+        std::string line;
+        if (std::getline(*this->trace_file_handle, line))
+        {
+            std::istringstream iss(line);
+            int dest_id;
+            if (!(iss >> dest_id))
+            {
+                this->trace.fatal("Error: cannot read dest_id from trace file\n");
+            }
+            REQ_DEST_ID = dest_id;
+        }
+        else
+        {
+            this->trace.fatal("Error: cannot read from trace file\n");
+        }
+    }
     int REQ_IS_ACK      = 0;
     int REQ_IS_LAST     = 0;
     this->cnt_tx_flit++;
@@ -162,7 +196,7 @@ void Endpoint::dummy_send()
     if (result == vp::IO_REQ_INVALID) {
         this->trace.fatal("Error: output interface request failed\n");
     } else {
-        this->trace.msg(vp::Trace::LEVEL_TRACE, "Sent flit %d\n", this->cnt_tx_flit);
+        this->trace.msg(vp::Trace::LEVEL_TRACE, "Sent flit %d, to dest %d\n", this->cnt_tx_flit, REQ_DEST_ID);
         if (result == vp::IO_REQ_DENIED) {
             if (this->tx_stalled == 0) {
                 this->tx_stalled = 1;

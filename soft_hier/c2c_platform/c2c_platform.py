@@ -58,6 +58,7 @@ class C2CSystem(gvsoc.systree.Component):
             endpoint = Endpoint(self, f"endpoint_{eid}",
                 endpoint_id=eid,
                 num_tx_flit=2000,
+                trace_file= '' if cfg.use_trace_file == 0 else cfg.trace_file_base + f"_{eid}.trace",
                 flit_granularity_byte=cfg.flit_granularity_byte)
             endpoint_list.append(endpoint)
             pass

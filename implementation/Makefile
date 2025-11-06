@@ -6,6 +6,11 @@ ifdef arch
 	ARCH_FILE = $(realpath $(arch))
 endif
 
+C2C_FILE ?= ${CUR_DIR}/config/c2c/c2c.py
+ifdef c2c
+	C2C_FILE = $(realpath $(c2c))
+endif
+
 export PYTHONPATH := ${CUR_DIR}/scripts:$(PYTHONPATH)
 
 
@@ -477,6 +482,7 @@ llm:
 			${CUR_DIR}/sw/ \
 			${CUR_DIR}/out/ \
 			${ARCH_FILE} \
+			${C2C_FILE} \
 			${MODEL_FILE} \
 			${WORK_FILE} \
 			${ATTN_FILE} \
