@@ -269,4 +269,4 @@ c2c-hw: c2c-cfg
 	make TARGETS=pulp.c2c_platform.c2c_platform all
 
 c2c-run:
-	./install/bin/gvsoc --target=pulp.c2c_platform.c2c_platform run --trace=ctrl --trace=endpoint --trace=router
+	./install/bin/gvsoc --target=pulp.c2c_platform.c2c_platform run --trace=ctrl --trace=endpoint

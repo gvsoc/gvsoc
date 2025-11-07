@@ -30,6 +30,7 @@ from pulp.c2c_platform.d2dlink import D2DLink
 from pulp.c2c_platform.endpoint import Endpoint
 from pulp.c2c_platform.c2c_platform_cfg import C2CPlatformCFG
 from pulp.c2c_platform.topology_manager.mesh_2d import Mesh2D
+from pulp.c2c_platform.topology_manager.fattree import FatTree
 import math
 
 GAPY_TARGET = True
@@ -93,6 +94,9 @@ class C2CSystem(gvsoc.systree.Component):
         elif cfg.topology == 'mesh2d':
             topology_manager = Mesh2D(self, 'mesh2d_manager', x_dim=cfg.num_chip_x, y_dim=cfg.num_chip_y)
             topology_manager.build_top(self, endpoint_list, cfg)
+        elif cfg.topology == 'fattree':
+            topology_manager = FatTree(self, 'fattree_manager', radix=cfg.radix, level=cfg.level, cfg=cfg)
+            topology_manager.build_top(self, endpoint_list)
         else:
             raise RuntimeError(f"C2C Topology {cfg.topology} currently not supported")
             pass

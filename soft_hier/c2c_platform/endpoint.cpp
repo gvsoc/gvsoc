@@ -23,6 +23,7 @@
 #include <queue>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <fstream>
 #include <string>
 #include "c2c_platform.hpp"
@@ -54,6 +55,7 @@ private:
     vp::WireMaster<bool>        barrier_req_itf;
 
     int                         endpoint_id;
+    int                         is_dummy_endpoint;
     int                         use_trace_file;
     int                         num_tx_flit;
     int                         cnt_tx_flit;
@@ -82,6 +84,7 @@ Endpoint::Endpoint(vp::ComponentConf &config)
     this->tx_fsm_event          = this->event_new(&Endpoint::tx_fsm_handler);
 
     this->endpoint_id           = this->get_js_config()->get("endpoint_id")->get_int();
+    this->is_dummy_endpoint     = (this->get_js_config()->get("endpoint_type")->get_str() == "dummy")? 1 : 0;
     this->use_trace_file        = this->get_js_config()->get("use_trace_file")->get_int();
     this->num_tx_flit           = this->get_js_config()->get("num_tx_flit")->get_int();
     this->flit_granularity_byte = this->get_js_config()->get("flit_granularity_byte")->get_int();
@@ -106,6 +109,9 @@ void Endpoint::reset(bool active)
     if (!active)
     {
         this->trace.msg(vp::Trace::LEVEL_TRACE, "Reset done\n");
+        if (this->num_tx_flit == 0 && !this->is_dummy_endpoint) {
+            this->barrier_req_itf.sync(1);
+        }
     }
 }
 
@@ -128,6 +134,11 @@ vp::IoReqStatus Endpoint::dummy_recv(vp::IoReq *req)
     int REQ_IS_LAST     = *(int *)req->arg_get(C2CPlatform::REQ_IS_LAST);
     int REQ_SIZE        = *(int *)req->arg_get(C2CPlatform::REQ_SIZE);
     int REQ_WRITE       = *(int *)req->arg_get(C2CPlatform::REQ_WRITE);
+
+    if(REQ_DEST_ID != this->endpoint_id)
+    {
+        this->trace.fatal("Error: endpoint %d, receive a wrong flit that should go to %d\n", this->endpoint_id, REQ_DEST_ID);
+    }
 
     if(REQ_IS_LAST == 1)
     {

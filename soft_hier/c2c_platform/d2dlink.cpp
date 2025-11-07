@@ -129,11 +129,11 @@ vp::IoReqStatus D2DLink::req(vp::Block *__this, vp::IoReq *req)
 
     //Check if TX FIFO is full
     if (_this->tx_fifo.size() >= _this->fifo_depth_tx) {
-        _this->trace.msg("TX FIFO is full, reject the request\n");
+        _this->trace.msg(vp::Trace::LEVEL_TRACE, "TX FIFO is full, reject the request\n");
         _this->stalled_tx_req = req;
         return vp::IO_REQ_DENIED;
     } else {
-        _this->trace.msg("Accept the request, put it into TX FIFO\n");
+        _this->trace.msg(vp::Trace::LEVEL_TRACE, "Accept the request, put it into TX FIFO\n");
         vp::IoReq * tmp_req = _this->new_req(req);
         _this->tx_fifo.push(tmp_req);
         _this->event_enqueue(_this->tx_fsm_event, 1);
@@ -152,7 +152,7 @@ void D2DLink::tx_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
         if (cr.delay_timestamp <= _this->time.get_time()) {
             _this->tx_allowed += cr.allowed;
             _this->cr_fifo.pop();
-            _this->trace.msg("Receive credit from remote side, tx_allowed=%d\n", _this->tx_allowed);
+            _this->trace.msg(vp::Trace::LEVEL_TRACE, "Receive credit from remote side, tx_allowed=%d\n", _this->tx_allowed);
         }
     }
 
@@ -167,12 +167,12 @@ void D2DLink::tx_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
         _this->tx_fifo.pop();
         _this->next_tx_timestamp = _this->time.get_time() + _this->bw_interval_ps;
         _this->event_enqueue(_this->rx_fsm_event, 1);
-        _this->trace.msg("Send a flit to output interface, remaining TX FIFO size: %d\n", _this->tx_fifo.size());
+        _this->trace.msg(vp::Trace::LEVEL_TRACE, "Send a flit to output interface, remaining TX FIFO size: %d\n", _this->tx_fifo.size());
     }
 
     //Handle stalled request if any
     if (_this->stalled_tx_req != NULL && _this->tx_fifo.size() < _this->fifo_depth_tx) {
-        _this->trace.msg("Handle stalled request, put it into TX FIFO\n");
+        _this->trace.msg(vp::Trace::LEVEL_TRACE, "Handle stalled request, put it into TX FIFO\n");
         vp::IoReq * tmp_req = _this->new_req(_this->stalled_tx_req);
         _this->tx_fifo.push(tmp_req);
         _this->stalled_tx_req->get_resp_port()->grant(_this->stalled_tx_req);
@@ -199,7 +199,7 @@ void D2DLink::rx_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                 _this->rx_fifo.push(dl_flit.req);
                 _this->dl_fifo.pop();
                 _this->event_enqueue(_this->ot_fsm_event, 1);
-                _this->trace.msg("Receive a flit from remote side, RX FIFO size: %d\n", _this->rx_fifo.size());
+                _this->trace.msg(vp::Trace::LEVEL_TRACE, "Receive a flit from remote side, RX FIFO size: %d\n", _this->rx_fifo.size());
             } else {
                 _this->trace.fatal("Error: Credit mechanisim wrong, RX FIFO is full, cannot receive the flit from remote side\n");
             }
@@ -234,11 +234,11 @@ void D2DLink::ot_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                 }
             }
             if(result == vp::IO_REQ_OK) {
-                _this->trace.msg(vp::DEBUG, "[D2DLink OT FSM] delete req %p\n", req);
+                _this->trace.msg(vp::Trace::LEVEL_TRACE, "[D2DLink OT FSM] delete req %p\n", req);
                 _this->del_req(req);
             }
             _this->rx_fifo.pop();
-            _this->trace.msg("Send a flit to output interface, remaining RX FIFO size: %d\n", _this->rx_fifo.size());
+            _this->trace.msg(vp::Trace::LEVEL_TRACE, "Send a flit to output interface, remaining RX FIFO size: %d\n", _this->rx_fifo.size());
             _this->fifo_credit_cnt += 1;
             if (_this->fifo_credit_cnt >= _this->fifo_credit_bar) {
                 //Send credit back to remote side
@@ -247,7 +247,7 @@ void D2DLink::ot_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
                 cr.delay_timestamp = _this->link_latency_ns * 1000 + _this->time.get_time();
                 _this->cr_fifo.push(cr);
                 _this->event_enqueue(_this->tx_fsm_event, 1);
-                _this->trace.msg("Send %d credits back to remote side, remaining CR FIFO size: %d\n", _this->fifo_credit_cnt, _this->cr_fifo.size());
+                _this->trace.msg(vp::Trace::LEVEL_TRACE, "Send %d credits back to remote side, remaining CR FIFO size: %d\n", _this->fifo_credit_cnt, _this->cr_fifo.size());
                 _this->fifo_credit_cnt = 0;
             }
         }
@@ -263,8 +263,8 @@ void D2DLink::ot_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 void D2DLink::response(vp::Block *__this, vp::IoReq *req)
 {
     D2DLink *_this = (D2DLink *)__this;
-    _this->trace.msg("Receive response from output interface\n");
-    _this->trace.msg(vp::DEBUG, "[D2DLink CallBack] delete req %p\n", req);
+    _this->trace.msg(vp::Trace::LEVEL_TRACE, "Receive response from output interface\n");
+    _this->trace.msg(vp::Trace::LEVEL_TRACE, "[D2DLink CallBack] delete req %p\n", req);
     _this->del_req(req);
 }
 
@@ -275,7 +275,7 @@ void D2DLink::grant(vp::Block *__this, vp::IoReq *req)
 
     if (_this->output_stalled == 1) {
         _this->output_stalled = 0;
-        _this->trace.msg("Output interface is un-stalled\n");
+        _this->trace.msg(vp::Trace::LEVEL_TRACE, "Output interface is un-stalled\n");
         _this->event_enqueue(_this->ot_fsm_event, 1);
     } else {
         _this->trace.fatal("Error: output interface is not stalled but we are granted\n");

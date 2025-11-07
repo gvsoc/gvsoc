@@ -41,3 +41,8 @@ class C2CPlatformCFG:
         self.topology               = "mesh2d"
         self.num_chip_x             = 4
         self.num_chip_y             = 4
+
+        # Topology - FatTree
+        # self.topology               = "fattree"
+        # self.radix                  = 4
+        # self.level                  = 3
