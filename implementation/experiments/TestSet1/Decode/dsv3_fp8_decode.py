@@ -131,7 +131,7 @@ def test():
     # Initialize Configuration
     normal_llm.init(args.module_paths)
     deepseek.init(args.module_paths)
-    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_dsv3_fp8_decode_batch_scale_at_ep1")
+    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="dsv3_fp8_decode")
 
     # Test Parameter Initialization
     arch, llm, work = test_initialization()
