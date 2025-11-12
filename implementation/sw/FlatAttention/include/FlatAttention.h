@@ -154,7 +154,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                         flex_dma_async_wait_all();
                     }
 
-                    if (info->slice_is_x_edge && j == 0) {
+                    if (info->cluster_for_rowwise == 1 && j == 0) {
                         //load Qi_sy
                         flex_dma_async_1d(
                             info->L1_Q,
@@ -164,7 +164,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                     }
 
 
-                    if (info->slice_is_y_edge)
+                    if (info->cluster_for_colwise == 1)
                     {
                         //load Vj_sx
                         flex_dma_async_1d(
@@ -373,7 +373,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                 grid_sync_group_barrier_xy(&(info->group));
             }
 
-            if (info->slice_is_x_edge)
+            if (info->cluster_for_rowwise == 1)
             {
                 //11. Store O
                 if(flex_is_dm_core()){
@@ -510,7 +510,7 @@ void flatasync_run(FlatAttentionInfo* info){
         flex_dma_async_1d(info->DB_L1_mr,zomem(0),info->L1_m_size+info->L1_l_size);
         flex_dma_async_wait_all();
 
-        if (info->slice_is_x_edge){
+        if (info->cluster_for_rowwise == 1){
             flex_dma_async_1d(
                 info->L1_Q,
                 info->HBM_Q + info->slice_id_y * info->slice_QO_size/*slice offset*/,
@@ -529,7 +529,7 @@ void flatasync_run(FlatAttentionInfo* info){
             }
         }
 
-        if (info->slice_is_y_edge)
+        if (info->cluster_for_colwise == 1)
         {
             flex_dma_async_1d(
                 info->L1_KT,
@@ -607,7 +607,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set B: <n-2> O=O/lr
         if (info->spatz_attached && __valid && __iter_j == (info->Tc - 1))
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flat_attention_vector_M_div_V(
                     info->d,
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -619,7 +619,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set B: < n > load Q_sy + < n > Broadcast Q_sy
         if (flex_is_dm_core() && valid && iter_j == 0)
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flex_dma_async_1d(
                     info->DB_L1_Q,
                     info->HBM_Q + (2*iter_h + 1) * info->heads_QO_size/*head offset*/ + iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
@@ -655,7 +655,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set B: <n-2> store O
         if (flex_is_dm_core() && __valid && __iter_j == (info->Tc - 1))
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flex_dma_async_1d(
                     info->HBM_O + (2*__iter_h + 1) * info->heads_QO_size/*head offset*/ + __iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->DB_L1_O,
@@ -770,7 +770,7 @@ void flatasync_run(FlatAttentionInfo* info){
 
         if (flex_is_dm_core())
         {
-            if (info->slice_is_y_edge)
+            if (info->cluster_for_colwise == 1)
             {
                 //Set B: < n > load K_sx
                 if (valid)
@@ -931,7 +931,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set A: <n-1> O=O/lr
         if (info->spatz_attached && _valid && _iter_j == (info->Tc - 1))
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flat_attention_vector_M_div_V(
                     info->d,
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -943,7 +943,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set A: <n+1> load Q_sy + <n+1> Broadcast Q_sy
         if (flex_is_dm_core() && valid_ && iter_j_ == 0)
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flex_dma_async_1d(
                     info->L1_Q,
                     info->HBM_Q + 2*iter_h_ * info->heads_QO_size/*head offset*/ + iter_i_ * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
@@ -979,7 +979,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set A: <n-1> store O
         if (flex_is_dm_core() && _valid && _iter_j == (info->Tc - 1))
         {
-            if (info->slice_is_x_edge){
+            if (info->cluster_for_rowwise == 1){
                 flex_dma_async_1d(
                     info->HBM_O + 2*_iter_h * info->heads_QO_size/*head offset*/ + _iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->L1_O,
@@ -1091,7 +1091,7 @@ void flatasync_run(FlatAttentionInfo* info){
 
         if (flex_is_dm_core())
         {
-            if (info->slice_is_y_edge)
+            if (info->cluster_for_colwise == 1)
             {
                 //Set A: <n+1> load K_sx
                 if (valid_)

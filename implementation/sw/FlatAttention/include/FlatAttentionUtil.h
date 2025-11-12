@@ -53,6 +53,8 @@ typedef struct FlatAttentionInfo
     uint32_t                cluster_in_group_id;
     uint32_t                cluster_in_group_id_x;
     uint32_t                cluster_in_group_id_y;
+    uint32_t                cluster_for_rowwise;
+    uint32_t                cluster_for_colwise;
 
     //Spatz Information
     uint32_t                spatz_num;
@@ -196,6 +198,8 @@ FlatAttentionInfo flat_attention_analyze(
     info.cluster_in_group_id_x  = pos.x % info.group.grid_x_dim;
     info.cluster_in_group_id_y  = pos.y % info.group.grid_y_dim;
     info.cluster_in_group_id    = info.cluster_in_group_id_x + info.group.this_grid_cluster_num_x * info.cluster_in_group_id_y;
+    info.cluster_for_rowwise    = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_x == (pos.y % info.group.grid_x_dim)))? 1 : 0;
+    info.cluster_for_colwise    = ((info.cluster_in_group_id_x % info.group.grid_y_dim) == (info.cluster_in_group_id_y % info.group.grid_x_dim) && (info.cluster_in_group_id_y == (pos.x % info.group.grid_y_dim)))? 1 : 0;
 
     //Spatz information
     info.spatz_num              = ARCH_SPATZ_ATTACED_CORES;
@@ -377,7 +381,7 @@ void flat_attention_print_info(FlatAttentionInfo* info) {
 
 
 inline void flat_attention_broadcast_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
-    if (flex_is_dm_core() && info->cluster_in_group_id_x == 0)
+    if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_broadcast(
             offset/*dst_offset*/,
@@ -390,7 +394,7 @@ inline void flat_attention_broadcast_rowwise(FlatAttentionInfo* info, uint32_t o
 }
 
 inline void flat_attention_broadcast_colwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
-    if (flex_is_dm_core() && info->cluster_in_group_id_y == 0)
+    if (flex_is_dm_core() && info->cluster_for_colwise == 1)
     {
         flex_dma_async_broadcast(
             offset/*dst_offset*/,
@@ -403,7 +407,7 @@ inline void flat_attention_broadcast_colwise(FlatAttentionInfo* info, uint32_t o
 }
 
 inline void flat_attention_redmax_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
-    if (flex_is_dm_core() && info->cluster_in_group_id_x == 0)
+    if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_reduction(
             offset/*dst_offset*/,
@@ -417,7 +421,7 @@ inline void flat_attention_redmax_rowwise(FlatAttentionInfo* info, uint32_t offs
 }
 
 inline void flat_attention_redsum_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
-    if (flex_is_dm_core() && info->cluster_in_group_id_x == 0)
+    if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_reduction(
             offset/*dst_offset*/,
