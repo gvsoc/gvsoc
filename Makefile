@@ -6,6 +6,7 @@ CMAKE ?= cmake
 TARGETS ?= rv64 \
     rv64_untimed \
     pulp-open \
+    pulp-open-nn \
     pulp-open:chip/cluster/redmule=True \
     pulp.spatz.spatz \
     snitch_spatz \
