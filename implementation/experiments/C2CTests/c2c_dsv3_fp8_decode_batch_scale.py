@@ -97,16 +97,19 @@ def test_initialization():
     ccfg.num_chip                   = 16
     ccfg.use_trace_file             = 0
     ccfg.trace_file_base            = ''
-    ccfg.link_latency_ns            = 256
-    ccfg.local_latency_ns           = 3
-    ccfg.link_bandwidth_GBps        = 256
+    ccfg.link_latency_ns            = 900
+    ccfg.local_latency_ns           = 50
+    ccfg.link_bandwidth_GBps        = 1024
     ccfg.link_depth_rx              = 1024
     ccfg.link_depth_tx              = 1024
     ccfg.link_credit_bar            = 10
     ccfg.flit_granularity_byte      = 1024
-    ccfg.topology                   = "fattree"
-    ccfg.radix                      = 16
-    ccfg.level                      = 2
+    # ccfg.topology                   = "fattree"
+    # ccfg.radix                      = 32
+    # ccfg.level                      = 1
+    ccfg.topology                   = "mesh2d"
+    ccfg.num_chip_x                 = 8
+    ccfg.num_chip_y                 = 4
 
     return arch, llm, work, ccfg
     pass
@@ -158,8 +161,8 @@ def test():
     # chip.compile_hw(arch=arch, arch_path=args.arch_path)
 
     # Step1: Increase Batch Size
-    bs  = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
-    eps = [64]
+    bs  = [64, 128, 256, 512]
+    eps = [32]
     for ep in eps:
         for b in bs:
             # Default
@@ -187,7 +190,7 @@ def test():
             kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
 
             # C2C Test
-            c2c_engine.register_workload(f"{llm.model_name} decode b{batch_size} kv{kv_cache_length} ep{expert_parallelsim} sp{speculative_factor}", info)
+            c2c_engine.register_workload(f"C2C with {ccfg.topology}-{ccfg.num_chip_x}-{ccfg.num_chip_y}-{ccfg.link_bandwidth_GBps}GBps {llm.model_name} decode b{batch_size} kv{kv_cache_length} ep{expert_parallelsim} sp{speculative_factor}", info)
             c2c_engine.execute_flow(c2c_flow)
             pass
         pass
