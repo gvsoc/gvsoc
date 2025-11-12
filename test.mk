@@ -39,7 +39,7 @@ test.checkout.pulp-sdk:
 	fi
 	cd "tests/pulp-sdk" && \
 	git fetch --all && \
-	git checkout 14474647174d124fe60bee3874d509758925b61f
+	git checkout 7c407695ac48401f0e1ebcdd4a4cc9c67e81138e
 
 test.build.pulp-sdk: test.checkout.pulp-sdk
 
@@ -153,11 +153,55 @@ test.build.magia: test.checkout.magia
 
 
 
-test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch test.clean.spatz test.clean.ara test.clean.magia
+#
+# Pulp-NN
+#
 
-test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk test.checkout.snitch test.checkout.spatz test.checkout.ara test.checkout.magia
+test.clean.pulp-nn:
+	rm -rf tests/pulp-nn
 
-test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch test.build.spatz test.build.ara test.build.magia
+test.checkout.pulp-nn:
+	@if [ ! -d "tests/pulp-nn" ]; then \
+		git clone "git@github.com:pulp-platform/pulp-nn-mixed.git" "tests/pulp-nn"; \
+	fi
+	cd "tests/pulp-nn" && \
+	git fetch --all && \
+	git checkout 415279ec37ef416fe43ded0e476c3fae3d17a6c8
+
+test.build.pulp-nn: test.checkout.pulp-nn
+	cd tests/pulp-nn/generators && python3 pulp_nn_examples_generator.py
+
+
+
+#
+# Mempool
+#
+
+test.clean.mempool:
+	rm -rf tests/mempool
+
+test.checkout.mempool:
+	@if [ ! -d "tests/mempool" ]; then \
+		git clone "git@github.com:pulp-platform/mempool.git" "tests/mempool"; \
+	fi
+	cd "tests/mempool" && \
+	git fetch --all && \
+	git checkout 84ab19ca74a421dc1c4fedbb88fd839ba9d25ffc && \
+	git submodule update --recursive --init
+
+test.build.mempool: test.checkout.mempool
+
+
+
+test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch \
+	test.clean.spatz test.clean.ara test.clean.magia test.clean.pulp-nn
+
+test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk \
+	test.checkout.snitch test.checkout.spatz test.checkout.ara test.checkout.magia \
+	test.checkout.pulp-nn
+
+test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch \
+	test.build.spatz test.build.ara test.build.magia test.build.pulp-nn
 
 test.run:
 	$(GVTEST_CMD)
