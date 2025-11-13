@@ -91,7 +91,6 @@ def opt(tmla, arch):
         assert(tmla.batch_size % available_group == 0)
         flatten_async = 1
         pass
-    flatten_async = flatten_async if tmla.dtype == 'fp8' else 0
 
     tmla.flatten_scale_x         = scale_x
     tmla.flatten_scale_y         = scale_y
