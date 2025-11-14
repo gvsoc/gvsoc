@@ -52,9 +52,9 @@ class FatTree(gvsoc.systree.Component):
         topology_list = []
         for i in range(num_routers):
             #a. instantiate router
-            router = Router(parent, f"router_lvl{level}_idx{i}", num_port=self.radix, rx_depth=2)
+            router = Router(parent, f"router_lvl{level}_idx{i}", radix=self.radix, virtual_ch=2)
 
-            #b. instantiate topology
+            #b. instantiate topology manager
             topology = FatTree(parent, f"top_lvl{level}_idx{i}", radix=self.radix, level=self.level, pos_idx=i, pos_lvl=level)
 
             #c. connect router and topology

@@ -49,8 +49,8 @@ private:
     vp::IoMaster                            top_ift;
     vp::ClockEvent *                        routing_fsm_event;
 
-    int                                     num_port;
-    int                                     rx_depth;
+    int                                     radix;
+    int                                     virtual_ch;
     int                                     rrb_port;
     std::vector<int>                        output_stall_list;
     std::vector<vp::IoReq *>                input_stall_req;
@@ -61,16 +61,16 @@ private:
 Router::Router(vp::ComponentConf &config)
     : vp::Component(config)
 {
-    this->num_port              = this->get_js_config()->get("num_port")->get_int();
-    this->rx_depth              = this->get_js_config()->get("rx_depth")->get_int();
+    this->radix              = this->get_js_config()->get("radix")->get_int();
+    this->virtual_ch              = this->get_js_config()->get("virtual_ch")->get_int();
     this->routing_fsm_event     = this->event_new(&Router::routing_fsm_handler);
     this->rrb_port              = 0;
     this->traces.new_trace("trace", &this->trace, vp::DEBUG);
-    this->input_itf.resize(this->num_port);
-    this->output_itf.resize(this->num_port);
-    this->rx_fifo.resize(this->num_port);
+    this->input_itf.resize(this->radix);
+    this->output_itf.resize(this->radix);
+    this->rx_fifo.resize(this->radix);
     this->new_master_port("top_req", &this->top_ift);
-    for (int i = 0; i < this->num_port; ++i)
+    for (int i = 0; i < this->radix; ++i)
     {
         this->new_slave_port("in_" + std::to_string(i), &this->input_itf[i]);
         this->new_master_port("out_" + std::to_string(i), &this->output_itf[i]);
@@ -87,7 +87,7 @@ vp::IoReqStatus Router::req(vp::Block *__this, vp::IoReq *req, int port)
     Router *_this = (Router *)__this;
     
     //Check if RX FIFO is full
-    if (_this->rx_fifo[port].size() >= _this->rx_depth) {
+    if (_this->rx_fifo[port].size() >= _this->virtual_ch) {
         _this->trace.msg(vp::Trace::LEVEL_TRACE, "[Router] Port %d RX FIFO is full, reject the request\n", port);
         _this->input_stall_req[port] = req;
         return vp::IO_REQ_DENIED;
@@ -168,7 +168,7 @@ int Router::process_rx_port(int port)
     this->rx_fifo[port] = remain_req;
 
     //Check input stalls
-    if (this->input_stall_req[port] != NULL && this->rx_fifo[port].size() < this->rx_depth)
+    if (this->input_stall_req[port] != NULL && this->rx_fifo[port].size() < this->virtual_ch)
     {
         //Push to rx fifo
         vp::IoReq * tmp_req = this->new_req(this->input_stall_req[port], port);
@@ -189,16 +189,16 @@ void Router::routing_fsm_handler(vp::Block *__this, vp::ClockEvent *event)
 
     //Iterate over ports
     int last_forward_port = _this->rrb_port;
-    for (int i = 0; i < _this->num_port; ++i)
+    for (int i = 0; i < _this->radix; ++i)
     {
-        int pid = (i + _this->rrb_port) % _this->num_port;
+        int pid = (i + _this->rrb_port) % _this->radix;
         int res = _this->process_rx_port(pid);
         if (res)
         {
             last_forward_port = pid;
         }
     }
-    _this->rrb_port = (last_forward_port + 1) % _this->num_port;
+    _this->rrb_port = (last_forward_port + 1) % _this->radix;
 
     //Check if there still exist requests in rx fifos
     int num_rx_req = 0;

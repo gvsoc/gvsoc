@@ -75,7 +75,7 @@ class Mesh2D(gvsoc.systree.Component):
         for x in range(cfg.num_chip_x):
             router_list.append([])
             for y in range(cfg.num_chip_y):
-                router = Router(parent, f"router_{x}_{y}", num_port=5, rx_depth=2)
+                router = Router(parent, f"router_{x}_{y}", radix=5, virtual_ch=2)
                 router_list[x].append(router)
                 pass
             pass

@@ -17,10 +17,10 @@
 import gvsoc.systree
 
 class Router(gvsoc.systree.Component):
-    def __init__(self, parent, name, num_port, rx_depth):
+    def __init__(self, parent, name, radix, virtual_ch):
         super(Router, self).__init__(parent, name)
-        self.add_property('num_port', num_port)
-        self.add_property('rx_depth', rx_depth)
+        self.add_property('radix', radix)
+        self.add_property('virtual_ch', virtual_ch)
         self.add_sources(['pulp/c2c_platform/router.cpp'])
 
     def i_PORT_INPUT(self, i: int) -> gvsoc.systree.SlaveItf:
