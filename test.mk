@@ -3,7 +3,7 @@ UBUNTU_VERSION = 22.04
 TIMEOUT ?= 60
 
 GVTEST_TARGET_FLAGS = $(foreach t,$(TEST_TARGETS),--target $(t))
-GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --dump-all --max-timeout $(TIMEOUT) run table junit summary
+GVTEST_CMD = gvtest $(GVTEST_TARGET_FLAGS) --max-timeout $(TIMEOUT) run table junit summary
 
 
 
