@@ -47,7 +47,7 @@ class FlexClusterArch:
         self.spatz_num_function_unit = 4
 
         #RedMule
-        self.redmule_ce_height       = 16
+        self.redmule_ce_height       = 32
         self.redmule_ce_width        = 16
         self.redmule_ce_pipe         = 1
         self.redmule_elem_size       = 2
@@ -86,4 +86,4 @@ class FlexClusterArch:
         self.sync_special_mem        = 0x00000040
 
         #Chip Frequence
-        self.frequence               = 1930000000
+        self.frequence               = 965000000

@@ -38,6 +38,7 @@ import matplotlib.pyplot as plt
 import utils.kernel_configuration as kc
 import kernels.auto_config.gemm_auto as gemm_optimizer
 import kernels.auto_config.tmla_auto as tmla_optimizer
+import kernels.auto_config.attn_auto as attn_optimizer
 import kernels.auto_config.moex_auto as moex_optimizer
 
 sw_dict = {
@@ -454,15 +455,8 @@ class SoftHier(object):
         # Check Configuration
         app_path = self.kernel_root / "FlatAttention"
 
-        # [TODO] need to change this naive check and do automatic parameterization
-        assert self.arch.num_cluster_x % cfg.flatten_scale_x == 0
-        assert self.arch.num_cluster_y % cfg.flatten_scale_y == 0
-        assert (cfg.batch_size * cfg.num_head_group) % ((self.arch.num_cluster_x // cfg.flatten_scale_x) * (self.arch.num_cluster_y // cfg.flatten_scale_y)) == 0
-        if cfg.flatten_async == 1:
-            assert (cfg.batch_size * cfg.num_head_group) % (2 * (self.arch.num_cluster_x // cfg.flatten_scale_x) * (self.arch.num_cluster_y // cfg.flatten_scale_y)) == 0
-            pass
-        assert cfg.kv_sequence_length % cfg.flatten_shape_x == 0
-        assert (cfg.q_sequence_length * cfg.speculative_length * (cfg.num_head // cfg.num_head_group)) % cfg.flatten_shape_x == 0
+        # Naive check and do automatic parameterization
+        cfg = attn_optimizer.opt(cfg, self.arch)
         self.record_info({name : cfg}, subdir="kernels")
 
         # Generate Configuration
