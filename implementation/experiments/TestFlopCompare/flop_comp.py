@@ -178,7 +178,7 @@ def test():
     # Test Parameter Initialization
     arch, qwen, dsv3_671B, dsv3_16B, prefill, decode = test_initialization()
     deepseek_llms = [dsv3_16B, dsv3_671B]
-    normal_llms = [qewn]
+    normal_llms = [qwen]
 
     # SoftHier Initialization
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
