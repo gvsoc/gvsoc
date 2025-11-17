@@ -61,43 +61,21 @@ def test_initialization():
     arch = FlexClusterArch()
 
     #llm initialization
-    dsv3_671B = Model()
-    dsv3_671B.model_name                  = "DeepSeekV3-671B"
-    dsv3_671B.dtype                       = 'fp8'
-    dsv3_671B.num_layers                  = 61
-    dsv3_671B.embeded_length              = 7168
-    dsv3_671B.max_sequence_length         = 8192
-    dsv3_671B.attention_type              = 'MLA'
-    dsv3_671B.num_heads                   = 128
-    dsv3_671B.head_dimension              = 128
-    dsv3_671B.q_lora_rank                 = 1536
-    dsv3_671B.kv_lora_rank                = 512
-    dsv3_671B.rope_head_dim               = 64
-    dsv3_671B.ffn_type                    = 'MoE'
-    dsv3_671B.moe_acti_algo               = 'silu'
-    dsv3_671B.moe_inter_dim               = 2048
-    dsv3_671B.n_routed_experts            = 256
-    dsv3_671B.n_shared_experts            = 1
-    dsv3_671B.n_activated_experts         = 8
-
-    dsv3_16B = Model()
-    dsv3_16B.model_name                   = "DeepSeekV3-16B"
-    dsv3_16B.dtype                        = 'fp8'
-    dsv3_16B.num_layers                   = 27
-    dsv3_16B.embeded_length               = 2048
-    dsv3_16B.max_sequence_length          = 8192
-    dsv3_16B.attention_type               = 'MLA'
-    dsv3_16B.num_heads                    = 16
-    dsv3_16B.head_dimension               = 128
-    dsv3_16B.q_lora_rank                  = 128
-    dsv3_16B.kv_lora_rank                 = 512
-    dsv3_16B.rope_head_dim                = 64
-    dsv3_16B.ffn_type                     = 'MoE'
-    dsv3_16B.moe_acti_algo                = 'silu'
-    dsv3_16B.moe_inter_dim                = 1408
-    dsv3_16B.n_routed_experts             = 64
-    dsv3_16B.n_shared_experts             = 2
-    dsv3_16B.n_activated_experts          = 6
+    llm = Model()
+    llm.model_name                        = "Qwen-7B-Chat"
+    llm.dtype                             = 'fp16'
+    llm.num_layers                        = 32
+    llm.embeded_length                    = 4096
+    llm.max_sequence_length               = 8192
+    llm.attention_type                    = 'MHA'
+    llm.num_heads                         = 32
+    llm.head_dimension                    = 128
+    llm.qk_rope_enable                    = 1
+    llm.head_groups                       = 8
+    llm.ffn_type                          = 'MLP'
+    llm.mlp_inter_dim                     = 22016
+    llm.mlp_acti_algo                     = 'silu'
+    llm.mlp_acti_bias_enable              = 0
 
     #work initialization
     prefill = Workload()
@@ -117,7 +95,7 @@ def test_initialization():
     decode.speculative_ratio              = 0.75
     decode.kv_cache_length                = 126
 
-    return arch, dsv3_671B, dsv3_16B, prefill, decode
+    return arch, llm, prefill, decode
     pass
 
 def test():
@@ -157,18 +135,18 @@ def test():
     # Initialize Configuration
     normal_llm.init(args.module_paths)
     deepseek.init(args.module_paths)
-    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_flop_comparision_deepseek")
+    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_flop_comparision_normal_llm")
 
     # Test Parameter Initialization
-    arch, dsv3_671B, dsv3_16B, prefill, decode = test_initialization()
-    deepseek_llms = [dsv3_16B, dsv3_671B]
+    arch, qewn, prefill, decode = test_initialization()
+    normal_llms = [qewn]
 
     # SoftHier Initialization
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
 
-    # DeepSeek Prefill
+    # Prefill
     sqs = [128, 256, 512, 1024, 2048, 4096, 8192, 16384]
-    for llm in deepseek_llms:
+    for llm in normal_llms:
         for sq in sqs:
             work = prefill
             # Configuration
@@ -176,25 +154,24 @@ def test():
             info = {"llm": llm, "work": work}
 
             # Generate flow
-            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch)
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
             info['kernel_flow'] = kernel_flow
             info['spaceA_hbm_plan'] = spaceA_hbm_plan
             info['spaceB_hbm_plan'] = spaceB_hbm_plan
             print_dict_as_table(work.__dict__)
-            kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
 
             # Dry Run
-            results = flow.softhier_launch(chip, f"Prefill {llm.model_name} sq{sq}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
-            flop_breakdown = deepseek.gen_flop_breakdown(results)
+            results = flow.softhier_launch(chip, f"Prefill {llm.model_name} sq{sq}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, dry_run=True)
+            flop_breakdown = normal_llm.gen_flop_breakdown(results)
             chip.record_info({"flop_breakdown" : flop_breakdown})
             print(f"[green][Flop Breakdown][/green]")
             cv.show_breakdown(flop_breakdown, metric='FLOP', unit='GFLOP', scale_div=1024 * 1024 * 1024)
             pass
         pass
     
-    # DeepSeek Decode
+    # Decode
     kvs = [128, 256, 512, 1024, 2048, 4096, 8192, 16384]
-    for llm in deepseek_llms:
+    for llm in normal_llms:
         for kv in kvs:
             work = decode
             # Configuration
@@ -202,16 +179,15 @@ def test():
             info = {"llm": llm, "work": work}
 
             # Generate flow
-            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = deepseek.deepseek_layer_plan(llm, work, arch)
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_decode_layer_plan(llm, work, arch)
             info['kernel_flow'] = kernel_flow
             info['spaceA_hbm_plan'] = spaceA_hbm_plan
             info['spaceB_hbm_plan'] = spaceB_hbm_plan
             print_dict_as_table(work.__dict__)
-            kernel_flow_simple = deepseek.kernel_flow_simplify(kernel_flow)
 
             # Dry Run
-            results = flow.softhier_launch(chip, f"Decode {llm.model_name} kv{kv}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
-            flop_breakdown = deepseek.gen_flop_breakdown(results)
+            results = flow.softhier_launch(chip, f"Decode {llm.model_name} kv{kv}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, dry_run=True)
+            flop_breakdown = normal_llm.gen_flop_breakdown(results)
             chip.record_info({"flop_breakdown" : flop_breakdown})
             print(f"[green][Flop Breakdown][/green]")
             cv.show_breakdown(flop_breakdown, metric='FLOP', unit='GFLOP', scale_div=1024 * 1024 * 1024)

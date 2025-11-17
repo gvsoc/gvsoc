@@ -61,6 +61,22 @@ def test_initialization():
     arch = FlexClusterArch()
 
     #llm initialization
+    qwen = Model()
+    qwen.model_name                        = "Qwen-7B-Chat"
+    qwen.dtype                             = 'fp16'
+    qwen.num_layers                        = 32
+    qwen.embeded_length                    = 4096
+    qwen.max_sequence_length               = 8192
+    qwen.attention_type                    = 'MHA'
+    qwen.num_heads                         = 32
+    qwen.head_dimension                    = 128
+    qwen.qk_rope_enable                    = 1
+    qwen.head_groups                       = 8
+    qwen.ffn_type                          = 'MLP'
+    qwen.mlp_inter_dim                     = 22016
+    qwen.mlp_acti_algo                     = 'silu'
+    qwen.mlp_acti_bias_enable              = 0
+
     dsv3_671B = Model()
     dsv3_671B.model_name                  = "DeepSeekV3-671B"
     dsv3_671B.dtype                       = 'fp8'
@@ -117,7 +133,7 @@ def test_initialization():
     decode.speculative_ratio              = 0.75
     decode.kv_cache_length                = 126
 
-    return arch, dsv3_671B, dsv3_16B, prefill, decode
+    return arch, qwen, dsv3_671B, dsv3_16B, prefill, decode
     pass
 
 def test():
@@ -157,11 +173,12 @@ def test():
     # Initialize Configuration
     normal_llm.init(args.module_paths)
     deepseek.init(args.module_paths)
-    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_flop_comparision_deepseek")
+    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="test_flop_comparision")
 
     # Test Parameter Initialization
-    arch, dsv3_671B, dsv3_16B, prefill, decode = test_initialization()
+    arch, qwen, dsv3_671B, dsv3_16B, prefill, decode = test_initialization()
     deepseek_llms = [dsv3_16B, dsv3_671B]
+    normal_llms = [qewn]
 
     # SoftHier Initialization
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
@@ -212,6 +229,56 @@ def test():
             # Dry Run
             results = flow.softhier_launch(chip, f"Decode {llm.model_name} kv{kv}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, kernel_flow_simple=kernel_flow_simple, dry_run=True)
             flop_breakdown = deepseek.gen_flop_breakdown(results)
+            chip.record_info({"flop_breakdown" : flop_breakdown})
+            print(f"[green][Flop Breakdown][/green]")
+            cv.show_breakdown(flop_breakdown, metric='FLOP', unit='GFLOP', scale_div=1024 * 1024 * 1024)
+            pass
+        pass
+
+    # LLM Prefill
+    sqs = [128, 256, 512, 1024, 2048, 4096, 8192, 16384]
+    for llm in normal_llms:
+        for sq in sqs:
+            work = prefill
+            # Configuration
+            work.prefill_input_token = sq
+            info = {"llm": llm, "work": work}
+
+            # Generate flow
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
+            info['kernel_flow'] = kernel_flow
+            info['spaceA_hbm_plan'] = spaceA_hbm_plan
+            info['spaceB_hbm_plan'] = spaceB_hbm_plan
+            print_dict_as_table(work.__dict__)
+
+            # Dry Run
+            results = flow.softhier_launch(chip, f"Prefill {llm.model_name} sq{sq}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, dry_run=True)
+            flop_breakdown = normal_llm.gen_flop_breakdown(results)
+            chip.record_info({"flop_breakdown" : flop_breakdown})
+            print(f"[green][Flop Breakdown][/green]")
+            cv.show_breakdown(flop_breakdown, metric='FLOP', unit='GFLOP', scale_div=1024 * 1024 * 1024)
+            pass
+        pass
+    
+    # LLM Decode
+    kvs = [128, 256, 512, 1024, 2048, 4096, 8192, 16384]
+    for llm in normal_llms:
+        for kv in kvs:
+            work = decode
+            # Configuration
+            work.kv_cache_length = kv - work.speculative_factor
+            info = {"llm": llm, "work": work}
+
+            # Generate flow
+            kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_decode_layer_plan(llm, work, arch)
+            info['kernel_flow'] = kernel_flow
+            info['spaceA_hbm_plan'] = spaceA_hbm_plan
+            info['spaceB_hbm_plan'] = spaceB_hbm_plan
+            print_dict_as_table(work.__dict__)
+
+            # Dry Run
+            results = flow.softhier_launch(chip, f"Decode {llm.model_name} kv{kv}", kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info=info, dry_run=True)
+            flop_breakdown = normal_llm.gen_flop_breakdown(results)
             chip.record_info({"flop_breakdown" : flop_breakdown})
             print(f"[green][Flop Breakdown][/green]")
             cv.show_breakdown(flop_breakdown, metric='FLOP', unit='GFLOP', scale_div=1024 * 1024 * 1024)
