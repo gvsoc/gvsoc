@@ -229,6 +229,18 @@ def plot_kernel_roofline(arch, raw_results, save_path, *, title=None, annotate=F
     pass
 
 def generate_polts(arch, results, save_root):
+    # Filter the usefull information
+    usefull_results = {}
+    for k,v in results.items():
+        if 'runtime' in v:
+            usefull_results[k] = v
+            pass
+        pass
+
+    # Return if no valid results
+    if len(usefull_results) == 0:
+        return
+
     # Create Save Path
     arch.cycles_per_ns = 1 if not hasattr(arch, 'frequence') else (arch.frequence / 1000000000)
     arch.bandwidth_GBps_per_hbm_channel = 64 if not hasattr(arch, 'hbm_type') else 53.78 if arch.hbm_type == 'hbm2-3360' else 64
@@ -237,11 +249,11 @@ def generate_polts(arch, results, save_root):
 
     # Generate Runtime Breakdown
     save_path = save_dir / "runtime_breakdown_and_utilization_curve.pdf"
-    plot_runtime_breakdown_and_utilization_curve(results, save_path, scale_div = 1000)
+    plot_runtime_breakdown_and_utilization_curve(usefull_results, save_path, scale_div = 1000)
 
     # Generate Roofline Plot
     save_path = save_dir / "kernels_roofline.pdf"
-    plot_kernel_roofline(arch, results, save_path)
+    plot_kernel_roofline(arch, usefull_results, save_path)
     pass
 
 if __name__ == '__main__':

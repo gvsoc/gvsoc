@@ -75,6 +75,26 @@ def align_addr(addr, align=0x10000):
     """
     return (addr + align - 1) & ~(align - 1)
 
+def gen_flop_breakdown(results):
+    flop_mla_porj = 0
+    flop_mla_core = 0
+    flop_moe = 0
+    for k,v in results.items():
+        if 'attn' in k and 'proj' in k and 'FLOP' in v:
+            flop_mla_porj += v['FLOP']
+        if 'attn_flatmla' in k and 'FLOP' in v:
+            flop_mla_core += v['FLOP']
+        if 'moe' in k and 'FLOP' in v:
+            flop_moe += v['FLOP']
+        pass
+    flop_breakdown = {
+        'ATN_proj': {'FLOP': flop_mla_porj},
+        'ATN_core': {'FLOP': flop_mla_core},
+        'FFN':      {'FLOP': flop_moe},
+    }
+    return flop_breakdown
+    pass
+
 def gen_moe_gate_index(num_tokens, num_routed_experts, num_active_experts, moe_distribution = 'Fair'):
     if moe_distribution == 'Fair':
         x = torch.arange(num_tokens * num_active_experts) % num_routed_experts
@@ -122,7 +142,7 @@ def kernel_flow_simplify(kernel_flow_in):
             unique_list.append(obj)
             unique_id_list.append(i)
     for i in unique_id_list:
-        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(compare_list[i])
         pass
     keys_to_delete = []
     for i in range(len(keys)):
@@ -146,7 +166,7 @@ def kernel_flow_simplify(kernel_flow_in):
             unique_list.append(obj)
             unique_id_list.append(i)
     for i in unique_id_list:
-        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(compare_list[i])
         pass
     keys_to_delete = []
     for i in range(len(keys)):
@@ -170,7 +190,7 @@ def kernel_flow_simplify(kernel_flow_in):
             unique_list.append(obj)
             unique_id_list.append(i)
     for i in unique_id_list:
-        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(compare_list[i])
         pass
     keys_to_delete = []
     for i in range(len(keys)):
@@ -194,7 +214,7 @@ def kernel_flow_simplify(kernel_flow_in):
             unique_list.append(obj)
             unique_id_list.append(i)
     for i in unique_id_list:
-        kernel_flow[keys[i]]["repeat"] = compare_list.count(unique_list[i])
+        kernel_flow[keys[i]]["repeat"] = compare_list.count(compare_list[i])
         pass
     keys_to_delete = []
     for i in range(len(keys)):

@@ -134,6 +134,8 @@ class SoftHier(object):
         app_path = self.kernel_root / "SummaGEMM"
         best_log = None
         result = {}
+        gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+        result['FLOP'] = gemm_flop
 
         # Naive check and do automatic parameterization
         cfg_list = gemm_optimizer.opt(cfg, self.arch)
@@ -229,7 +231,6 @@ class SoftHier(object):
                 runtime = self.get_runtime_ns(best_log)
                 cycles = runtime * self.arch.cycles_per_ns
                 peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
-                gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
                 achieved_flop_per_cycle = gemm_flop / cycles
                 redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
                 elem_size = 1 if cfg.dtype == 'fp8' else 2
@@ -241,7 +242,7 @@ class SoftHier(object):
                 result["arithmetic_intensity"] = arithmetic_intensity
                 pass
             pass
-        if not dry_run: return result
+        return result
         pass
 
     def norm(self, cfg, data, name, dry_run = False):
@@ -458,6 +459,9 @@ class SoftHier(object):
         # Naive check and do automatic parameterization
         cfg = attn_optimizer.opt(cfg, self.arch)
         self.record_info({name : cfg}, subdir="kernels")
+        result = {}
+        flat_attn_flop = 4 * cfg.q_sequence_length * cfg.speculative_length * cfg.kv_sequence_length * cfg.head_dimemsion * cfg.num_head * cfg.batch_size
+        result['FLOP'] = flat_attn_flop
 
         # Generate Configuration
         attn_cfg_h = self.kernel_root / "FlatAttention" / "include" / "attn.h"
@@ -495,11 +499,9 @@ class SoftHier(object):
             assert os.system(cmd) == 0
 
             # Anaylze Result
-            result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
             cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
-            flat_attn_flop = 4 * cfg.q_sequence_length * cfg.speculative_length * cfg.kv_sequence_length * cfg.head_dimemsion * cfg.num_head * cfg.batch_size
             achieved_flop_per_cycle = flat_attn_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
@@ -509,7 +511,8 @@ class SoftHier(object):
             result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
             result["redmule_uti"] = redmule_uti
             result["arithmetic_intensity"] = arithmetic_intensity
-            return result
+            pass
+        return result
         pass
 
     def flat_mla_auto(self, cfg, data, name, dry_run = False):
@@ -522,6 +525,11 @@ class SoftHier(object):
         # Naive check and do automatic parameterization
         cfg = tmla_optimizer.opt(cfg, self.arch)
         self.record_info({name : cfg}, subdir="kernels")
+        result = {}
+        seqlen_q = cfg.q_sequence_length * cfg.speculative_length * cfg.num_head
+        seqlen_c = cfg.kv_sequence_length
+        flat_mla_flop = 2 * cfg.batch_size * (seqlen_q * seqlen_c * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * seqlen_c * cfg.nope_head_dim)
+        result['FLOP'] = flat_mla_flop
 
         # Generate Configuration
         tmla_cfg_h = self.kernel_root / "FlatMLA" / "include" / "tmla.h"
@@ -561,13 +569,9 @@ class SoftHier(object):
             assert os.system(cmd) == 0
 
             # Anaylze Result
-            result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log")
             cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
-            seqlen_q = cfg.q_sequence_length * cfg.speculative_length * cfg.num_head
-            seqlen_c = cfg.kv_sequence_length
-            flat_mla_flop = 2 * cfg.batch_size * (seqlen_q * seqlen_c * (cfg.nope_head_dim + cfg.rope_head_dim) + seqlen_q * seqlen_c * cfg.nope_head_dim)
             achieved_flop_per_cycle = flat_mla_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
@@ -577,7 +581,8 @@ class SoftHier(object):
             result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
             result["redmule_uti"] = redmule_uti
             result["arithmetic_intensity"] = arithmetic_intensity
-            return result
+            pass
+        return result
         pass
 
     def moe_gate_topk(self, cfg, data, name, dry_run = False):
@@ -759,6 +764,9 @@ class SoftHier(object):
         # Naive check and do automatic parameterization
         cfg, repeat = gemm_optimizer.ofdp_opt(cfg, self.arch)
         self.record_info({f"{name}" : cfg}, subdir="kernels")
+        result = {}
+        gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+        result['FLOP'] = gemm_flop
 
         # Generate Configuration
         gemm_cfg_h = self.kernel_root / "SummaGEMM" / "include" / "gemm.h"
@@ -792,11 +800,9 @@ class SoftHier(object):
             assert os.system(cmd) == 0
 
             # Anaylze Result
-            result = {}
             runtime = self.get_runtime_ns(f"{self.output_folder_trace}/{name}.log") * repeat
             cycles = runtime * self.arch.cycles_per_ns
             peak_flop_per_cycle = 2 * self.arch.num_cluster_x * self.arch.num_cluster_y * self.arch.redmule_ce_height * self.arch.redmule_ce_width
-            gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
             achieved_flop_per_cycle = gemm_flop / cycles
             redmule_uti = achieved_flop_per_cycle / peak_flop_per_cycle
             elem_size = 1 if cfg.dtype == 'fp8' else 2
@@ -806,6 +812,7 @@ class SoftHier(object):
             result["achieved_flop_per_cycle"] = achieved_flop_per_cycle
             result["redmule_uti"] = redmule_uti
             result["arithmetic_intensity"] = arithmetic_intensity
-            return result
+            pass
+        return result
         pass
         

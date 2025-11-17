@@ -136,7 +136,8 @@ def push_results(kernel_results, name, kernel, res):
         return
         pass
     if "repeat" in kernel:
-        res["runtime"] = res["runtime"] * kernel['repeat']
+        if "runtime" in res: res["runtime"] = res["runtime"] * kernel['repeat']
+        if "FLOP" in res: res["FLOP"] = res["FLOP"] * kernel['repeat']
         kernel_results[f"{name}(x{kernel['repeat']})"] = res
     else:
         kernel_results[name] = res
