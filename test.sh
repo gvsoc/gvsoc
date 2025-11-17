@@ -7,5 +7,6 @@ fi
 
 source sourceme.sh
 
+export SIRACUSA_SDK_HOME=$SDK_HOME/tests/pulp-sdk-siracusa
 export PULP_SDK_HOME=$SDK_HOME/tests/pulp-sdk
 export PULPOS_HOME=$SDK_HOME/pulpos
