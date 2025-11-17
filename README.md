@@ -47,14 +47,10 @@ pip3 install -r gapy/requirements.txt
 Get submodules and compile GVSoC with this command:
 
 ~~~~~shell
-make all
+make all TARGETS=<target>
 ~~~~~
 
-It will by default build it for generic targets rv32 and rv64. You can build it for another target with this command:
-
-~~~~~shell
-make all TARGETS=pulp-open
-~~~~~
+<target> should indicate the target for which GVSoC must be build. This can for example be generic targets rv32 or rv64. 
 
 On ETH network, please use this command to get the proper version of gcc and cmake:
 

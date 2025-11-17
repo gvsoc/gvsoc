@@ -46,6 +46,25 @@ test.build.pulp-sdk: test.checkout.pulp-sdk
 
 
 #
+# PULP-SDK Siracusa
+#
+
+test.clean.pulp-sdk-siracusa:
+	rm -rf tests/pulp-sdk-siracusa
+
+test.checkout.pulp-sdk-siracusa:
+	@if [ ! -d "tests/pulp-sdk-siracusa" ]; then \
+		git clone "git@github.com:siracusa-soc/pulp-sdk.git" "tests/pulp-sdk-siracusa"; \
+	fi
+	cd "tests/pulp-sdk-siracusa" && \
+	git fetch --all && \
+	git checkout 597e0ebb12b4c7d609bdd2b09452c1f9d80031be
+
+test.build.pulp-sdk-siracusa: test.checkout.pulp-sdk-siracusa
+
+
+
+#
 # CHIMERA SDK
 #
 
@@ -194,14 +213,14 @@ test.build.mempool: test.checkout.mempool
 
 
 test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch \
-	test.clean.spatz test.clean.ara test.clean.magia test.clean.pulp-nn
+	test.clean.spatz test.clean.ara test.clean.magia test.clean.pulp-nn test.clean.pulp-sdk-siracusa
 
 test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk \
 	test.checkout.snitch test.checkout.spatz test.checkout.ara test.checkout.magia \
-	test.checkout.pulp-nn
+	test.checkout.pulp-nn test.checkout.pulp-sdk-siracusa
 
 test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch \
-	test.build.spatz test.build.ara test.build.magia test.build.pulp-nn
+	test.build.spatz test.build.ara test.build.magia test.build.pulp-nn test.build.pulp-sdk-siracusa
 
 test.run:
 	$(GVTEST_CMD)
