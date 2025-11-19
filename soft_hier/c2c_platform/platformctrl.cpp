@@ -20,8 +20,6 @@
 #include <vp/vp.hpp>
 #include <vp/itf/io.hpp>
 #include <vp/itf/wire.hpp>
-#include <pulp/snitch/snitch_cluster/cluster_periph_regfields.h>
-#include <pulp/snitch/snitch_cluster/cluster_periph_gvsoc.h>
 
 
 using namespace std::placeholders;
