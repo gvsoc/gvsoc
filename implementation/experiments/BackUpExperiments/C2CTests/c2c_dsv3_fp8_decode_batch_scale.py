@@ -178,7 +178,7 @@ def test():
             work.kv_cache_length = kv_cache_length - work.speculative_factor
             ccfg.num_chip = expert_parallelsim
             ccfg.topology = "mesh2d"
-            ccfg.num_chip_y = int(2 ** (math.log2(expert_parallelsim) / 2))
+            ccfg.num_chip_y = int(2 ** (int(math.log2(expert_parallelsim) / 2)))
             ccfg.num_chip_x = expert_parallelsim // ccfg.num_chip_y
             info = {"llm": llm, "work": work, "ccfg": ccfg}
 
