@@ -98,7 +98,7 @@ def test_initialization():
     ccfg.num_chip                   = 16
     ccfg.use_trace_file             = 0
     ccfg.trace_file_base            = ''
-    ccfg.link_latency_ns            = 900
+    ccfg.link_latency_ns            = 256
     ccfg.local_latency_ns           = 50
     ccfg.link_bandwidth_GBps        = 1024
     ccfg.link_depth_rx              = 1024
