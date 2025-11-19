@@ -20,6 +20,7 @@ import os
 import io
 import re
 import sys
+import math
 import torch
 import shutil
 import argparse
@@ -161,8 +162,8 @@ def test():
     # chip.compile_hw(arch=arch, arch_path=args.arch_path)
 
     # Step1: Increase Batch Size
-    bs  = [64, 128, 256, 512]
-    eps = [32]
+    bs  = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    eps = [32, 2, 4, 8, 16, 64]
     for ep in eps:
         for b in bs:
             # Default
@@ -176,6 +177,9 @@ def test():
             work.speculative_factor = speculative_factor
             work.kv_cache_length = kv_cache_length - work.speculative_factor
             ccfg.num_chip = expert_parallelsim
+            ccfg.topology = "mesh2d"
+            ccfg.num_chip_y = int(2 ** (math.log2(expert_parallelsim) / 2))
+            ccfg.num_chip_x = expert_parallelsim // ccfg.num_chip_y
             info = {"llm": llm, "work": work, "ccfg": ccfg}
 
             # Generate flow
