@@ -256,6 +256,42 @@ def generate_polts(arch, results, save_root):
     plot_kernel_roofline(arch, usefull_results, save_path)
     pass
 
+
+
+def check_uti():
+    files = {}
+
+    for batch, path in files.items():
+        with open(path, 'r') as f:
+            results = yaml.safe_load(f)
+            compute_utis = []
+            compute_time = []
+            memory_utis = []
+            memory_time = []
+            for k, v in results.items():
+                if 'runtime' in v and 'redmule_uti' in v and 'arithmetic_intensity' in v:
+                    if float(v['arithmetic_intensity']) > 500:
+                        # compute-bound
+                        compute_utis.append(v['redmule_uti'])
+                        compute_time.append(v['runtime'])
+                    else:
+                        # memory-bound
+                        memory_peak = v['arithmetic_intensity'] * 4
+                        perf = 1976 * v['redmule_uti']
+                        memory_utis.append(perf / memory_peak)
+                        memory_time.append(v['runtime'])
+                        pass
+                    pass
+                pass
+            compute_uti = "None"
+            memory_uti = "None"
+            if len(compute_time) > 0: compute_uti = f"{sum(np.array(compute_utis) * np.array(compute_time)) / sum(np.array(compute_time)): .3f}"
+            if len(memory_time) > 0: memory_uti = f"{sum(np.array(memory_utis) * np.array(memory_time)) / sum(np.array(memory_time)): .3f}"
+            print(f"{batch} {compute_uti} {memory_uti}")
+            pass
+        pass
+    pass
+
 if __name__ == '__main__':
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Plot Results")
