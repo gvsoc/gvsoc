@@ -143,9 +143,9 @@ def gen_arch():
             arch.num_cluster_y              = d
             arch.num_core_per_cluster       = s + 1
             arch.cluster_tcdm_bank_nb       = int(128 * scale_f)
-            arch.cluster_tcdm_size          = int(0x00060000 * scale_f * scale_f)
-            arch.cluster_stack_size         = int(0x00020000 * scale_f * scale_f)
-            arch.cluster_zomem_size         = int(0x00020000 * scale_f * scale_f)
+            arch.cluster_tcdm_size          = int(0x00060000 * scale_f * scale_f) if d <= 32 else int(0x00060000 * scale_f)
+            arch.cluster_stack_size         = int(0x00020000 * scale_f * scale_f) if d <= 32 else int(0x00020000 * scale_f)
+            arch.cluster_zomem_size         = int(0x00020000 * scale_f * scale_f) if d <= 32 else int(0x00020000 * scale_f)
             arch.spatz_attaced_core_list    = list(range(0, s))
             arch.spatz_num_vlsu_port        = int(8 * scale_f * scale_f * spatz_f)
             arch.spatz_num_function_unit    = int(4 * scale_f * scale_f * spatz_f)

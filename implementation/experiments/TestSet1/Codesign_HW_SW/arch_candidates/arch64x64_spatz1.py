@@ -6,12 +6,12 @@ class FlexClusterArch:
         self.cluster_tcdm_bank_width = 32
         self.cluster_tcdm_bank_nb = 64
         self.cluster_tcdm_base = 0x00000000
-        self.cluster_tcdm_size = 0x00018000
+        self.cluster_tcdm_size = 0x00030000
         self.cluster_tcdm_remote = 0x30000000
         self.cluster_stack_base = 0x10000000
-        self.cluster_stack_size = 0x00008000
+        self.cluster_stack_size = 0x00010000
         self.cluster_zomem_base = 0x18000000
-        self.cluster_zomem_size = 0x00008000
+        self.cluster_zomem_size = 0x00010000
         self.cluster_reg_base = 0x20000000
         self.cluster_reg_size = 0x00000200
         self.spatz_attaced_core_list = [0]
