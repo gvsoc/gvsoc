@@ -129,30 +129,32 @@ def gen_arch():
     os.makedirs(defualt_dir, exist_ok=True)
 
     # Varaibles
-    mesh_dim_list = [32, 16, 8]
+    mesh_dim_list = [64, 32, 16, 8]
     spat_num_list = [1, 2, 4]
 
     # Generate candidates
     for d in mesh_dim_list:
         for s in spat_num_list:
             filename = defualt_dir / f"arch{d}x{d}_spatz{s}.py"
-            scale_f = (32 // d)
+            scale_f = (32 / d)
             spatz_f = (4 // s)
             arch = FlexClusterArch()
             arch.num_cluster_x              = d
             arch.num_cluster_y              = d
             arch.num_core_per_cluster       = s + 1
-            arch.cluster_tcdm_bank_nb       = 128 * scale_f
-            arch.cluster_tcdm_size          = 0x00060000 * scale_f * scale_f
+            arch.cluster_tcdm_bank_nb       = int(128 * scale_f)
+            arch.cluster_tcdm_size          = int(0x00060000 * scale_f * scale_f)
+            arch.cluster_stack_size         = int(0x00020000 * scale_f * scale_f)
+            arch.cluster_zomem_size         = int(0x00020000 * scale_f * scale_f)
             arch.spatz_attaced_core_list    = list(range(0, s))
-            arch.spatz_num_vlsu_port        = 8 * scale_f * scale_f * spatz_f
-            arch.spatz_num_function_unit    = 4 * scale_f * scale_f * spatz_f
-            arch.redmule_ce_height          = 32 * scale_f
-            arch.redmule_ce_width           = 16 * scale_f
+            arch.spatz_num_vlsu_port        = int(8 * scale_f * scale_f * spatz_f)
+            arch.spatz_num_function_unit    = int(4 * scale_f * scale_f * spatz_f)
+            arch.redmule_ce_height          = int(32 * scale_f)
+            arch.redmule_ce_width           = int(16 * scale_f)
             arch.num_node_per_ctrl          = d
             arch.hbm_chan_placement         = [0, 0, 0, 2 * d]
             arch.hbm_node_aliase            = d
-            arch.noc_link_width             = 1024 * scale_f
+            arch.noc_link_width             = int(1024 * scale_f)
             write_arch_file(arch, filename)
             pass
 
