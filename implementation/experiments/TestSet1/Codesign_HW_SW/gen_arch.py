@@ -152,7 +152,7 @@ def gen_arch():
             arch.redmule_ce_height          = int(32 * scale_f)
             arch.redmule_ce_width           = int(16 * scale_f)
             arch.num_node_per_ctrl          = d
-            arch.hbm_chan_placement         = [0, 0, 0, 2 * d]
+            arch.hbm_chan_placement         = [0, 0, 0, 64]
             arch.hbm_node_aliase            = d
             arch.noc_link_width             = int(1024 * scale_f)
             write_arch_file(arch, filename)
