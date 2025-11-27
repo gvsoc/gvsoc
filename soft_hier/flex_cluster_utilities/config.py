@@ -1,4 +1,5 @@
 import re
+import ast
 import argparse
 
 parser = argparse.ArgumentParser(description="Generate C and S header files from a SoftHier configuration file.")
@@ -27,10 +28,36 @@ with open(input_file, 'r') as file:
 with open(C_header_file, 'w') as file:
     file.write('#ifndef FLEXCLUSTERARCH_H\n')
     file.write('#define FLEXCLUSTERARCH_H\n\n')
+    num_core_per_cluster = 0
     
     for attr_name, attr_value in attributes.items():
         # Convert attribute name to uppercase and prefix with 'ARCH_'
         define_name = f'ARCH_{attr_name.upper()}'
+        if define_name == 'ARCH_NUM_CORE_PER_CLUSTER':
+            num_core_per_cluster = int(attr_value)
+            pass
+        if define_name == 'ARCH_SPATZ_ATTACED_CORE_LIST':
+            core_list = ast.literal_eval(attr_value)
+            file.write(f'#define ARCH_SPATZ_ATTACED_CORES {len(core_list)}\n')
+            attach_list = []
+            sid_list = []
+            sid = 0
+            for x in range(num_core_per_cluster):
+                if x in core_list:
+                    attach_list.append(1)
+                    sid_list.append(sid)
+                    sid = sid + 1
+                else:
+                    attach_list.append(0)
+                    sid_list.append(0)
+                    pass
+                pass
+            attach_list_str = str(attach_list).replace("[", "{").replace("]", "}")
+            file.write(f'#define ARCH_SPATZ_ATTACED_CHECK_LIST {attach_list_str}\n')
+            sid_list_str = str(sid_list).replace("[", "{").replace("]", "}")
+            file.write(f'#define ARCH_SPATZ_ATTACED_SID_LIST {sid_list_str}\n')
+            attr_value = attr_value.replace("[", "{").replace("]", "}")
+            pass
         file.write(f'#define {define_name} {attr_value}\n')
     
     file.write('\n#endif // FLEXCLUSTERARCH_H\n')
@@ -45,7 +72,7 @@ with open(S_header_file, 'w') as file:
     for attr_name, attr_value in attributes.items():
         # Convert attribute name to uppercase and prefix with 'ARCH_'
         define_name = f'ARCH_{attr_name.upper()}'
-        if define_name == 'ARCH_HBM_CHAN_PLACEMENT' or define_name == 'ARCH_SPATZ_ATTACED_CORE_LIST':
+        if define_name == 'ARCH_HBM_CHAN_PLACEMENT' or define_name == 'ARCH_SPATZ_ATTACED_CORE_LIST' or define_name == 'ARCH_HBM_TYPE':
             continue
             pass
         file.write(f'.set {define_name}, {attr_value}\n')
