@@ -13,7 +13,6 @@ fi
 
 export PATH=$SDK_INSTALL/install/bin:$PATH
 export PYTHONPATH=$SDK_INSTALL/install/python:$PYTHONPATH
-export PULPOS_HOME=$SDK_HOME/pulpos
 
 ##############################################################################
 ## 				Envirment Parameters for DRAMSys Integration 				##
