@@ -58,7 +58,7 @@ test.checkout.pulp-sdk-siracusa:
 	fi
 	cd "tests/pulp-sdk-siracusa" && \
 	git fetch --all && \
-	git checkout 597e0ebb12b4c7d609bdd2b09452c1f9d80031be
+	git checkout 11121ab42fdf0e9d1ff379dcba0ee22bd1fa1d3d
 
 test.build.pulp-sdk-siracusa: test.checkout.pulp-sdk-siracusa
 
