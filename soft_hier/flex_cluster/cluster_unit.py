@@ -81,7 +81,8 @@ class ClusterArch:
                         num_cluster_x,      num_cluster_y,
                         spatz_core_list,    spatz_num_vlsu,     spatz_num_fu,
                         spatz_vlsu_bw,      spatz_vreg_gather_eff,
-                        data_bandwidth,     auto_fetch=False,   multi_idma_enable=0):
+                        data_bandwidth,     auto_fetch=False,   multi_idma_enable=0,
+                        num_cluster_z = 1):
 
         self.nb_core                = nb_core_per_cluster
         self.base                   = base
@@ -119,6 +120,7 @@ class ClusterArch:
         #Global Information
         self.num_cluster_x          = num_cluster_x
         self.num_cluster_y          = num_cluster_y
+        self.num_cluster_z          = num_cluster_z
 
     class Tcdm:
         def __init__(self, base, nb_masters, tcdm_size, nb_tcdm_banks, tcdm_bank_width, sync_itlv, sync_special_mem):
@@ -251,7 +253,7 @@ class ClusterUnit(gvsoc.systree.Component):
 
         # Cluster peripherals
         cluster_registers = ClusterRegisters(self, 'cluster_registers',
-            num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, nb_cores=arch.nb_core,
+            num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, num_cluster_z=arch.num_cluster_z, nb_cores=arch.nb_core,
             boot_addr=boot_addr, cluster_id=arch.cluster_id, global_barrier_addr=arch.sync_area.base+arch.tcdm.sync_itlv)
 
         #data dumpper
@@ -333,7 +335,7 @@ class ClusterUnit(gvsoc.systree.Component):
         narrow_axi.o_MAP(instr_mem.i_INPUT(), base=arch.insn_area.base, size=arch.insn_area.size, rm_base=True)
 
         #binding to synchronization bus
-        narrow_axi.o_MAP(sync_router_master.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size*arch.num_cluster_x*arch.num_cluster_y, rm_base=False)
+        narrow_axi.o_MAP(sync_router_master.i_INPUT(), base=arch.sync_area.base, size=arch.sync_area.size*arch.num_cluster_x*arch.num_cluster_y*arch.num_cluster_z, rm_base=False)
         sync_router_master.o_MAP(self.i_SYNC_OUTPUT())
 
 

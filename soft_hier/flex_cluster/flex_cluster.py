@@ -52,8 +52,9 @@ class FlexClusterSystem(gvsoc.systree.Component):
         #################
 
         arch            = FlexClusterArch()
-        num_clusters    = arch.num_cluster_x * arch.num_cluster_y
-        noc_outstanding = (arch.num_cluster_x + arch.num_cluster_y) + arch.noc_outstanding
+        if not hasattr(arch, 'num_cluster_z'): arch.num_cluster_z = 1
+        num_clusters    = arch.num_cluster_x * arch.num_cluster_y * arch.num_cluster_z
+        noc_outstanding = (arch.num_cluster_x + arch.num_cluster_y + arch.num_cluster_z) + arch.noc_outstanding
         num_hbm_ctrl_x  = arch.num_cluster_x // arch.num_node_per_ctrl
         num_hbm_ctrl_y  = arch.num_cluster_y // arch.num_node_per_ctrl
 
@@ -138,6 +139,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         idma_outstand_burst =   arch.idma_outstand_burst,
                                         num_cluster_x       =   arch.num_cluster_x,
                                         num_cluster_y       =   arch.num_cluster_y,
+                                        num_cluster_z       =   arch.num_cluster_z,
                                         spatz_core_list     =   arch.spatz_attaced_core_list,
                                         spatz_num_vlsu      =   arch.spatz_num_vlsu_port,
                                         spatz_num_fu        =   arch.spatz_num_function_unit,
@@ -152,11 +154,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
         virtual_interco = router.Router(self, 'virtual_interco', bandwidth=8)
 
         #Control register
-        csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, has_preload_binary=has_preload_binary)
+        csr = CtrlRegisters(self, 'ctrl_registers', num_cluster_x=arch.num_cluster_x, num_cluster_y=arch.num_cluster_y, num_cluster_z=arch.num_cluster_z, has_preload_binary=has_preload_binary)
 
         #Synchronization bus
         sync_bus = FlexMeshNoC(self, 'sync_bus', width=4,
-                nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
+                nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y, nb_z_clusters=arch.num_cluster_z,
                 ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, atomics=1, collective=1)
 
         #HBM channels
@@ -207,7 +209,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #NoC
         data_noc = FlexMeshNoC(self, 'data_noc', width=arch.noc_link_width/8,
-                nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
+                nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y, nb_z_clusters=arch.num_cluster_z,
                 ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, collective=1,
                 edge_node_alias=arch.hbm_node_aliase, edge_node_alias_start_bit=arch.hbm_node_aliase_start_bit)
 
@@ -223,6 +225,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         ############
 
         #Debug memory
+        # TODO: Is no Z extension here correct? Seems HBM related
         virtual_interco.o_MAP(debug_mem.i_INPUT())
         virtual_interco.o_MAP(data_noc.i_CLUSTER_INPUT(0, 0), base=arch.hbm_start_base, size=arch.hbm_node_addr_space * 2 * (arch.num_cluster_x + arch.num_cluster_y), rm_base=False)
 
@@ -241,12 +244,13 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
         #Data NoC + Sync NoC
         for node_id in range(num_clusters):
-            x_id = int(node_id%arch.num_cluster_x)
-            y_id = int(node_id/arch.num_cluster_x)
-            cluster_list[node_id].o_WIDE_SOC(data_noc.i_CLUSTER_INPUT(x_id, y_id))
-            cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_CLUSTER_INPUT(x_id, y_id))
-            data_noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote  + node_id*arch.cluster_tcdm_size,   size=arch.cluster_tcdm_size,    x=x_id+1, y=y_id+1)
-            sync_bus.o_MAP(cluster_list[node_id].i_SYNC_INPUT(), base=arch.sync_base            + node_id*(arch.sync_interleave + arch.sync_special_mem),     size=(arch.sync_interleave + arch.sync_special_mem),      x=x_id+1, y=y_id+1)
+            x_id = int(node_id % (arch.num_cluster_x))
+            y_id = int((node_id // (arch.num_cluster_x)) % (arch.num_cluster_y))
+            z_id = int(node_id // (arch.num_cluster_x * arch.num_cluster_y))
+            cluster_list[node_id].o_WIDE_SOC(data_noc.i_CLUSTER_INPUT(x_id, y_id, z_id))
+            cluster_list[node_id].o_SYNC_OUTPUT(sync_bus.i_CLUSTER_INPUT(x_id, y_id, z_id))
+            data_noc.o_MAP(cluster_list[node_id].i_WIDE_INPUT(), base=arch.cluster_tcdm_remote  + node_id*arch.cluster_tcdm_size,   size=arch.cluster_tcdm_size,    x=x_id+1, y=y_id+1, z=z_id)
+            sync_bus.o_MAP(cluster_list[node_id].i_SYNC_INPUT(), base=arch.sync_base            + node_id*(arch.sync_interleave + arch.sync_special_mem),     size=(arch.sync_interleave + arch.sync_special_mem),      x=x_id+1, y=y_id+1, z=z_id)
             pass
 
         #HBM controllers and channels connections

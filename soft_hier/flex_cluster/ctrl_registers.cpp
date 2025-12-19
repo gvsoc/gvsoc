@@ -50,6 +50,7 @@ private:
     int64_t timer_start;
     uint32_t num_cluster_x;
     uint32_t num_cluster_y;
+    uint32_t num_cluster_z;
     uint32_t num_cluster_all;
     uint32_t has_preload_binary;
     uint32_t hbm_preload_done;
@@ -62,8 +63,9 @@ CtrlRegisters::CtrlRegisters(vp::ComponentConf &config)
 {
     this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
     this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
+    this->num_cluster_z = this->get_js_config()->get("num_cluster_z")->get_int();
     this->has_preload_binary = this->get_js_config()->get("has_preload_binary")->get_int();
-    this->num_cluster_all = this->num_cluster_x * this->num_cluster_y;
+    this->num_cluster_all = this->num_cluster_x * this->num_cluster_y * this->num_cluster_z;
 
     this->traces.new_trace("trace", &this->trace, vp::DEBUG);
     this->input_itf.set_req_meth(&CtrlRegisters::req);
@@ -86,7 +88,7 @@ void CtrlRegisters::reset(bool active)
 {
     if (active)
     {
-        std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << std::endl;
+        std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << ", num_cluster_z = " << this->num_cluster_z << std::endl;
         this->event_enqueue(this->hbm_preload_done_to_cluster_event, 300);
     }
 }

@@ -52,20 +52,20 @@ class FlexMeshNoC(FlooNoc2dMesh):
     def __init__(self, parent: gvsoc.systree.Component, name, width: int, nb_x_clusters: int,
             nb_y_clusters: int, ni_outstanding_reqs: int=2, router_input_queue_size: int=2, atomics: int=0, collective: int=0,
             edge_node_alias: int=0, edge_node_alias_start_bit: int=48,
-            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0):
+            interleave_enable: int=0, interleave_region_base: int=0, interleave_region_size: int=0, interleave_granularity: int=0, interleave_bit_start: int=0, interleave_bit_width: int=0, nb_z_clusters: int = 1):
         # The total grid contains 1 more node on each direction for the targets
-        super(FlexMeshNoC, self).__init__(parent, name, width, dim_x=nb_x_clusters+2, dim_y=nb_y_clusters+2,
+        super(FlexMeshNoC, self).__init__(parent, name, width, dim_x=nb_x_clusters+2, dim_y=nb_y_clusters+2, dim_z=nb_z_clusters,
                                           ni_outstanding_reqs=ni_outstanding_reqs, router_input_queue_size=router_input_queue_size, atomics=atomics, collective=collective,
                                           edge_node_alias=edge_node_alias, edge_node_alias_start_bit=edge_node_alias_start_bit,
                                           interleave_enable=interleave_enable, interleave_region_base=interleave_region_base, interleave_region_size=interleave_region_size, interleave_granularity=interleave_granularity, interleave_bit_start=interleave_bit_start, interleave_bit_width=interleave_bit_width)
+        for tile_z in range(0, nb_z_clusters):
+            for tile_x in range(0, nb_x_clusters):
+                for tile_y in range(0, nb_y_clusters):
+                    # Add 1 as clusters, routers and network_interfaces are in the central part
+                    self.add_router(tile_x+1, tile_y+1, tile_z)
+                    self.add_network_interface(tile_x+1, tile_y+1, tile_z)
 
-        for tile_x in range(0, nb_x_clusters):
-            for tile_y in range(0, nb_y_clusters):
-                # Add 1 as clusters, routers and network_interfaces are in the central part
-                self.add_router(tile_x+1, tile_y+1)
-                self.add_network_interface(tile_x+1, tile_y+1)
-
-    def i_CLUSTER_INPUT(self, x: int, y: int) -> gvsoc.systree.SlaveItf:
+    def i_CLUSTER_INPUT(self, x: int, y: int, z: int = 0) -> gvsoc.systree.SlaveItf:
         """Returns the input port of a cluster tile.
 
         The cluster can inject requests to the noc using this interface. The noc will then
@@ -76,4 +76,4 @@ class FlexMeshNoC(FlooNoc2dMesh):
         gvsoc.systree.SlaveItf
             The slave interface
         """
-        return self.i_INPUT(x+1, y+1)
+        return self.i_INPUT(x+1, y+1, z)

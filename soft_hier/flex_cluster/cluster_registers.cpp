@@ -64,6 +64,7 @@ private:
     vp::reg_32 barrier_status;
     uint32_t num_cluster_x;
     uint32_t num_cluster_y;
+    uint32_t num_cluster_z;
 
     std::vector<vp::WireSlave<bool>> barrier_req_itf;
     vp::WireMaster<bool> barrier_ack_itf;
@@ -104,6 +105,7 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
     this->cluster_id = this->get_js_config()->get("cluster_id")->get_int();
     this->num_cluster_x = this->get_js_config()->get("num_cluster_x")->get_int();
     this->num_cluster_y = this->get_js_config()->get("num_cluster_y")->get_int();
+    this->num_cluster_z = this->get_js_config()->get("num_cluster_z")->get_int();
 
     this->global_barrier_slave_itf.set_req_meth(&ClusterRegisters::global_barrier_sync);
     this->new_slave_port("global_barrier_slave", &this->global_barrier_slave_itf);
@@ -184,7 +186,7 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
     }
 
     if(offset == 8){
-        data[0] = _this->num_cluster_x * _this->num_cluster_y;
+        data[0] = _this->num_cluster_x * _this->num_cluster_y * _this->num_cluster_z;
     }
 
     if(offset == 12){
@@ -239,6 +241,11 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         {
             _this->trace.fatal("[Global Sync] There was an error while broadcating wakeup signal\n");
         }
+    }
+
+    // New reg: Z height of cluster stack
+    if(offset == 32){
+        data[0] = _this->num_cluster_z;
     }
 
     // _this->regmap.access(offset, size, data, is_write);
@@ -378,5 +385,3 @@ extern "C" vp::Component *gv_new(vp::ComponentConf &config)
 {
     return new ClusterRegisters(config);
 }
-
-
