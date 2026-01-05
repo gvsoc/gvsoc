@@ -154,7 +154,7 @@ def gen_arch():
             arch.num_node_per_ctrl          = d
             arch.hbm_chan_placement         = [0, 0, 0, 64]
             arch.hbm_node_aliase            = d
-            arch.noc_link_width             = int(1024 * scale_f)
+            arch.noc_link_width             = 1024
             write_arch_file(arch, filename)
             pass
 

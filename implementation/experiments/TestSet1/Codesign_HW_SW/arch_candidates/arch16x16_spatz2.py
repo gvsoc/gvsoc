@@ -33,7 +33,7 @@ class FlexClusterArch:
         self.hbm_node_aliase = 16
         self.hbm_ctrl_xor_scrambling = 1
         self.noc_outstanding = 64
-        self.noc_link_width = 2048
+        self.noc_link_width = 1024
         self.instruction_mem_base = 0x80000000
         self.instruction_mem_size = 0x00010000
         self.soc_register_base = 0x90000000
