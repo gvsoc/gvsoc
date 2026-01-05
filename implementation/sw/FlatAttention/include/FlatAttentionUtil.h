@@ -379,8 +379,14 @@ void flat_attention_print_info(FlatAttentionInfo* info) {
     printf("        HBM_O:                      0x%08x_%08x\n", H, L);
 }
 
+#ifdef ATTN_FLATTEN_SWCOLL
+#include "SoftwareCollectives.h"
+#endif
 
 inline void flat_attention_broadcast_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
+#if defined(ATTN_FLATTEN_SWCOLL_PIPELINE)
+    swcoll_pipeline_broadcast_rowwise(info, offset, size, ATTN_FLATTEN_SWCOLL_PIPELINE);
+#else
     if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_broadcast(
@@ -391,9 +397,13 @@ inline void flat_attention_broadcast_rowwise(FlatAttentionInfo* info, uint32_t o
             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
         flex_dma_async_wait_all();
     }
+#endif
 }
 
 inline void flat_attention_broadcast_colwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
+#if defined(ATTN_FLATTEN_SWCOLL_PIPELINE)
+    swcoll_pipeline_broadcast_colwise(info, offset, size, ATTN_FLATTEN_SWCOLL_PIPELINE);
+#else
     if (flex_is_dm_core() && info->cluster_for_colwise == 1)
     {
         flex_dma_async_broadcast(
@@ -404,9 +414,13 @@ inline void flat_attention_broadcast_colwise(FlatAttentionInfo* info, uint32_t o
             info->group.wakeup_col_mask/*col_mask*/);
         flex_dma_async_wait_all();
     }
+#endif
 }
 
 inline void flat_attention_redmax_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
+#if defined(ATTN_FLATTEN_SWCOLL_PIPELINE)
+    swcoll_pipeline_redmax_rowwise(info, offset, size, ATTN_FLATTEN_SWCOLL_PIPELINE);
+#else
     if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_reduction(
@@ -418,9 +432,13 @@ inline void flat_attention_redmax_rowwise(FlatAttentionInfo* info, uint32_t offs
             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
         flex_dma_async_wait_all();
     }
+#endif
 }
 
 inline void flat_attention_redsum_rowwise(FlatAttentionInfo* info, uint32_t offset, uint32_t size){
+#if defined(ATTN_FLATTEN_SWCOLL_PIPELINE)
+    swcoll_pipeline_redsum_rowwise(info, offset, size, ATTN_FLATTEN_SWCOLL_PIPELINE);
+#else
     if (flex_is_dm_core() && info->cluster_for_rowwise == 1)
     {
         flex_dma_async_reduction(
@@ -432,6 +450,7 @@ inline void flat_attention_redsum_rowwise(FlatAttentionInfo* info, uint32_t offs
             (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
         flex_dma_async_wait_all();
     }
+#endif
 }
 
 
