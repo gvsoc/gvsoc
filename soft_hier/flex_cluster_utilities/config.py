@@ -1,5 +1,6 @@
 import re
 import ast
+import math
 import argparse
 
 parser = argparse.ArgumentParser(description="Generate C and S header files from a SoftHier configuration file.")
@@ -68,12 +69,20 @@ print(f'Header file "{C_header_file}" generated successfully.')
 with open(S_header_file, 'w') as file:
     file.write('#ifndef FLEXCLUSTERARCH_H\n')
     file.write('#define FLEXCLUSTERARCH_H\n\n')
+    num_core_per_cluster = 0
     
     for attr_name, attr_value in attributes.items():
         # Convert attribute name to uppercase and prefix with 'ARCH_'
         define_name = f'ARCH_{attr_name.upper()}'
+        if define_name == 'ARCH_NUM_CORE_PER_CLUSTER':
+            num_core_per_cluster = int(attr_value)
+            pass
         if define_name == 'ARCH_HBM_CHAN_PLACEMENT' or define_name == 'ARCH_SPATZ_ATTACED_CORE_LIST' or define_name == 'ARCH_HBM_TYPE':
             continue
+            pass
+        if define_name == 'ARCH_CLUSTER_STACK_SIZE':
+            clog2_stack_offest_per_core = min(int(math.ceil(math.log2(int(attr_value, 16)/num_core_per_cluster))), 14)
+            file.write(f'.set ARCH_CLUSTER_STACK_OFFSET, {clog2_stack_offest_per_core}\n')
             pass
         file.write(f'.set {define_name}, {attr_value}\n')
     

@@ -102,7 +102,7 @@ init_stack:
 
     # Compute the relative start address of the stack for each hart.
     # The stack for hart N starts at the end of the stack of hart N-1.
-    sll  t0, a0, 0xa
+    sll  t0, a0, ARCH_CLUSTER_STACK_OFFSET
     
     # Initialize the stack pointer to the start of the stack
     sub  sp, a2, t0
