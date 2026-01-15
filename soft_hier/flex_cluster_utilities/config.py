@@ -81,7 +81,7 @@ with open(S_header_file, 'w') as file:
             continue
             pass
         if define_name == 'ARCH_CLUSTER_STACK_SIZE':
-            clog2_stack_offest_per_core = min(int(math.ceil(math.log2(int(attr_value, 16)/num_core_per_cluster))), 14)
+            clog2_stack_offest_per_core = int(math.ceil(math.log2(int(attr_value, 16)/(1 << (num_core_per_cluster - 1).bit_length()))))
             file.write(f'.set ARCH_CLUSTER_STACK_OFFSET, {clog2_stack_offest_per_core}\n')
             pass
         file.write(f'.set {define_name}, {attr_value}\n')
