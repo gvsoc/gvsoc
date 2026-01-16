@@ -142,7 +142,7 @@ def gen_arch():
             arch.num_cluster_x              = d
             arch.num_cluster_y              = d
             arch.num_core_per_cluster       = s + 1
-            arch.cluster_tcdm_bank_nb       = int(128 * scale_f)
+            arch.cluster_tcdm_bank_nb       = int(128 * scale_f * scale_f)
             arch.cluster_tcdm_size          = int(0x00060000 * scale_f * scale_f) if d <= 32 else int(0x00060000 * scale_f)
             arch.cluster_stack_size         = int(0x00020000 * scale_f * scale_f) if d <= 32 else int(0x00020000 * scale_f)
             arch.cluster_zomem_size         = int(0x00020000 * scale_f * scale_f) if d <= 32 else int(0x00020000 * scale_f)
@@ -154,7 +154,7 @@ def gen_arch():
             arch.num_node_per_ctrl          = d
             arch.hbm_chan_placement         = [0, 0, 0, 64]
             arch.hbm_node_aliase            = d
-            arch.noc_link_width             = 1024
+            arch.noc_link_width             = min(int(1024 * scale_f), 1024)
             write_arch_file(arch, filename)
             pass
 
