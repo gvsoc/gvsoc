@@ -219,10 +219,16 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
 
     if(is_write && offset == 28){
         uint32_t value = *(uint32_t *)data;
+        /*
         uint8_t row_mask = value & 0xFFFF; // Lower 16 bits
         uint8_t col_mask = value >> 16; // Upper 16 bits
+	*/
+        uint8_t row_mask = value & 0xFF; // First byte
+        uint8_t lay_mask = (value >> 8) & 0xFF; // Second byte
+        uint8_t col_mask = (value >> 16) & 0xFF; // Third byte
 
-        // _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Global Sync] start wakeup with row_mask: %d and col_mask: %d\n", row_mask, col_mask);
+        printf("[Global Sync] start wakeup with row_mask: %d and col_mask: %d and lay_mask: %d\n", row_mask, col_mask, lay_mask);
+        _this->trace.msg(vp::Trace::LEVEL_DEBUG, "[Global Sync] start wakeup with row_mask: %d and col_mask: %d and lay_mask: %d\n", row_mask, col_mask, lay_mask);
 
         _this->global_barrier_master_req->prepare();
         _this->global_barrier_master_req->set_is_write(true);
@@ -234,6 +240,9 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         payload_ptr[0] = 1; //broadcast
         payload_ptr[1] = row_mask;
         payload_ptr[2] = col_mask;
+
+        payload_ptr[3] = lay_mask;
+
 
         vp::IoReqStatus status = _this->global_barrier_master_itf.req(_this->global_barrier_master_req);
 

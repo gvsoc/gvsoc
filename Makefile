@@ -11,7 +11,8 @@ all: checkout build
 all-deeploy: checkout build-deeploy
 
 checkout:
-	git submodule update --recursive --init
+	echo
+	#git submodule update --recursive --init
 
 .PHONY: build
 
@@ -192,7 +193,10 @@ ifdef pld
 	preload_arg = --preload $(pld_path)
 endif
 run:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=/chip/cluster_0/redmule
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=insn:insn.txt --trace=lsu:lsu.txt --verbose=debug --trace-level=trace  --verbose=debug --trace=cluster_0/cluster_registers:cregs_0.log
+
+rung:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=data_noc:bla.log --trace-level=trace  --verbose=debug --gdb
 
 runv:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=redmule --trace=idma --trace=spatz --trace=cluster_registers | tee sw_build/analyze_trace.txt
