@@ -106,6 +106,10 @@ FlexPosition zminus_pos(FlexPosition pos) {
     return new_pos;
 }
 
+// NOTE: This SHOULD be volatile, but it is a constant, so declaring it volatile would hurt performance.
+// That said, discarding a volatile qualifier is undefined behavior, so this is a ticking time bomb...
+// Honestly, there is no justification for this to be a (repeated) register read to begin with.
+// The same is true for many constant register lookup functions below.
 uint32_t flex_get_cluster_id(){
     volatile uint32_t * cluster_reg      = (volatile uint32_t *) ARCH_CLUSTER_REG_BASE;
     return *cluster_reg;
@@ -222,11 +226,11 @@ void flex_annotate_barrier(uint32_t type){
     *info_reg = type;
 }
 
-void flex_reset_barrier(uint32_t* barrier){
+void flex_reset_barrier(volatile uint32_t* barrier){
     *barrier = flex_get_disable_value();
 }
 
-uint32_t flex_amo_fetch_add(uint32_t* barrier){
+volatile uint32_t flex_amo_fetch_add(volatile uint32_t* barrier){
     return __atomic_fetch_add(barrier, flex_get_enable_value(), __ATOMIC_RELAXED);
 }
 
