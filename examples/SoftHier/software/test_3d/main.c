@@ -8,7 +8,8 @@ void hello_world_all_cluster(){
     {
         if (flex_get_core_id() == 0 && flex_get_cluster_id() == cid)
         {
-            printf("[Cluster %3d] Hello World\n", cid);
+            FlexPosition pos = get_pos(cid);
+            printf("[Cluster %3d] Hello from (%d, %d, %d)\n", cid, pos.x, pos.y, pos.z);
         }
         flex_global_barrier_xyz();//Global barrier
     }
@@ -19,12 +20,9 @@ void hello_world_all_cluster(){
 int main()
 {
     uint32_t eoc_val = 0;
-
     flex_barrier_xyz_init();
     flex_global_barrier_xyz();
 
-    flex_eoc(eoc_val);
-    /*
     //*************************************
     //  Program Execution Region -- Start *
     //*************************************
@@ -36,7 +34,6 @@ int main()
     //**************************************
     flex_global_barrier_xyz();
     flex_eoc(eoc_val);
-    */
 
     return 0;
 }
