@@ -193,7 +193,7 @@ ifdef pld
 	preload_arg = --preload $(pld_path)
 endif
 run:
-	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=insn:insn.txt --trace=lsu:lsu.txt --verbose=debug --trace-level=trace  --verbose=debug --trace=cluster_0/cluster_registers:cregs_0.log
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=insn:insn.log --trace=lsu:lsu.log --verbose=debug --trace-level=trace  --verbose=debug --trace=cluster_0/cluster_registers:cregs_0.log --trace=sync_bus:sync_bus.log --trace=data_noc:data_noc.log --trace=sync_mem:sync_mem.log
 
 rung:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=data_noc:bla.log --trace-level=trace  --verbose=debug --gdb
