@@ -26,20 +26,20 @@ class FlexClusterArch:
         self.num_core_per_cluster    = 3
 
         self.cluster_tcdm_bank_width = 32
-        self.cluster_tcdm_bank_nb    = 128
+        self.cluster_tcdm_bank_nb    = 128  # num of banks, BW = 32b*128 = 512 bytes per cycle
 
         self.cluster_tcdm_base       = 0x00000000
-        self.cluster_tcdm_size       = 0x00100000
+        self.cluster_tcdm_size       = 0x00100000   # 1MB
         self.cluster_tcdm_remote     = 0x30000000
 
         self.cluster_stack_base      = 0x10000000
-        self.cluster_stack_size      = 0x00020000
+        self.cluster_stack_size      = 0x00020000   # 128kB
 
-        self.cluster_zomem_base      = 0x18000000
-        self.cluster_zomem_size      = 0x00020000
+        self.cluster_zomem_base      = 0x18000000   # Zero‑Overhead Memory - the cluster’s fast user‑managed scratchpad
+        self.cluster_zomem_size      = 0x00020000   # 128kB
 
         self.cluster_reg_base        = 0x20000000
-        self.cluster_reg_size        = 0x00000200
+        self.cluster_reg_size        = 0x00000200   # 521B
 
         #Spatz Vector Unit
         self.spatz_attaced_core_list = []
@@ -56,8 +56,8 @@ class FlexClusterArch:
         self.redmule_reg_size        = 0x00000200
 
         #IDMA
-        self.idma_outstand_txn       = 16
-        self.idma_outstand_burst     = 256
+        self.idma_outstand_txn       = 16           # up to 16 DMA transactions in the NoC or memory system at the same time
+        self.idma_outstand_burst     = 256          # each transaction can can create up to 256 outstanding memory bursts, 256x512bit = 16KB of burst data
 
         #HBM
         self.hbm_start_base          = 0xc0000000
