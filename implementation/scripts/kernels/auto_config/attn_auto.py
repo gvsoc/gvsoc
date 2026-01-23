@@ -58,6 +58,9 @@ def opt(attn, arch):
         return attn
         pass
 
+    y_tile = y_tile if (4 * arch.redmule_ce_height > 64) else 32
+    x_tile = x_tile if (4 * arch.redmule_ce_height > 64) else 32
+
     #2. Determine Group Scale
     scale_y = seqlen_y // y_tile
     scale_x = seqlen_x // x_tile
