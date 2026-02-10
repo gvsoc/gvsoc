@@ -11,7 +11,7 @@
 #define zomem(offset)               (ARCH_CLUSTER_ZOMEM_BASE+offset)
 #define remote_cid(cid,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cid*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define remote_xyz(x,y,z,offset)    (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(x,y,z)*ARCH_CLUSTER_TCDM_SIZE+offset)
-#define remote_pos(pos,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(pos.x,pos.y)*ARCH_CLUSTER_TCDM_SIZE+offset)
+#define remote_pos(pos,offset)      (ARCH_CLUSTER_TCDM_REMOTE+cluster_index(pos.x,pos.y,pos.z)*ARCH_CLUSTER_TCDM_SIZE+offset)
 #define hbm_addr(offset)            ((uint64_t)ARCH_HBM_START_BASE+(uint64_t)offset)
 #define hbm_west(nid,offset)        ((uint64_t)ARCH_HBM_START_BASE+((uint64_t)nid)*(uint64_t)ARCH_HBM_NODE_ADDR_SPACE+(uint64_t)offset)
 #define hbm_north(nid,offset)       ((uint64_t)ARCH_HBM_START_BASE+((uint64_t)nid)*(uint64_t)ARCH_HBM_NODE_ADDR_SPACE+(uint64_t)ARCH_HBM_NODE_ADDR_SPACE*(uint64_t)ARCH_NUM_CLUSTER_Y+(uint64_t)offset)
