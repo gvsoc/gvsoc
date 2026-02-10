@@ -159,13 +159,10 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
                     pos.z * info->tile_size_byte_Y_3dchunk;
                 info->dma1_src = local(info->Y_offset);
                 info->dma1_size = info->tile_size_byte_Y_3dchunk;
-
-                if (pos.z == 0) {
-                    info->use_dma2 = 1;
-                    info->dma2_dst = local(info->Y_offset);
-                    info->dma2_src = zomem(0);
-                    info->dma2_size = info->tile_size_byte_Y_3dchunk;
-                }
+                info->use_dma2 = 1;
+                info->dma2_dst = local(info->Y_offset);
+                info->dma2_src = zomem(0);
+                info->dma2_size = info->tile_size_byte_Y_3dchunk;
             }
         // For regular subiterations, just bring in new double-buffered X or W, respectively.
         } else {
@@ -187,8 +184,8 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
                     info->dma1_dst = local(local_x);
                     info->dma1_src = hbm_west(pos.y,0) + xw_count * info->tile_size_byte_X;
                 } else {
-                    info->dma2_dst = local(local_x);
-                    info->dma2_src = remote_pos(zminus_pos(pos),local_x);
+                    info->dma1_dst = local(local_x);
+                    info->dma1_src = remote_pos(zminus_pos(pos),local_x);
                 }
             } else {
                 /* clusters on-chip transfer*/
@@ -204,7 +201,7 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
                     // bring in entire chunk size for all clusters above you.
                     info->dma2_dst = local(local_w);
                     info->dma2_src = hbm_south(pos.x,0) + xw_count * info->tile_size_byte_W;
-                    info->dma2_size = info->tile_size_byte_W_3dchunk;
+                    info->dma2_size = info->tile_size_byte_W;
                 } else {
                     // upper edge (z > 0) clusters pull their data from below.
                     // They only need to fetch increasingly small blocks to provide to those above.
