@@ -64,7 +64,7 @@ build: gvrun.build
 	# Change directory to curdir to avoid issue with symbolic links
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
-		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/gvrun/python;$(MODULES)" \
+		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/pulp/targets;$(CURDIR)/gvrun/python;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
