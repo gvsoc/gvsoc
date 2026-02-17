@@ -1,8 +1,8 @@
 diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
-index 2dbaacd..4671dec 100644
+index 2dbaacd..33ced83 100644
 --- a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
 +++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
-@@ -126,6 +126,40 @@ const Configuration& DRAMSys::getConfig() const
+@@ -126,6 +126,64 @@ const Configuration& DRAMSys::getConfig() const
      return config;
  }
  
@@ -40,28 +40,68 @@ index 2dbaacd..4671dec 100644
 +    return 0;
 +}
 +
++void DRAMSys::togglePim(int channel)
++{
++    drams[channel]->togglePim();
++}
++
++void DRAMSys::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth)
++{
++    uint i = 0;
++    for (auto& dram : drams)
++    {
++        dram->registerCBPimMeth(instance, pim_meth, i++);
++    }
++}
++
++void DRAMSys::pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    drams[channel]->pimRead(base_addr, length, stride, count, buf);
++}
++
++void DRAMSys::pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    drams[channel]->pimWrite(base_addr, length, stride, count, buf);
++}
++
  void DRAMSys::end_of_simulation()
  {
      if (config.powerAnalysis)
 diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.h b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
-index 3202b88..4c19e5f 100644
+index 3202b88..d4d9e39 100644
 --- a/src/libdramsys/DRAMSys/simulation/DRAMSys.h
 +++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
-@@ -71,6 +71,9 @@ public:
+@@ -71,6 +71,14 @@ public:
  
      const Configuration& getConfig() const;
      const AddressDecoder& getAddressDecoder() const { return *addressDecoder; }
++    
 +    unsigned char * getDramBasePointer();
 +    void perloadByte(uint64_t addr, unsigned char data);
 +    unsigned char checkByte(uint64_t addr);
++    void togglePim(int channel);
++    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth);
++    void pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++    void pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
  
      /**
       * Returns true if all memory controllers are in idle state.
 diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
-index a2c21dc..e537d38 100644
+index a2c21dc..f202523 100644
 --- a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
 +++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
-@@ -111,6 +111,24 @@ Dram::~Dram()
+@@ -73,6 +73,10 @@ Dram::Dram(const sc_module_name& name, const Configuration& config) :
+     powerAnalysis(config.powerAnalysis),
+     channelSize(memSpec.getSimMemSizeInBytes() / memSpec.numberOfChannels),
+     useMalloc(config.useMalloc),
++    channelIdx(0),
++    pimEnable(0),
++    async_callback_instance(nullptr),
++    async_callback_pim_meth(nullptr),
+     tSocket("socket")
+ {
+     if (storeMode == Configuration::StoreMode::Store)
+@@ -111,6 +115,60 @@ Dram::~Dram()
          free(memory);
  }
  
@@ -83,67 +123,147 @@ index a2c21dc..e537d38 100644
 +    return check_data;
 +}
 +
++void Dram::togglePim()
++{
++    pimEnable = !pimEnable;
++}
++
++void Dram::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx)
++{
++    async_callback_instance = instance;
++    async_callback_pim_meth = pim_meth;
++    channelIdx = _channelIdx;
++}
++
++void Dram::pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    unsigned char* phyAddr = memory + base_addr;    // Obtain physical address
++
++    for (uint64_t i = 0; i < count; i++) {
++        // Calculate stride address
++        unsigned char* strideAddr = phyAddr + i * stride;   
++        // Copy data from DRAM to buffer compactly
++        memcpy((unsigned char*)buf + i * length, strideAddr, length);
++    }
++}
++
++void Dram::pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    unsigned char* phyAddr = memory + base_addr;
++    
++    for (uint64_t i = 0; i < count; i++) {
++        // Calculate stride address
++        unsigned char* strideAddr = phyAddr + i * stride;   
++        // Copy data from buffer to DRAM with stride
++        memcpy(strideAddr, (unsigned char*)buf + i * length, length);
++    }
++}
++
  void Dram::reportPower()
  {
  #ifdef DRAMPOWER
+@@ -162,6 +220,20 @@ tlm_sync_enum Dram::nb_transport_fw(tlm_generic_payload& trans, tlm_phase& phase
+                     }
+                 }
+             }
++            // PIM callback when a read is issued
++            if (pimEnable && async_callback_instance && async_callback_pim_meth)
++            {
++                PimInfo pimInfo;
++                pimInfo.isWrite = 0; // Read operation
++                pimInfo.address = trans.get_address();
++                pimInfo.channel = channelIdx;
++                pimInfo.rank = uint(ControllerExtension::getRank(trans));
++                pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
++                pimInfo.bank = uint(ControllerExtension::getBank(trans));
++                pimInfo.row = uint(ControllerExtension::getRow(trans));
++                pimInfo.column = uint(ControllerExtension::getColumn(trans));
++                async_callback_pim_meth(async_callback_instance, pimInfo);
++            }  
+         }
+         else if (phase == BEGIN_WR || phase == BEGIN_WRA || phase == BEGIN_MWR ||
+                  phase == BEGIN_MWRA)
+@@ -183,6 +255,20 @@ tlm_sync_enum Dram::nb_transport_fw(tlm_generic_payload& trans, tlm_phase& phase
+                     }
+                 }
+             }
++            // PIM callback when a write is issued
++            if (pimEnable && async_callback_instance && async_callback_pim_meth)
++            {
++                PimInfo pimInfo;
++                pimInfo.isWrite = 1; // Write operation
++                pimInfo.address = trans.get_address();
++                pimInfo.channel = channelIdx;
++                pimInfo.rank = uint(ControllerExtension::getRank(trans));
++                pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
++                pimInfo.bank = uint(ControllerExtension::getBank(trans));
++                pimInfo.row = uint(ControllerExtension::getRow(trans));
++                pimInfo.column = uint(ControllerExtension::getColumn(trans));
++                async_callback_pim_meth(async_callback_instance, pimInfo);
++            }  
+         }
+     }
+ 
 diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.h b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
-index d800406..2ee2bce 100644
+index d800406..d70c03e 100644
 --- a/src/libdramsys/DRAMSys/simulation/dram/Dram.h
 +++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
-@@ -88,6 +88,9 @@ public:
+@@ -51,6 +51,20 @@
+ #include <tlm>
+ #include <tlm_utils/simple_target_socket.h>
+ 
++struct PimInfo {
++    uint isWrite;
++    uint address;
++    uint channel;
++    uint rank;
++    uint bankGroup;
++    uint bank;
++    uint row;
++    uint column;
++};
++
++typedef void*   CallbackInstance_t;
++typedef void    (AsynCallbackPim_Meth)(CallbackInstance_t instance, PimInfo pimInfo);
++
+ class libDRAMPower;
+ 
+ namespace DRAMSys
+@@ -71,6 +85,12 @@ protected:
+     const uint64_t channelSize;
+     const bool useMalloc;
+ 
++    // PIM related variables
++    uint channelIdx;
++    uint pimEnable;                      // PIM enable flag (if not supported, remains 0)
++    CallbackInstance_t      async_callback_instance;    // PIM callback instance
++    AsynCallbackPim_Meth*   async_callback_pim_meth;    // PIM callback
++
+ #ifdef DRAMPOWER
+     std::unique_ptr<libDRAMPower> DRAMPower;
+ #endif
+@@ -88,6 +108,16 @@ public:
  
      tlm_utils::simple_target_socket<Dram> tSocket;
  
 +    unsigned char * getDramBasePointer();
 +    void perloadByteInDram(uint64_t addr, unsigned char data);
 +    unsigned char checkByte(uint64_t addr);
++
++    // Enable PIM and register PIM callback
++    void togglePim();
++    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx);
++    void pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++    void pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++    
      virtual void reportPower();
  
      void serialize(std::ostream& stream) const override;
 diff --git a/src/simulator/CMakeLists.txt b/src/simulator/CMakeLists.txt
-index a485bbd..8891e4e 100644
+index a485bbd..8bfb5cf 100644
 --- a/src/simulator/CMakeLists.txt
 +++ b/src/simulator/CMakeLists.txt
-@@ -1,67 +1,28 @@
--# Copyright (c) 2020, RPTU Kaiserslautern-Landau
--# All rights reserved.
--#
--# Redistribution and use in source and binary forms, with or without
--# modification, are permitted provided that the following conditions are
--# met:
--#
--# 1. Redistributions of source code must retain the above copyright notice,
--#    this list of conditions and the following disclaimer.
--#
--# 2. Redistributions in binary form must reproduce the above copyright
--#    notice, this list of conditions and the following disclaimer in the
--#    documentation and/or other materials provided with the distribution.
--#
--# 3. Neither the name of the copyright holder nor the names of its
--#    contributors may be used to endorse or promote products derived from
--#    this software without specific prior written permission.
--#
--# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
--# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
--# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
--# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER
--# OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
--# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
--# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
--# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
--# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
--# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
--# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--#
--# Authors: 
--#    Matthias Jung
--#    Lukas Steiner
--#    Derek Christ
--#    Thomas Psota
--
- ########################################
- ###      DRAMSys::simulator          ###
- ########################################
+@@ -40,28 +40,25 @@
  
  project(DRAMSys_Simulator)
  
@@ -216,10 +336,10 @@ index 35f2ddf..3cff9dd 100644
  #include <DRAMSys/simulation/DRAMSysRecordable.h>
 diff --git a/src/simulator/simulator/dramsys_conv.h b/src/simulator/simulator/dramsys_conv.h
 new file mode 100644
-index 0000000..d9787f5
+index 0000000..2949a20
 --- /dev/null
 +++ b/src/simulator/simulator/dramsys_conv.h
-@@ -0,0 +1,363 @@
+@@ -0,0 +1,362 @@
 +#pragma once
 +
 +#include "simulator/MemoryManager.h"
@@ -564,7 +684,6 @@ index 0000000..d9787f5
 +        async_callback_update_request_meth = meth;
 +    }
 +
-+
 +    SC_CTOR(dramsys_conv):
 +    max_pending_req(1),
 +    inflight_read_cnt(0),
@@ -585,10 +704,10 @@ index 0000000..d9787f5
 +
 diff --git a/src/simulator/simulator/dramsys_lib.cpp b/src/simulator/simulator/dramsys_lib.cpp
 new file mode 100644
-index 0000000..fb90e9a
+index 0000000..bc541a2
 --- /dev/null
 +++ b/src/simulator/simulator/dramsys_lib.cpp
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,308 @@
 +#include "Simulator.h"
 +
 +#include <DRAMSys/config/DRAMSysConfiguration.h>
@@ -597,6 +716,23 @@ index 0000000..fb90e9a
 +
 +#define svOpenArrayHandle void*
 +
++struct GvsocMemspec {
++    uint access_size;
++    uint nb_channels;
++    uint nb_pseudo_channels;
++    uint nb_ranks;
++    uint nb_bank_groups;
++    uint nb_banks;
++    uint nb_rows;
++    uint nb_columns;
++    uint channel_stride;
++    uint rank_stride;
++    uint bankgroup_stride;
++    uint bank_stride;
++    uint row_stride;
++    uint column_stride;
++};
++
 +std::vector<uint64_t>                               list_of_DRAMburst;
 +std::vector<uint64_t>                               list_of_DRAMsize;
 +std::vector<DRAMSys::DRAMSys *>                     list_of_DRAMsys;
@@ -604,7 +740,7 @@ index 0000000..fb90e9a
 +std::vector<uint8_t *>                              list_of_wbuffer;
 +std::vector<uint8_t *>                              list_of_wstrobe;
 +
-+extern "C" int add_dram(char * resources_path, char * simulationJson_path){
++extern "C" int add_dram(char * resources_path, char * simulationJson_path, GvsocMemspec * memspec) {
 +
 +    static int id = 0;
 +
@@ -615,7 +751,7 @@ index 0000000..fb90e9a
 +    }
 +
 +    std::filesystem::path baseConfig = resourceDirectory / "hbm2-example.json";
-+    if (simulationJson_path != 0)
++    if (simulationJson_path != 0 && std::filesystem::exists(simulationJson_path))
 +    {
 +        baseConfig = simulationJson_path;
 +    }
@@ -671,6 +807,27 @@ index 0000000..fb90e9a
 +
 +
 +    std::cout << "the instantiated DRAM id is: " << id << std::endl;
++
++    // Fill the memspec struct to return to the caller
++    if (memspec != nullptr)
++    {
++        memspec->access_size = dramMaxBurstByte;
++        memspec->nb_channels = config.memSpec->numberOfChannels;
++        memspec->nb_pseudo_channels = config.memSpec->pseudoChannelsPerChannel;
++        memspec->nb_ranks = config.memSpec->ranksPerChannel;
++        memspec->nb_bank_groups = config.memSpec->groupsPerRank;
++        memspec->nb_banks = config.memSpec->banksPerGroup;
++        memspec->nb_rows = config.memSpec->rowsPerBank;
++        memspec->nb_columns = config.memSpec->columnsPerRow;
++
++        DRAMSys::AddressDecoder addressDecoder = dramSys->getAddressDecoder();
++        memspec->channel_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(1,0,0,0,0,0,0));
++        memspec->rank_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,1,0,0,0,0,0));
++        memspec->bankgroup_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,1,0,0,0,0));
++        memspec->bank_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,1,0,0,0));
++        memspec->row_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,1,0,0));
++        memspec->column_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,0,1,0));
++    }
 +
 +    int res = id;
 +    id += 1;
@@ -841,6 +998,23 @@ index 0000000..fb90e9a
 +    list_of_conv[dram_id]->registerCBRespMeth(resp_meth);
 +    list_of_conv[dram_id]->registerCBUpdateReqMeth(req_meth);
 +}
++
++extern "C" void dram_toggle_pim(int dram_id, int channel) {
++    list_of_DRAMsys[dram_id]->togglePim(channel);  
++}
++
++extern "C" void dram_register_pim_callback(int dram_id, CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth) {
++    list_of_DRAMsys[dram_id]->registerCBPimMeth(instance, pim_meth);
++}
++
++extern "C" void dram_pim_read(int dram_id, int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf) {
++    list_of_DRAMsys[dram_id]->pimRead(channel, base_addr, length, stride, count, buf);
++}
++
++extern "C" void dram_pim_write(int dram_id, int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf) {
++    list_of_DRAMsys[dram_id]->pimWrite(channel, base_addr, length, stride, count, buf);
++}
++     
 +
 diff --git a/src/simulator/simulator/elfloader.cpp b/src/simulator/simulator/elfloader.cpp
 new file mode 100644
