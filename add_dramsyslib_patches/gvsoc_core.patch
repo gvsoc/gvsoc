@@ -95,7 +95,7 @@ index fc84bf5b..87f3f6c5 100644
 +    void* libraryHandle;
 +    int dram_id;
 +    int (*add_dram)(char * resources_path, char * config_path);
-+    void (*cloes_dram)(int dram_id);
++    void (*close_dram)(int dram_id);
 +    int (*dram_can_accept_req)(int dram_id);
 +    int (*dram_has_read_rsp)(int dram_id);
 +    int (*dram_has_write_rsp)(int dram_id);
@@ -123,7 +123,7 @@ index fc84bf5b..87f3f6c5 100644
  
 +    libraryHandle = dlopen("libDRAMSys_Simulator.so", RTLD_LAZY);
 +    add_dram = (int (*)(char*, char*))dlsym(libraryHandle, "add_dram");
-+    cloes_dram = (void (*)(int))dlsym(libraryHandle, "cloes_dram");
++    close_dram = (void (*)(int))dlsym(libraryHandle, "close_dram");
 +    dram_can_accept_req = (int (*)(int))dlsym(libraryHandle, "dram_can_accept_req");
 +    dram_has_read_rsp = (int (*)(int))dlsym(libraryHandle, "dram_has_read_rsp");
 +    dram_has_write_rsp = (int (*)(int))dlsym(libraryHandle, "dram_has_write_rsp");
@@ -297,7 +297,7 @@ index fc84bf5b..87f3f6c5 100644
 +}
 +
 +ddr::~ddr(){
-+    cloes_dram(dram_id);
++    close_dram(dram_id);
  }
  
  
