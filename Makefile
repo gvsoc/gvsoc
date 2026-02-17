@@ -131,7 +131,7 @@ third_party/DRAMSys/libDRAMSys_Simulator.so:
 	cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/ && \
 	gcc main.c -ldl
 	@if add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out ; then \
-        echo "Test libaray succeeded"; \
+        echo "Test library succeeded"; \
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
 		rm DRAMSysRecordable* ; \
     else \

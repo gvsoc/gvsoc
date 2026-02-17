@@ -764,7 +764,7 @@ index 0000000..fb90e9a
 +}
 +
 +
-+extern "C" void cloes_dram(int dram_id) {
++extern "C" void close_dram(int dram_id) {
 +    if(dram_id == 0) sc_stop();
 +    delete list_of_conv[dram_id];
 +    delete list_of_DRAMsys[dram_id];
