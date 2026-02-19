@@ -97,19 +97,9 @@ doc:
 ## 				Make Targets for DRAMSys Integration 				##
 ######################################################################
 
-SYSTEMC_VERSION := 2.3.3
+SYSTEMC_VERSION := 2.3.4
 SYSTEMC_GIT_URL := https://github.com/accellera-official/systemc.git
 SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
-
-drmasys_apply_patch:
-	git submodule update --init --recursive
-	if cd core && git apply --check ../add_dramsyslib_patches/gvsoc_core.patch; then \
-		git apply ../add_dramsyslib_patches/gvsoc_core.patch;\
-	fi
-	if cd pulp && git apply --check ../add_dramsyslib_patches/gvsoc_pulp.patch; then \
-		git apply ../add_dramsyslib_patches/gvsoc_pulp.patch;\
-	fi
-
 
 build-systemc: third_party/systemc_install/lib64/libsystemc.so
 
@@ -131,7 +121,7 @@ third_party/DRAMSys/libDRAMSys_Simulator.so:
 	cd add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/ && \
 	gcc main.c -ldl
 	@if add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out ; then \
-        echo "Test libaray succeeded"; \
+        echo "Test library succeeded"; \
 		rm add_dramsyslib_patches/build_dynlib_from_github_dramsys5/dynamic_load/a.out; \
 		rm DRAMSysRecordable* ; \
     else \

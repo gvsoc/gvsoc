@@ -20,7 +20,7 @@ void print_data(uint64_t * buf){
 int main() {
     void* libraryHandle;
     int (*add_dram)(char *, char *);
-    void (*cloes_dram)(int);
+    void (*close_dram)(int);
     int (*dram_can_accept_req)(int);
     void (*dram_write_buffer)(int dram_id, int byte_int, int idx);
     void (*dram_write_strobe)(int dram_id, int strob_int, int idx);
@@ -34,7 +34,7 @@ int main() {
 
     printf("get function --- \n");
     add_dram = dlsym(libraryHandle, "add_dram");
-    cloes_dram = dlsym(libraryHandle, "cloes_dram");
+    close_dram = dlsym(libraryHandle, "close_dram");
     dram_can_accept_req = dlsym(libraryHandle, "dram_can_accept_req");
     dram_has_read_rsp = dlsym(libraryHandle, "dram_has_read_rsp");
     dram_send_req = dlsym(libraryHandle, "dram_send_req");
@@ -97,7 +97,7 @@ int main() {
 
     print_data(rec);
 
-    cloes_dram(dram_id);
+    close_dram(dram_id);
     printf("close dram: %d\n", dram_id);
 
     // Unload the dynamic library

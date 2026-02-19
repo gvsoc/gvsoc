@@ -41,7 +41,7 @@ build: DRAMSys/build/lib/libDRAMSys_Simulator.so
 all: build
 
 clean:
-	if [ -d "DRAMSys" ]; then rm -rf DRAMSys; fi
+# 	if [ -d "DRAMSys" ]; then rm -rf DRAMSys; fi
 	if [ -d "$(CMAKE_BUILD_DIR)" ]; then rm -rf $(CMAKE_BUILD_DIR); fi
 	if [ -d "$(CMAKE_DIR)" ]; then rm -rf $(CMAKE_DIR); fi
 	if [ -f "$(CMAKE_TARBALL)" ]; then rm $(CMAKE_TARBALL); fi
