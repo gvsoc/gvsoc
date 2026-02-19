@@ -1,11 +1,9 @@
 [submodule "core"]
 	path = core
 	url = https://github.com/gvsoc/gvsoc-core.git
-	branch = rfamedina/pim-support
 [submodule "pulp"]
 	path = pulp
 	url = https://github.com/gvsoc/gvsoc-pulp.git
-	branch = rfamedina/pim-support
 [submodule "gvtest"]
 	path = gvtest
 	url =  https://github.com/gvsoc/gvtest.git
