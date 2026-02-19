@@ -1,0 +1,7 @@
+These examples have been compiled from this repository: https://github.com/pulp-platform/spatz.git
+
+They can be launched with target "spatz" using this command:
+
+gvrun --target spatz --param chip/soc/binary=test-spatzBenchmarks-dp-fconv2d_M64_N64_K7 run
+
+gvrun --target spatz --param chip/soc/binary=test-riscvTests-vfadd run
