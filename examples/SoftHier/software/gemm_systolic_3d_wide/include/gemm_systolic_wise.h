@@ -2,10 +2,14 @@
 #define _GEMM_SYSTOLIC_WISE_H_
 
 #include <math.h>
-#include "flex_runtime.h"
+#include "flex_runtime_3d.h"
 #include "flex_redmule.h"
 #include "flex_cluster_arch.h"
-#include "flex_dma_pattern.h"
+#include "flex_dma_pattern_3d.h"
+
+
+// Create an "equivalent" size for the X+Z dimensions to tile along
+uint32_t ARCH_NUM_CLUSTER_XZ = ARCH_NUM_CLUSTER_X * ARCH_NUM_CLUSTER_Z;
 
 typedef struct GemmSystolicInfo
 {
@@ -89,7 +93,7 @@ GemmSystolicInfo gemm_systolic_wise_analysis(
 
     FlexPosition pos = get_pos(flex_get_cluster_id());
     info.Z_tile_on_row = 0;
-    while((info.Z_tile_on_row * ARCH_NUM_CLUSTER_X + pos.x) < K_tile){
+    while((info.Z_tile_on_row * ARCH_NUM_CLUSTER_XZ + pos.x + pos.z) < K_tile){
         info.Z_tile_on_row ++;
     }
     info.Z_tile_on_col = 0;
@@ -98,8 +102,11 @@ GemmSystolicInfo gemm_systolic_wise_analysis(
     }
     info.XW_tile_length = N_tile;
     info.Z_tile_all = info.Z_tile_on_row * info.Z_tile_on_col;
-    info.systolic_delay = pos.x + pos.y;
-    info.total_iter = ((K_tile + ARCH_NUM_CLUSTER_X -1)/ARCH_NUM_CLUSTER_X) * ((M_tile + ARCH_NUM_CLUSTER_Y - 1)/ARCH_NUM_CLUSTER_Y) * (N_tile + 1) + ARCH_NUM_CLUSTER_X + ARCH_NUM_CLUSTER_Y;
+    info.systolic_delay = pos.x + pos.y + pos.z;
+    info.total_iter =
+        ((K_tile + ARCH_NUM_CLUSTER_XZ -1)/ARCH_NUM_CLUSTER_XZ) *
+        ((M_tile + ARCH_NUM_CLUSTER_Y - 1)/ARCH_NUM_CLUSTER_Y) *
+        (N_tile + 1) + ARCH_NUM_CLUSTER_X + ARCH_NUM_CLUSTER_Y + ARCH_NUM_CLUSTER_Z;
 
     info.dma_runing = 0;
     info.redmule_runing = 0;
@@ -130,7 +137,11 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
             {
                 info->use_sync_dma = 1;
                 info->use_dma1 = 1;
-                info->dma1_dst = hbm_south(pos.x,0) + (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) + (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y + pos.y * info->tile_size_byte_Y;
+                // TODO: Address still needs fixing
+                info->dma1_dst = hbm_south(pos.x,0) +
+                    (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) +
+                    (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y +
+                    pos.y * info->tile_size_byte_Y;
                 info->dma1_src = local(info->Y_offset);
                 info->dma1_size = info->tile_size_byte_Y;
                 info->use_dma2 = 1;
@@ -149,9 +160,15 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
 
             //XW tile transfering
             if(pos.x == 0){
-                /* clusters at west edge hbm transfer*/
-                info->dma1_dst = local(local_x);
-                info->dma1_src = hbm_west(pos.y,0) + xw_count * info->tile_size_byte_X;
+                if (pos.z == 0) {
+                    /* clusters at west edge hbm transfer*/
+                    info->dma1_dst = local(local_x);
+                    // TODO: Check address
+                    info->dma1_src = hbm_west(pos.y,0) + xw_count * info->tile_size_byte_X;
+                } else {
+                    info->dma1_dst = local(local_x);
+                    info->dma1_src = remote_pos(zminus_pos(pos),local_x);
+                }
             } else {
                 /* clusters on-chip transfer*/
                 info->dma1_dst = local(local_x);
@@ -162,7 +179,8 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
             {
                 /* clusters at south edge hbm transfer*/
                 info->dma2_dst = local(local_w);
-                info->dma2_src = hbm_south(pos.x,0) + xw_count * info->tile_size_byte_W;
+                // TODO: Check address
+                info->dma2_src = hbm_south(pos.x,0) + ((xw_count * ARCH_NUM_CLUSTER_Z + pos.z) * info->tile_size_byte_W);
             } else {
                 /* clusters on-chip transfer*/
                 info->dma2_dst = local(local_w);
@@ -179,7 +197,11 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
         FlexPosition pos = get_pos(flex_get_cluster_id());
 
         info->use_dma1 = 1;
-        info->dma1_dst = hbm_south(pos.x,0) + (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) + (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y + pos.y * info->tile_size_byte_Y;
+        // TODO: Address still needs fixing
+        info->dma1_dst = hbm_south(pos.x,0) +
+            (info->matrix_N * info->matrix_K * info->elem_size / ARCH_NUM_CLUSTER_X) +
+            (st_count - 1) * ARCH_NUM_CLUSTER_Y * info->tile_size_byte_Y +
+            pos.y * info->tile_size_byte_Y;
         info->dma1_src = local(info->Y_offset);
         info->dma1_size = info->tile_size_byte_Y;
     }
@@ -212,8 +234,7 @@ void gemm_systolic_wise(
     uint32_t M_size, uint32_t N_size, uint32_t K_size, uint32_t elem_size,
     uint32_t tile_dimension_M, uint32_t tile_dimension_N, uint32_t tile_dimension_K){
 
-    flex_global_barrier_xy();
-    uint32_t CID = flex_get_cluster_id();
+    flex_global_barrier_xyz();
     GemmSystolicInfo info = gemm_systolic_wise_analysis(M_size, N_size, K_size, elem_size,tile_dimension_M,tile_dimension_N,tile_dimension_K);
 
     if (flex_is_first_core())
@@ -231,8 +252,8 @@ void gemm_systolic_wise(
     }
 
     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_start();
-    flex_global_barrier_xy();
- 
+    flex_global_barrier_xyz();
+
     for (int i = 0; i < info.total_iter; ++i)
     {
         if (flex_is_first_core())
@@ -272,7 +293,7 @@ void gemm_systolic_wise(
         }
 
         //Global synchronization
-        flex_global_barrier_xy();
+        flex_global_barrier_xyz();
     }
     if (flex_get_core_id() == 0 && flex_get_cluster_id() == 0) flex_timer_end();
 }

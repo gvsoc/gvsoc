@@ -290,7 +290,7 @@ void gemm_systolic_wise(
         if (flex_is_first_core())
         {
             //Asynchronizly execute redmule actions
-            if (info.use_redmule) flex_redmule_trigger(info.redmule_x, info.redmule_w, info.redmule_y, REDMULE_NONE_16);
+            if (info.use_redmule) flex_redmule_trigger(info.redmule_x, info.redmule_w, info.redmule_y, (elem_size == 1 ? REDMULE_FP_8 : REDMULE_NONE_16));
             info.redmule_runing = info.use_redmule;
 
             //Compute for next redmule actions
