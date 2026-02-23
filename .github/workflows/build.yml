@@ -3,8 +3,8 @@ on: [push, pull_request]
 
 jobs:
   build_ubuntu:
-    name: Try build on ubuntu latest
-    runs-on: ubuntu-latest
+    name: Try build on ubuntu 22.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
@@ -13,36 +13,67 @@ jobs:
       - name: Install system software requirements
         run: |
           sudo apt update
-          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt update
+          sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev gcc-11 g++-11
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+          gcc --version
+          # Install CMake 3.28.3
+          wget https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.tar.gz
+          tar -xzf cmake-3.28.3-linux-x86_64.tar.gz
+          sudo mv cmake-3.28.3-linux-x86_64 /opt/cmake-3.28.3
+          sudo ln -sf /opt/cmake-3.28.3/bin/cmake /usr/local/bin/cmake
+          cmake --version
       - name: Install python requirements
         run: |
           pwd
           ls -la
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
+          sudo pip3 install -r requirements.txt
       - name: build all targets
         run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+          gcc --version
           source sourceme.sh
-          make dramsys_preparation
           make all TARGETS=pulp-open-ddr
           make all TARGETS=rv64
           make all TARGETS=pulp-open
-          make all TARGETS=pulp.spatz.spatz
-          make all TARGETS=snitch_spatz
-          make all TARGETS=occamy
-          make TARGETS=snitch:noc_type=floonoc,soc/nb_cluster=16 build
-          make TARGETS=snitch build
+          make config
+          make TARGETS=pulp.chips.flex_cluster.flex_cluster all
       - name: Run examples
         run: |
           source sourceme.sh
           ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
           ./install/bin/gvsoc --target=rv64 --binary examples/pk --arg ./examples/hello run
-          ./install/bin/gvsoc --target=pulp-open-ddr --binary add_dramsyslib_patches/dma_dram_test.bin image flash run
-          ./install/bin/gvsoc --target=pulp.spatz.spatz --binary examples/test-spatzBenchmarks-dp-fdotp_M128  run
-          ./install/bin/gvsoc --target=snitch_spatz --binary examples/rv64uv-p-vfadd run
-          ./install/bin/gvsoc --target=occamy --binary examples/offload-multi_cluster.elf run
-          ./install/bin/gvsoc --target=snitch --binary examples/fp32_computation_vector.elf run
-          ./install/bin/gvsoc --target snitch:noc_type=floonoc,soc/nb_cluster=16 --binary examples/floonoc.elf run
+          ./install/bin/gvsoc --target=pulp-open-ddr --binary soft_hier/dma_dram_test.bin image flash run
+      - name: Run SoftHier ReadMe
+        run: |
+          source sourceme.sh
+          cfg=examples/SoftHier/config/arch_test.py app=examples/SoftHier/software/test make hs run
+          cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/test make hs run
+          python examples/SoftHier/software/spatz_check/util/spatz_datagen.py -M 64
+          cfg=examples/SoftHier/config/arch_spatz_check.py app=examples/SoftHier/software/spatz_check make hs run
+          cfg=examples/SoftHier/config/arch_NoC512.py app=examples/SoftHier/software/gemm_systolic make hs runv
+          cfg=examples/SoftHier/config/arch_NoC1024.py app=examples/SoftHier/software/gemm_systolic make hs runv pfto
+          python examples/SoftHier/assembled/HBM_preload_example/preload/hbm_data.py
+          cfg=examples/SoftHier/assembled/HBM_preload_example/config/arch.py app=examples/SoftHier/assembled/HBM_preload_example/software pld=examples/SoftHier/assembled/HBM_preload_example/preload/preload.elf make hs runv
+      - name: Run SoftHier Tutorial
+        run: |
+          source sourceme.sh
+          make -C tutorial/0_softhier_architecture_introduction/ all
+          make -C tutorial/1_HBM_accesses/ hbm_pld
+          make -C tutorial/1_HBM_accesses/ hbm_l1
+          make -C tutorial/1_HBM_accesses/ l1_hbm
+          make -C tutorial/1_HBM_accesses/ hbm_dump
+      - name: SoftHier Scale Check
+        run: |
+          source sourceme.sh
+          cfg=examples/SoftHier/config/arch_test_8x8.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_16x16.py app=examples/SoftHier/software/scale_check make hs run
+          cfg=examples/SoftHier/config/arch_test_32x32.py app=examples/SoftHier/software/scale_check make hs run
 
   # Removed due to no space left on eth machine
   # build_eth:

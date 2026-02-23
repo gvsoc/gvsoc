@@ -1,0 +1,13 @@
+**/attn.h
+**/gemm.h
+**/norm.h
+**/rope.h
+**/acti.h
+**/moeg.h
+**/moec.h
+**/moed.h
+**/tmla.h
+**/preload.elf
+**/preload.dump
+**/preload.h
+out
