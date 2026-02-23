@@ -2,8 +2,9 @@ docs/developer/_build/
 build/
 /install/
 __pycache__/
-add_dramsyslib_patches/build_dynlib_from_github_dramsys5/DRAMSys
-add_dramsyslib_patches/build_dynlib_from_github_dramsys5/cmake*
+soft_hier/build_dynlib_from_github_dramsys5/DRAMSys
+soft_hier/build_dynlib_from_github_dramsys5/cmake*
+flex_cluster_arch*
 *DRAMSysRecordable*
 *debug_binary*
 *gvsoc_config.json
@@ -13,3 +14,12 @@ add_dramsyslib_patches/build_dynlib_from_github_dramsys5/cmake*
 third_party/
 *trace_file.txt
 *tx_uart.log
+result*
+sw_build*
+pyenv*
+soft_hier/flex_cluster_sdk/runtime/include/flex_cluster_arch.*
+dump*
+test.sh
+softhier.log
+data*.h
+*_trace.json

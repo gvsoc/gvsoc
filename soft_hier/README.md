@@ -1,0 +1,27 @@
+## To-Do List
+
+- [x] Support Main Memory Preloading
+- [x] Update the ReadMe
+	- [x] Give notion of MNK notation
+	- [x] Update Make target for HW + SW
+	- [x] Update CMD for example simulation
+- [x] Support Printf
+- [ ] SoftHier tutorial
+	- [x] SoftHier architecture configuration
+		- [x] Familiarize with basic runtime
+	- [x] HBM Pre-load and Post-load
+	- [ ] Compute with Snitch core
+	- [ ] Compute with RedMulE
+	- [ ] Compute with Spatz
+	- [ ] Advanced Synchronization
+		- [ ] global sync
+		- [ ] intra cluster sync
+		- [ ] group cluster sync
+	- [ ] Advanced DMA APIs
+- [ ] Bug fixing and feature improvement
+	- [x] Update the collective primitive API
+		- [x] Update all SW using collective primitives
+	- [ ] Segmental fault issue with some cases of sucessive async_DMA
+	- [ ] Issue with >32bit address HBM preloading
+	- [x] Add more option in the HW synchrounization schemes
+	- [ ] fine-tune cluster interco model

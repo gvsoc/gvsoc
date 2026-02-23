@@ -1,0 +1,1064 @@
+13732000: 13732: [/chip/ctrl_registers/trace                                      ] Global Barrier at 13732 ns
+13874000: 13874: [/chip/ctrl_registers/trace                                      ] Global Barrier at 13874 ns
+13885000: 13885: [/chip/ctrl_registers/trace                                      ] Global Barrier at 13885 ns
+[Print]: 16
+14024000: 14024: [/chip/ctrl_registers/trace                                      ] Global Barrier at 14024 ns
+14731000: 14731: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 14205 ns ---> 14731 ns | period = 526 ns | runtime = 526 ns
+14731000: 14731: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 14205 ns ---> 14731 ns | period = 526 ns | runtime = 526 ns
+14732000: 14732: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 14205 ns ---> 14732 ns | period = 527 ns | runtime = 527 ns
+14885000: 14885: [/chip/ctrl_registers/trace                                      ] Global Barrier at 14885 ns
+15565000: 15565: [/chip/ctrl_registers/trace                                      ] Global Barrier at 15565 ns
+16829000: 16829: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 15616 ns ---> 16829 ns | period = 1213 ns | runtime = 1213 ns
+17011000: 17011: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 16881 ns ---> 17011 ns | period = 130 ns | runtime = 1343 ns
+18666000: 18666: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 16106 ns ---> 18666 ns | period = 2560 ns | uti = 0.800 | runtime = 2560 ns | matmul id = 1
+18666000: 18666: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 16106 ns ---> 18666 ns | period = 2560 ns | uti = 0.800 | runtime = 2560 ns | matmul id = 1
+18666000: 18666: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 16106 ns ---> 18666 ns | period = 2560 ns | uti = 0.800 | runtime = 2560 ns | matmul id = 1
+18931000: 18931: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 16094 ns ---> 18931 ns | period = 2837 ns | uti = 0.722 | runtime = 2837 ns | matmul id = 1
+18933000: 18933: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 18672 ns ---> 18933 ns | period = 261 ns | runtime = 261 ns | id = 1
+18933000: 18933: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 18672 ns ---> 18933 ns | period = 261 ns | runtime = 261 ns | id = 1
+18933000: 18933: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 18672 ns ---> 18933 ns | period = 261 ns | runtime = 261 ns | id = 1
+19198000: 19198: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 18937 ns ---> 19198 ns | period = 261 ns | runtime = 261 ns | id = 1
+19292000: 19292: [/chip/ctrl_registers/trace                                      ] Global Barrier at 19292 ns
+19373000: 19373: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 19354 ns ---> 19373 ns | period = 19 ns | runtime = 545 ns
+19373000: 19373: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 19354 ns ---> 19373 ns | period = 19 ns | runtime = 545 ns
+19374000: 19374: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 19354 ns ---> 19374 ns | period = 20 ns | runtime = 547 ns
+19543000: 19543: [/chip/ctrl_registers/trace                                      ] Global Barrier at 19543 ns
+19600000: 19600: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 19580 ns ---> 19600 ns | period = 20 ns | runtime = 1363 ns
+19600000: 19600: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 19580 ns ---> 19600 ns | period = 20 ns | runtime = 565 ns
+19600000: 19600: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 19580 ns ---> 19600 ns | period = 20 ns | runtime = 565 ns
+19600000: 19600: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 19581 ns ---> 19600 ns | period = 19 ns | runtime = 566 ns
+19718000: 19718: [/chip/ctrl_registers/trace                                      ] Global Barrier at 19718 ns
+19994000: 19994: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 19732 ns ---> 19994 ns | period = 262 ns | runtime = 523 ns | id = 2
+19994000: 19994: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 19732 ns ---> 19994 ns | period = 262 ns | runtime = 523 ns | id = 2
+19994000: 19994: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 19732 ns ---> 19994 ns | period = 262 ns | runtime = 523 ns | id = 2
+19994000: 19994: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 19732 ns ---> 19994 ns | period = 262 ns | runtime = 523 ns | id = 2
+20258000: 20258: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 19997 ns ---> 20258 ns | period = 261 ns | runtime = 784 ns | id = 3
+20258000: 20258: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 19997 ns ---> 20258 ns | period = 261 ns | runtime = 784 ns | id = 3
+20258000: 20258: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 19997 ns ---> 20258 ns | period = 261 ns | runtime = 784 ns | id = 3
+20258000: 20258: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 19997 ns ---> 20258 ns | period = 261 ns | runtime = 784 ns | id = 3
+20374000: 20374: [/chip/ctrl_registers/trace                                      ] Global Barrier at 20374 ns
+20430000: 20430: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 20411 ns ---> 20430 ns | period = 19 ns | runtime = 584 ns
+20430000: 20430: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 20411 ns ---> 20430 ns | period = 19 ns | runtime = 584 ns
+20431000: 20431: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 20411 ns ---> 20431 ns | period = 20 ns | runtime = 586 ns
+20547000: 20547: [/chip/ctrl_registers/trace                                      ] Global Barrier at 20547 ns
+20605000: 20605: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 20585 ns ---> 20605 ns | period = 20 ns | runtime = 606 ns
+20613000: 20613: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 20594 ns ---> 20613 ns | period = 19 ns | runtime = 603 ns
+20613000: 20613: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 20594 ns ---> 20613 ns | period = 19 ns | runtime = 1382 ns
+20614000: 20614: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 20594 ns ---> 20614 ns | period = 20 ns | runtime = 604 ns
+20756000: 20756: [/chip/ctrl_registers/trace                                      ] Global Barrier at 20756 ns
+21298000: 21298: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 20784 ns ---> 21298 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21298000: 21298: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 20784 ns ---> 21298 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21298000: 21298: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 20784 ns ---> 21298 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21299000: 21299: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 20785 ns ---> 21299 ns | period = 514 ns | runtime = 1298 ns | id = 4
+21408000: 21408: [/chip/ctrl_registers/trace                                      ] Global Barrier at 21408 ns
+21988000: 21988: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 21462 ns ---> 21988 ns | period = 526 ns | runtime = 1130 ns
+21988000: 21988: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 21462 ns ---> 21988 ns | period = 526 ns | runtime = 1129 ns
+21989000: 21989: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 21462 ns ---> 21989 ns | period = 527 ns | runtime = 1133 ns
+22105000: 22105: [/chip/ctrl_registers/trace                                      ] Global Barrier at 22105 ns
+23397000: 23397: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 22182 ns ---> 23397 ns | period = 1215 ns | runtime = 2344 ns
+23397000: 23397: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 22182 ns ---> 23397 ns | period = 1215 ns | runtime = 2345 ns
+23398000: 23398: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 22183 ns ---> 23398 ns | period = 1215 ns | runtime = 2348 ns
+24547000: 24547: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 22183 ns ---> 24547 ns | period = 2364 ns | runtime = 3746 ns
+24696000: 24696: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 22120 ns ---> 24696 ns | period = 2576 ns | uti = 0.795 | runtime = 5136 ns | matmul id = 2
+24696000: 24696: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 22120 ns ---> 24696 ns | period = 2576 ns | uti = 0.795 | runtime = 5136 ns | matmul id = 2
+24696000: 24696: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 22120 ns ---> 24696 ns | period = 2576 ns | uti = 0.795 | runtime = 5413 ns | matmul id = 2
+24697000: 24697: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 22121 ns ---> 24697 ns | period = 2576 ns | uti = 0.795 | runtime = 5136 ns | matmul id = 2
+24798000: 24798: [/chip/ctrl_registers/trace                                      ] Global Barrier at 24798 ns
+25386000: 25386: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 24860 ns ---> 25386 ns | period = 526 ns | runtime = 4272 ns
+25387000: 25387: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 24860 ns ---> 25387 ns | period = 527 ns | runtime = 2872 ns
+25387000: 25387: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 24860 ns ---> 25387 ns | period = 527 ns | runtime = 2871 ns
+25387000: 25387: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 24860 ns ---> 25387 ns | period = 527 ns | runtime = 2875 ns
+25515000: 25515: [/chip/ctrl_registers/trace                                      ] Global Barrier at 25515 ns
+26265000: 26265: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 25738 ns ---> 26265 ns | period = 527 ns | runtime = 3399 ns
+26266000: 26266: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 25739 ns ---> 26266 ns | period = 527 ns | runtime = 3398 ns
+26267000: 26267: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 25740 ns ---> 26267 ns | period = 527 ns | runtime = 3402 ns
+26416000: 26416: [/chip/ctrl_registers/trace                                      ] Global Barrier at 26416 ns
+27096000: 27096: [/chip/ctrl_registers/trace                                      ] Global Barrier at 27096 ns
+28362000: 28362: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 27147 ns ---> 28362 ns | period = 1215 ns | runtime = 5487 ns
+28544000: 28544: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 28414 ns ---> 28544 ns | period = 130 ns | runtime = 5617 ns
+30197000: 30197: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 27637 ns ---> 30197 ns | period = 2560 ns | uti = 0.800 | runtime = 7696 ns | matmul id = 3
+30197000: 30197: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 27637 ns ---> 30197 ns | period = 2560 ns | uti = 0.800 | runtime = 7696 ns | matmul id = 3
+30197000: 30197: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 27637 ns ---> 30197 ns | period = 2560 ns | uti = 0.800 | runtime = 7696 ns | matmul id = 3
+30464000: 30464: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 30203 ns ---> 30464 ns | period = 261 ns | runtime = 1559 ns | id = 5
+30464000: 30464: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 30203 ns ---> 30464 ns | period = 261 ns | runtime = 1559 ns | id = 5
+30464000: 30464: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 30203 ns ---> 30464 ns | period = 261 ns | runtime = 1559 ns | id = 5
+30464000: 30464: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 27625 ns ---> 30464 ns | period = 2839 ns | uti = 0.721 | runtime = 8252 ns | matmul id = 3
+30731000: 30731: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 30470 ns ---> 30731 ns | period = 261 ns | runtime = 1559 ns | id = 5
+30825000: 30825: [/chip/ctrl_registers/trace                                      ] Global Barrier at 30825 ns
+30906000: 30906: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 30887 ns ---> 30906 ns | period = 19 ns | runtime = 3418 ns
+30906000: 30906: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 30887 ns ---> 30906 ns | period = 19 ns | runtime = 3417 ns
+30907000: 30907: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 30887 ns ---> 30907 ns | period = 20 ns | runtime = 3422 ns
+31076000: 31076: [/chip/ctrl_registers/trace                                      ] Global Barrier at 31076 ns
+31133000: 31133: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 31113 ns ---> 31133 ns | period = 20 ns | runtime = 5637 ns
+31133000: 31133: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 31113 ns ---> 31133 ns | period = 20 ns | runtime = 3438 ns
+31133000: 31133: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 31113 ns ---> 31133 ns | period = 20 ns | runtime = 3437 ns
+31133000: 31133: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 31114 ns ---> 31133 ns | period = 19 ns | runtime = 3441 ns
+31252000: 31252: [/chip/ctrl_registers/trace                                      ] Global Barrier at 31252 ns
+31528000: 31528: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 31266 ns ---> 31528 ns | period = 262 ns | runtime = 1821 ns | id = 6
+31528000: 31528: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 31266 ns ---> 31528 ns | period = 262 ns | runtime = 1821 ns | id = 6
+31528000: 31528: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 31266 ns ---> 31528 ns | period = 262 ns | runtime = 1821 ns | id = 6
+31532000: 31532: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 31270 ns ---> 31532 ns | period = 262 ns | runtime = 1821 ns | id = 6
+31792000: 31792: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 31531 ns ---> 31792 ns | period = 261 ns | runtime = 2082 ns | id = 7
+31792000: 31792: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 31531 ns ---> 31792 ns | period = 261 ns | runtime = 2082 ns | id = 7
+31792000: 31792: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 31531 ns ---> 31792 ns | period = 261 ns | runtime = 2082 ns | id = 7
+31796000: 31796: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 31535 ns ---> 31796 ns | period = 261 ns | runtime = 2082 ns | id = 7
+31909000: 31909: [/chip/ctrl_registers/trace                                      ] Global Barrier at 31909 ns
+31965000: 31965: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 31946 ns ---> 31965 ns | period = 19 ns | runtime = 3457 ns
+31965000: 31965: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 31946 ns ---> 31965 ns | period = 19 ns | runtime = 3456 ns
+31966000: 31966: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 31946 ns ---> 31966 ns | period = 20 ns | runtime = 3461 ns
+32082000: 32082: [/chip/ctrl_registers/trace                                      ] Global Barrier at 32082 ns
+32140000: 32140: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 32120 ns ---> 32140 ns | period = 20 ns | runtime = 3481 ns
+32148000: 32148: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 32129 ns ---> 32148 ns | period = 19 ns | runtime = 3475 ns
+32148000: 32148: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 32129 ns ---> 32148 ns | period = 19 ns | runtime = 5656 ns
+32149000: 32149: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 32129 ns ---> 32149 ns | period = 20 ns | runtime = 3477 ns
+32290000: 32290: [/chip/ctrl_registers/trace                                      ] Global Barrier at 32290 ns
+32832000: 32832: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 32318 ns ---> 32832 ns | period = 514 ns | runtime = 2596 ns | id = 8
+32832000: 32832: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 32318 ns ---> 32832 ns | period = 514 ns | runtime = 2596 ns | id = 8
+32832000: 32832: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 32318 ns ---> 32832 ns | period = 514 ns | runtime = 2596 ns | id = 8
+32832000: 32832: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 32318 ns ---> 32832 ns | period = 514 ns | runtime = 2596 ns | id = 8
+32941000: 32941: [/chip/ctrl_registers/trace                                      ] Global Barrier at 32941 ns
+33521000: 33521: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 32995 ns ---> 33521 ns | period = 526 ns | runtime = 4003 ns
+33521000: 33521: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 32995 ns ---> 33521 ns | period = 526 ns | runtime = 4001 ns
+33522000: 33522: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 32995 ns ---> 33522 ns | period = 527 ns | runtime = 4008 ns
+33638000: 33638: [/chip/ctrl_registers/trace                                      ] Global Barrier at 33638 ns
+34930000: 34930: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 33715 ns ---> 34930 ns | period = 1215 ns | runtime = 5216 ns
+34930000: 34930: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 33715 ns ---> 34930 ns | period = 1215 ns | runtime = 5218 ns
+34931000: 34931: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 33716 ns ---> 34931 ns | period = 1215 ns | runtime = 5223 ns
+36080000: 36080: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 33716 ns ---> 36080 ns | period = 2364 ns | runtime = 8020 ns
+36229000: 36229: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 33653 ns ---> 36229 ns | period = 2576 ns | uti = 0.795 | runtime = 10272 ns | matmul id = 4
+36229000: 36229: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 33653 ns ---> 36229 ns | period = 2576 ns | uti = 0.795 | runtime = 10272 ns | matmul id = 4
+36229000: 36229: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 33653 ns ---> 36229 ns | period = 2576 ns | uti = 0.795 | runtime = 10828 ns | matmul id = 4
+36230000: 36230: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 33654 ns ---> 36230 ns | period = 2576 ns | uti = 0.795 | runtime = 10272 ns | matmul id = 4
+36330000: 36330: [/chip/ctrl_registers/trace                                      ] Global Barrier at 36330 ns
+36918000: 36918: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 36392 ns ---> 36918 ns | period = 526 ns | runtime = 8546 ns
+36919000: 36919: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 36392 ns ---> 36919 ns | period = 527 ns | runtime = 5745 ns
+36919000: 36919: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 36392 ns ---> 36919 ns | period = 527 ns | runtime = 5743 ns
+36919000: 36919: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 36392 ns ---> 36919 ns | period = 527 ns | runtime = 5750 ns
+37047000: 37047: [/chip/ctrl_registers/trace                                      ] Global Barrier at 37047 ns
+37821000: 37821: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 37294 ns ---> 37821 ns | period = 527 ns | runtime = 6272 ns
+37822000: 37822: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 37295 ns ---> 37822 ns | period = 527 ns | runtime = 6270 ns
+37823000: 37823: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 37296 ns ---> 37823 ns | period = 527 ns | runtime = 6277 ns
+37972000: 37972: [/chip/ctrl_registers/trace                                      ] Global Barrier at 37972 ns
+38652000: 38652: [/chip/ctrl_registers/trace                                      ] Global Barrier at 38652 ns
+39918000: 39918: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 38703 ns ---> 39918 ns | period = 1215 ns | runtime = 9761 ns
+40100000: 40100: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 39970 ns ---> 40100 ns | period = 130 ns | runtime = 9891 ns
+41753000: 41753: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 39193 ns ---> 41753 ns | period = 2560 ns | uti = 0.800 | runtime = 12832 ns | matmul id = 5
+41753000: 41753: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 39193 ns ---> 41753 ns | period = 2560 ns | uti = 0.800 | runtime = 12832 ns | matmul id = 5
+41753000: 41753: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 39193 ns ---> 41753 ns | period = 2560 ns | uti = 0.800 | runtime = 12832 ns | matmul id = 5
+42020000: 42020: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 41759 ns ---> 42020 ns | period = 261 ns | runtime = 2857 ns | id = 9
+42020000: 42020: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 41759 ns ---> 42020 ns | period = 261 ns | runtime = 2857 ns | id = 9
+42020000: 42020: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 41759 ns ---> 42020 ns | period = 261 ns | runtime = 2857 ns | id = 9
+42020000: 42020: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 39181 ns ---> 42020 ns | period = 2839 ns | uti = 0.721 | runtime = 13667 ns | matmul id = 5
+42287000: 42287: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 42026 ns ---> 42287 ns | period = 261 ns | runtime = 2857 ns | id = 9
+42381000: 42381: [/chip/ctrl_registers/trace                                      ] Global Barrier at 42381 ns
+42462000: 42462: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 42443 ns ---> 42462 ns | period = 19 ns | runtime = 6291 ns
+42462000: 42462: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 42443 ns ---> 42462 ns | period = 19 ns | runtime = 6289 ns
+42463000: 42463: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 42443 ns ---> 42463 ns | period = 20 ns | runtime = 6297 ns
+42632000: 42632: [/chip/ctrl_registers/trace                                      ] Global Barrier at 42632 ns
+42689000: 42689: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 42669 ns ---> 42689 ns | period = 20 ns | runtime = 9911 ns
+42689000: 42689: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 42669 ns ---> 42689 ns | period = 20 ns | runtime = 6311 ns
+42689000: 42689: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 42669 ns ---> 42689 ns | period = 20 ns | runtime = 6309 ns
+42689000: 42689: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 42670 ns ---> 42689 ns | period = 19 ns | runtime = 6316 ns
+42808000: 42808: [/chip/ctrl_registers/trace                                      ] Global Barrier at 42808 ns
+43084000: 43084: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 42822 ns ---> 43084 ns | period = 262 ns | runtime = 3119 ns | id = 10
+43084000: 43084: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 42822 ns ---> 43084 ns | period = 262 ns | runtime = 3119 ns | id = 10
+43084000: 43084: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 42822 ns ---> 43084 ns | period = 262 ns | runtime = 3119 ns | id = 10
+43088000: 43088: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 42826 ns ---> 43088 ns | period = 262 ns | runtime = 3119 ns | id = 10
+43348000: 43348: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 43087 ns ---> 43348 ns | period = 261 ns | runtime = 3380 ns | id = 11
+43348000: 43348: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 43087 ns ---> 43348 ns | period = 261 ns | runtime = 3380 ns | id = 11
+43348000: 43348: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 43087 ns ---> 43348 ns | period = 261 ns | runtime = 3380 ns | id = 11
+43352000: 43352: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 43091 ns ---> 43352 ns | period = 261 ns | runtime = 3380 ns | id = 11
+43465000: 43465: [/chip/ctrl_registers/trace                                      ] Global Barrier at 43465 ns
+43521000: 43521: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 43502 ns ---> 43521 ns | period = 19 ns | runtime = 6330 ns
+43521000: 43521: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 43502 ns ---> 43521 ns | period = 19 ns | runtime = 6328 ns
+43522000: 43522: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 43502 ns ---> 43522 ns | period = 20 ns | runtime = 6336 ns
+43638000: 43638: [/chip/ctrl_registers/trace                                      ] Global Barrier at 43638 ns
+43696000: 43696: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 43676 ns ---> 43696 ns | period = 20 ns | runtime = 6356 ns
+43704000: 43704: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 43685 ns ---> 43704 ns | period = 19 ns | runtime = 6347 ns
+43704000: 43704: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 43685 ns ---> 43704 ns | period = 19 ns | runtime = 9930 ns
+43705000: 43705: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 43685 ns ---> 43705 ns | period = 20 ns | runtime = 6350 ns
+43847000: 43847: [/chip/ctrl_registers/trace                                      ] Global Barrier at 43847 ns
+44389000: 44389: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 43875 ns ---> 44389 ns | period = 514 ns | runtime = 3894 ns | id = 12
+44389000: 44389: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 43875 ns ---> 44389 ns | period = 514 ns | runtime = 3894 ns | id = 12
+44389000: 44389: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 43875 ns ---> 44389 ns | period = 514 ns | runtime = 3894 ns | id = 12
+44390000: 44390: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 43876 ns ---> 44390 ns | period = 514 ns | runtime = 3894 ns | id = 12
+44500000: 44500: [/chip/ctrl_registers/trace                                      ] Global Barrier at 44500 ns
+45080000: 45080: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 44554 ns ---> 45080 ns | period = 526 ns | runtime = 6876 ns
+45080000: 45080: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 44554 ns ---> 45080 ns | period = 526 ns | runtime = 6873 ns
+45081000: 45081: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 44554 ns ---> 45081 ns | period = 527 ns | runtime = 6883 ns
+45197000: 45197: [/chip/ctrl_registers/trace                                      ] Global Barrier at 45197 ns
+46489000: 46489: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 45274 ns ---> 46489 ns | period = 1215 ns | runtime = 8091 ns
+46489000: 46489: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 45274 ns ---> 46489 ns | period = 1215 ns | runtime = 8088 ns
+46490000: 46490: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 45275 ns ---> 46490 ns | period = 1215 ns | runtime = 8098 ns
+47639000: 47639: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 45275 ns ---> 47639 ns | period = 2364 ns | runtime = 12294 ns
+47788000: 47788: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 45212 ns ---> 47788 ns | period = 2576 ns | uti = 0.795 | runtime = 15408 ns | matmul id = 6
+47788000: 47788: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 45212 ns ---> 47788 ns | period = 2576 ns | uti = 0.795 | runtime = 15408 ns | matmul id = 6
+47788000: 47788: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 45212 ns ---> 47788 ns | period = 2576 ns | uti = 0.795 | runtime = 16243 ns | matmul id = 6
+47789000: 47789: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 45213 ns ---> 47789 ns | period = 2576 ns | uti = 0.795 | runtime = 15408 ns | matmul id = 6
+47889000: 47889: [/chip/ctrl_registers/trace                                      ] Global Barrier at 47889 ns
+48477000: 48477: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 47951 ns ---> 48477 ns | period = 526 ns | runtime = 12820 ns
+48478000: 48478: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 47951 ns ---> 48478 ns | period = 527 ns | runtime = 8618 ns
+48478000: 48478: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 47951 ns ---> 48478 ns | period = 527 ns | runtime = 8615 ns
+48478000: 48478: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 47951 ns ---> 48478 ns | period = 527 ns | runtime = 8625 ns
+48605000: 48605: [/chip/ctrl_registers/trace                                      ] Global Barrier at 48605 ns
+49372000: 49372: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 48845 ns ---> 49372 ns | period = 527 ns | runtime = 9152 ns
+49379000: 49379: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 48852 ns ---> 49379 ns | period = 527 ns | runtime = 9145 ns
+49379000: 49379: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 48853 ns ---> 49379 ns | period = 526 ns | runtime = 9141 ns
+49529000: 49529: [/chip/ctrl_registers/trace                                      ] Global Barrier at 49529 ns
+50208000: 50208: [/chip/ctrl_registers/trace                                      ] Global Barrier at 50208 ns
+51474000: 51474: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 50259 ns ---> 51474 ns | period = 1215 ns | runtime = 14035 ns
+51656000: 51656: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 51526 ns ---> 51656 ns | period = 130 ns | runtime = 14165 ns
+53309000: 53309: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 50749 ns ---> 53309 ns | period = 2560 ns | uti = 0.800 | runtime = 17968 ns | matmul id = 7
+53309000: 53309: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 50749 ns ---> 53309 ns | period = 2560 ns | uti = 0.800 | runtime = 17968 ns | matmul id = 7
+53309000: 53309: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 50749 ns ---> 53309 ns | period = 2560 ns | uti = 0.800 | runtime = 17968 ns | matmul id = 7
+53569000: 53569: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 50737 ns ---> 53569 ns | period = 2832 ns | uti = 0.723 | runtime = 19075 ns | matmul id = 7
+53576000: 53576: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 53315 ns ---> 53576 ns | period = 261 ns | runtime = 4155 ns | id = 13
+53576000: 53576: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 53315 ns ---> 53576 ns | period = 261 ns | runtime = 4155 ns | id = 13
+53576000: 53576: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 53315 ns ---> 53576 ns | period = 261 ns | runtime = 4155 ns | id = 13
+53836000: 53836: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 53575 ns ---> 53836 ns | period = 261 ns | runtime = 4155 ns | id = 13
+53930000: 53930: [/chip/ctrl_registers/trace                                      ] Global Barrier at 53930 ns
+54011000: 54011: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 53992 ns ---> 54011 ns | period = 19 ns | runtime = 9164 ns
+54011000: 54011: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 53992 ns ---> 54011 ns | period = 19 ns | runtime = 9160 ns
+54012000: 54012: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 53992 ns ---> 54012 ns | period = 20 ns | runtime = 9172 ns
+54181000: 54181: [/chip/ctrl_registers/trace                                      ] Global Barrier at 54181 ns
+54238000: 54238: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 54218 ns ---> 54238 ns | period = 20 ns | runtime = 14185 ns
+54238000: 54238: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 54218 ns ---> 54238 ns | period = 20 ns | runtime = 9184 ns
+54238000: 54238: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 54218 ns ---> 54238 ns | period = 20 ns | runtime = 9180 ns
+54238000: 54238: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 54219 ns ---> 54238 ns | period = 19 ns | runtime = 9191 ns
+54357000: 54357: [/chip/ctrl_registers/trace                                      ] Global Barrier at 54357 ns
+54633000: 54633: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 54371 ns ---> 54633 ns | period = 262 ns | runtime = 4417 ns | id = 14
+54633000: 54633: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 54371 ns ---> 54633 ns | period = 262 ns | runtime = 4417 ns | id = 14
+54633000: 54633: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 54371 ns ---> 54633 ns | period = 262 ns | runtime = 4417 ns | id = 14
+54637000: 54637: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 54375 ns ---> 54637 ns | period = 262 ns | runtime = 4417 ns | id = 14
+54897000: 54897: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 54636 ns ---> 54897 ns | period = 261 ns | runtime = 4678 ns | id = 15
+54897000: 54897: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 54636 ns ---> 54897 ns | period = 261 ns | runtime = 4678 ns | id = 15
+54897000: 54897: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 54636 ns ---> 54897 ns | period = 261 ns | runtime = 4678 ns | id = 15
+54901000: 54901: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 54640 ns ---> 54901 ns | period = 261 ns | runtime = 4678 ns | id = 15
+55014000: 55014: [/chip/ctrl_registers/trace                                      ] Global Barrier at 55014 ns
+55070000: 55070: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 55051 ns ---> 55070 ns | period = 19 ns | runtime = 9203 ns
+55070000: 55070: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 55051 ns ---> 55070 ns | period = 19 ns | runtime = 9199 ns
+55071000: 55071: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 55051 ns ---> 55071 ns | period = 20 ns | runtime = 9211 ns
+55187000: 55187: [/chip/ctrl_registers/trace                                      ] Global Barrier at 55187 ns
+55245000: 55245: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 55225 ns ---> 55245 ns | period = 20 ns | runtime = 9231 ns
+55253000: 55253: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 55234 ns ---> 55253 ns | period = 19 ns | runtime = 9218 ns
+55253000: 55253: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 55234 ns ---> 55253 ns | period = 19 ns | runtime = 14204 ns
+55254000: 55254: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 55234 ns ---> 55254 ns | period = 20 ns | runtime = 9223 ns
+55395000: 55395: [/chip/ctrl_registers/trace                                      ] Global Barrier at 55395 ns
+55937000: 55937: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 55423 ns ---> 55937 ns | period = 514 ns | runtime = 5192 ns | id = 16
+55937000: 55937: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 55423 ns ---> 55937 ns | period = 514 ns | runtime = 5192 ns | id = 16
+55937000: 55937: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 55423 ns ---> 55937 ns | period = 514 ns | runtime = 5192 ns | id = 16
+55937000: 55937: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 55423 ns ---> 55937 ns | period = 514 ns | runtime = 5192 ns | id = 16
+56046000: 56046: [/chip/ctrl_registers/trace                                      ] Global Barrier at 56046 ns
+56626000: 56626: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 56100 ns ---> 56626 ns | period = 526 ns | runtime = 9749 ns
+56626000: 56626: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 56100 ns ---> 56626 ns | period = 526 ns | runtime = 9744 ns
+56627000: 56627: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 56100 ns ---> 56627 ns | period = 527 ns | runtime = 9758 ns
+56744000: 56744: [/chip/ctrl_registers/trace                                      ] Global Barrier at 56744 ns
+58036000: 58036: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 56821 ns ---> 58036 ns | period = 1215 ns | runtime = 10959 ns
+58036000: 58036: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 56821 ns ---> 58036 ns | period = 1215 ns | runtime = 10964 ns
+58037000: 58037: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 56822 ns ---> 58037 ns | period = 1215 ns | runtime = 10973 ns
+59186000: 59186: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 56822 ns ---> 59186 ns | period = 2364 ns | runtime = 16568 ns
+59335000: 59335: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 56759 ns ---> 59335 ns | period = 2576 ns | uti = 0.795 | runtime = 20544 ns | matmul id = 8
+59335000: 59335: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 56759 ns ---> 59335 ns | period = 2576 ns | uti = 0.795 | runtime = 20544 ns | matmul id = 8
+59335000: 59335: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 56759 ns ---> 59335 ns | period = 2576 ns | uti = 0.795 | runtime = 21651 ns | matmul id = 8
+59336000: 59336: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 56760 ns ---> 59336 ns | period = 2576 ns | uti = 0.795 | runtime = 20544 ns | matmul id = 8
+59436000: 59436: [/chip/ctrl_registers/trace                                      ] Global Barrier at 59436 ns
+60024000: 60024: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 59498 ns ---> 60024 ns | period = 526 ns | runtime = 17094 ns
+60025000: 60025: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 59498 ns ---> 60025 ns | period = 527 ns | runtime = 11491 ns
+60025000: 60025: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 59498 ns ---> 60025 ns | period = 527 ns | runtime = 11486 ns
+60025000: 60025: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 59498 ns ---> 60025 ns | period = 527 ns | runtime = 11500 ns
+60153000: 60153: [/chip/ctrl_registers/trace                                      ] Global Barrier at 60153 ns
+60903000: 60903: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 60376 ns ---> 60903 ns | period = 527 ns | runtime = 12018 ns
+60904000: 60904: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 60377 ns ---> 60904 ns | period = 527 ns | runtime = 12013 ns
+60905000: 60905: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 60378 ns ---> 60905 ns | period = 527 ns | runtime = 12027 ns
+61054000: 61054: [/chip/ctrl_registers/trace                                      ] Global Barrier at 61054 ns
+61734000: 61734: [/chip/ctrl_registers/trace                                      ] Global Barrier at 61734 ns
+63000000: 63000: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 61785 ns ---> 63000 ns | period = 1215 ns | runtime = 18309 ns
+63182000: 63182: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 63052 ns ---> 63182 ns | period = 130 ns | runtime = 18439 ns
+64835000: 64835: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 62275 ns ---> 64835 ns | period = 2560 ns | uti = 0.800 | runtime = 23104 ns | matmul id = 9
+64835000: 64835: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 62275 ns ---> 64835 ns | period = 2560 ns | uti = 0.800 | runtime = 23104 ns | matmul id = 9
+64835000: 64835: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 62275 ns ---> 64835 ns | period = 2560 ns | uti = 0.800 | runtime = 23104 ns | matmul id = 9
+65102000: 65102: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 64841 ns ---> 65102 ns | period = 261 ns | runtime = 5453 ns | id = 17
+65102000: 65102: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 64841 ns ---> 65102 ns | period = 261 ns | runtime = 5453 ns | id = 17
+65102000: 65102: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 64841 ns ---> 65102 ns | period = 261 ns | runtime = 5453 ns | id = 17
+65102000: 65102: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 62263 ns ---> 65102 ns | period = 2839 ns | uti = 0.721 | runtime = 24490 ns | matmul id = 9
+65369000: 65369: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 65108 ns ---> 65369 ns | period = 261 ns | runtime = 5453 ns | id = 17
+65463000: 65463: [/chip/ctrl_registers/trace                                      ] Global Barrier at 65463 ns
+65544000: 65544: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 65525 ns ---> 65544 ns | period = 19 ns | runtime = 12037 ns
+65544000: 65544: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 65525 ns ---> 65544 ns | period = 19 ns | runtime = 12032 ns
+65545000: 65545: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 65525 ns ---> 65545 ns | period = 20 ns | runtime = 12047 ns
+65714000: 65714: [/chip/ctrl_registers/trace                                      ] Global Barrier at 65714 ns
+65771000: 65771: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 65751 ns ---> 65771 ns | period = 20 ns | runtime = 18459 ns
+65771000: 65771: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 65751 ns ---> 65771 ns | period = 20 ns | runtime = 12057 ns
+65771000: 65771: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 65751 ns ---> 65771 ns | period = 20 ns | runtime = 12052 ns
+65771000: 65771: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 65752 ns ---> 65771 ns | period = 19 ns | runtime = 12066 ns
+65889000: 65889: [/chip/ctrl_registers/trace                                      ] Global Barrier at 65889 ns
+66165000: 66165: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 65903 ns ---> 66165 ns | period = 262 ns | runtime = 5715 ns | id = 18
+66165000: 66165: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 65903 ns ---> 66165 ns | period = 262 ns | runtime = 5715 ns | id = 18
+66165000: 66165: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 65903 ns ---> 66165 ns | period = 262 ns | runtime = 5715 ns | id = 18
+66169000: 66169: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 65907 ns ---> 66169 ns | period = 262 ns | runtime = 5715 ns | id = 18
+66429000: 66429: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 66168 ns ---> 66429 ns | period = 261 ns | runtime = 5976 ns | id = 19
+66429000: 66429: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 66168 ns ---> 66429 ns | period = 261 ns | runtime = 5976 ns | id = 19
+66429000: 66429: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 66168 ns ---> 66429 ns | period = 261 ns | runtime = 5976 ns | id = 19
+66433000: 66433: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 66172 ns ---> 66433 ns | period = 261 ns | runtime = 5976 ns | id = 19
+66545000: 66545: [/chip/ctrl_registers/trace                                      ] Global Barrier at 66545 ns
+66601000: 66601: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 66582 ns ---> 66601 ns | period = 19 ns | runtime = 12076 ns
+66602000: 66602: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 66582 ns ---> 66602 ns | period = 20 ns | runtime = 12072 ns
+66603000: 66603: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 66583 ns ---> 66603 ns | period = 20 ns | runtime = 12086 ns
+66718000: 66718: [/chip/ctrl_registers/trace                                      ] Global Barrier at 66718 ns
+66776000: 66776: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 66756 ns ---> 66776 ns | period = 20 ns | runtime = 12106 ns
+66784000: 66784: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 66765 ns ---> 66784 ns | period = 19 ns | runtime = 12091 ns
+66784000: 66784: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 66765 ns ---> 66784 ns | period = 19 ns | runtime = 18478 ns
+66785000: 66785: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 66765 ns ---> 66785 ns | period = 20 ns | runtime = 12096 ns
+66926000: 66926: [/chip/ctrl_registers/trace                                      ] Global Barrier at 66926 ns
+67468000: 67468: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 66954 ns ---> 67468 ns | period = 514 ns | runtime = 6490 ns | id = 20
+67468000: 67468: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 66954 ns ---> 67468 ns | period = 514 ns | runtime = 6490 ns | id = 20
+67468000: 67468: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 66954 ns ---> 67468 ns | period = 514 ns | runtime = 6490 ns | id = 20
+67468000: 67468: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 66954 ns ---> 67468 ns | period = 514 ns | runtime = 6490 ns | id = 20
+67578000: 67578: [/chip/ctrl_registers/trace                                      ] Global Barrier at 67578 ns
+68158000: 68158: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 67632 ns ---> 68158 ns | period = 526 ns | runtime = 12622 ns
+68158000: 68158: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 67632 ns ---> 68158 ns | period = 526 ns | runtime = 12617 ns
+68159000: 68159: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 67632 ns ---> 68159 ns | period = 527 ns | runtime = 12633 ns
+68275000: 68275: [/chip/ctrl_registers/trace                                      ] Global Barrier at 68275 ns
+69565000: 69565: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 68352 ns ---> 69565 ns | period = 1213 ns | runtime = 13835 ns
+69565000: 69565: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 68352 ns ---> 69565 ns | period = 1213 ns | runtime = 13830 ns
+69566000: 69566: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 68353 ns ---> 69566 ns | period = 1213 ns | runtime = 13846 ns
+70715000: 70715: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 68353 ns ---> 70715 ns | period = 2362 ns | runtime = 20840 ns
+70866000: 70866: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 68290 ns ---> 70866 ns | period = 2576 ns | uti = 0.795 | runtime = 25680 ns | matmul id = 10
+70866000: 70866: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 68290 ns ---> 70866 ns | period = 2576 ns | uti = 0.795 | runtime = 25680 ns | matmul id = 10
+70866000: 70866: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 68290 ns ---> 70866 ns | period = 2576 ns | uti = 0.795 | runtime = 27066 ns | matmul id = 10
+70867000: 70867: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 68291 ns ---> 70867 ns | period = 2576 ns | uti = 0.795 | runtime = 25680 ns | matmul id = 10
+70967000: 70967: [/chip/ctrl_registers/trace                                      ] Global Barrier at 70967 ns
+71555000: 71555: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 71029 ns ---> 71555 ns | period = 526 ns | runtime = 21366 ns
+71556000: 71556: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 71029 ns ---> 71556 ns | period = 527 ns | runtime = 14362 ns
+71556000: 71556: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 71029 ns ---> 71556 ns | period = 527 ns | runtime = 14357 ns
+71556000: 71556: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 71029 ns ---> 71556 ns | period = 527 ns | runtime = 14373 ns
+71684000: 71684: [/chip/ctrl_registers/trace                                      ] Global Barrier at 71684 ns
+72458000: 72458: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 71931 ns ---> 72458 ns | period = 527 ns | runtime = 14889 ns
+72459000: 72459: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 71932 ns ---> 72459 ns | period = 527 ns | runtime = 14884 ns
+72460000: 72460: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 71933 ns ---> 72460 ns | period = 527 ns | runtime = 14900 ns
+72609000: 72609: [/chip/ctrl_registers/trace                                      ] Global Barrier at 72609 ns
+73289000: 73289: [/chip/ctrl_registers/trace                                      ] Global Barrier at 73289 ns
+74555000: 74555: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 73340 ns ---> 74555 ns | period = 1215 ns | runtime = 22581 ns
+74737000: 74737: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 74607 ns ---> 74737 ns | period = 130 ns | runtime = 22711 ns
+76390000: 76390: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 73830 ns ---> 76390 ns | period = 2560 ns | uti = 0.800 | runtime = 28240 ns | matmul id = 11
+76390000: 76390: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 73830 ns ---> 76390 ns | period = 2560 ns | uti = 0.800 | runtime = 28240 ns | matmul id = 11
+76390000: 76390: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 73830 ns ---> 76390 ns | period = 2560 ns | uti = 0.800 | runtime = 28240 ns | matmul id = 11
+76657000: 76657: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 76396 ns ---> 76657 ns | period = 261 ns | runtime = 6751 ns | id = 21
+76657000: 76657: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 76396 ns ---> 76657 ns | period = 261 ns | runtime = 6751 ns | id = 21
+76657000: 76657: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 76396 ns ---> 76657 ns | period = 261 ns | runtime = 6751 ns | id = 21
+76657000: 76657: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 73818 ns ---> 76657 ns | period = 2839 ns | uti = 0.721 | runtime = 29905 ns | matmul id = 11
+76924000: 76924: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 76663 ns ---> 76924 ns | period = 261 ns | runtime = 6751 ns | id = 21
+77018000: 77018: [/chip/ctrl_registers/trace                                      ] Global Barrier at 77018 ns
+77099000: 77099: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 77080 ns ---> 77099 ns | period = 19 ns | runtime = 14908 ns
+77099000: 77099: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 77080 ns ---> 77099 ns | period = 19 ns | runtime = 14903 ns
+77100000: 77100: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 77080 ns ---> 77100 ns | period = 20 ns | runtime = 14920 ns
+77269000: 77269: [/chip/ctrl_registers/trace                                      ] Global Barrier at 77269 ns
+77326000: 77326: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 77306 ns ---> 77326 ns | period = 20 ns | runtime = 22731 ns
+77326000: 77326: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 77306 ns ---> 77326 ns | period = 20 ns | runtime = 14928 ns
+77326000: 77326: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 77306 ns ---> 77326 ns | period = 20 ns | runtime = 14923 ns
+77326000: 77326: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 77307 ns ---> 77326 ns | period = 19 ns | runtime = 14939 ns
+77445000: 77445: [/chip/ctrl_registers/trace                                      ] Global Barrier at 77445 ns
+77721000: 77721: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 77459 ns ---> 77721 ns | period = 262 ns | runtime = 7013 ns | id = 22
+77721000: 77721: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 77459 ns ---> 77721 ns | period = 262 ns | runtime = 7013 ns | id = 22
+77721000: 77721: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 77459 ns ---> 77721 ns | period = 262 ns | runtime = 7013 ns | id = 22
+77725000: 77725: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 77463 ns ---> 77725 ns | period = 262 ns | runtime = 7013 ns | id = 22
+77985000: 77985: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 77724 ns ---> 77985 ns | period = 261 ns | runtime = 7274 ns | id = 23
+77985000: 77985: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 77724 ns ---> 77985 ns | period = 261 ns | runtime = 7274 ns | id = 23
+77985000: 77985: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 77724 ns ---> 77985 ns | period = 261 ns | runtime = 7274 ns | id = 23
+77989000: 77989: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 77728 ns ---> 77989 ns | period = 261 ns | runtime = 7274 ns | id = 23
+78102000: 78102: [/chip/ctrl_registers/trace                                      ] Global Barrier at 78102 ns
+78158000: 78158: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 78139 ns ---> 78158 ns | period = 19 ns | runtime = 14947 ns
+78158000: 78158: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 78139 ns ---> 78158 ns | period = 19 ns | runtime = 14942 ns
+78159000: 78159: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 78139 ns ---> 78159 ns | period = 20 ns | runtime = 14959 ns
+78275000: 78275: [/chip/ctrl_registers/trace                                      ] Global Barrier at 78275 ns
+78333000: 78333: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 78313 ns ---> 78333 ns | period = 20 ns | runtime = 14979 ns
+78341000: 78341: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 78322 ns ---> 78341 ns | period = 19 ns | runtime = 14961 ns
+78341000: 78341: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 78322 ns ---> 78341 ns | period = 19 ns | runtime = 22750 ns
+78342000: 78342: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 78322 ns ---> 78342 ns | period = 20 ns | runtime = 14967 ns
+78484000: 78484: [/chip/ctrl_registers/trace                                      ] Global Barrier at 78484 ns
+79026000: 79026: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 78512 ns ---> 79026 ns | period = 514 ns | runtime = 7788 ns | id = 24
+79026000: 79026: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 78512 ns ---> 79026 ns | period = 514 ns | runtime = 7788 ns | id = 24
+79026000: 79026: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 78512 ns ---> 79026 ns | period = 514 ns | runtime = 7788 ns | id = 24
+79027000: 79027: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 78513 ns ---> 79027 ns | period = 514 ns | runtime = 7788 ns | id = 24
+79138000: 79138: [/chip/ctrl_registers/trace                                      ] Global Barrier at 79138 ns
+79718000: 79718: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 79192 ns ---> 79718 ns | period = 526 ns | runtime = 15493 ns
+79718000: 79718: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 79192 ns ---> 79718 ns | period = 526 ns | runtime = 15487 ns
+79719000: 79719: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 79192 ns ---> 79719 ns | period = 527 ns | runtime = 15506 ns
+79836000: 79836: [/chip/ctrl_registers/trace                                      ] Global Barrier at 79836 ns
+81129000: 81129: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 79913 ns ---> 81129 ns | period = 1216 ns | runtime = 16703 ns
+81129000: 81129: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 79913 ns ---> 81129 ns | period = 1216 ns | runtime = 16709 ns
+81130000: 81130: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 79914 ns ---> 81130 ns | period = 1216 ns | runtime = 16722 ns
+82250000: 82250: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 79914 ns ---> 82250 ns | period = 2336 ns | runtime = 25086 ns
+82411000: 82411: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 79851 ns ---> 82411 ns | period = 2560 ns | uti = 0.800 | runtime = 30800 ns | matmul id = 12
+82411000: 82411: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 79851 ns ---> 82411 ns | period = 2560 ns | uti = 0.800 | runtime = 30800 ns | matmul id = 12
+82411000: 82411: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 79851 ns ---> 82411 ns | period = 2560 ns | uti = 0.800 | runtime = 32465 ns | matmul id = 12
+82412000: 82412: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 79852 ns ---> 82412 ns | period = 2560 ns | uti = 0.800 | runtime = 30800 ns | matmul id = 12
+82505000: 82505: [/chip/ctrl_registers/trace                                      ] Global Barrier at 82505 ns
+83093000: 83093: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 82567 ns ---> 83093 ns | period = 526 ns | runtime = 25612 ns
+83094000: 83094: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 82567 ns ---> 83094 ns | period = 527 ns | runtime = 17236 ns
+83094000: 83094: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 82567 ns ---> 83094 ns | period = 527 ns | runtime = 17230 ns
+83094000: 83094: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 82567 ns ---> 83094 ns | period = 527 ns | runtime = 17249 ns
+83221000: 83221: [/chip/ctrl_registers/trace                                      ] Global Barrier at 83221 ns
+83963000: 83963: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 83436 ns ---> 83963 ns | period = 527 ns | runtime = 17776 ns
+83971000: 83971: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 83444 ns ---> 83971 ns | period = 527 ns | runtime = 17763 ns
+83971000: 83971: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 83445 ns ---> 83971 ns | period = 526 ns | runtime = 17756 ns
+84121000: 84121: [/chip/ctrl_registers/trace                                      ] Global Barrier at 84121 ns
+84801000: 84801: [/chip/ctrl_registers/trace                                      ] Global Barrier at 84801 ns
+86150000: 86150: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 84852 ns ---> 86150 ns | period = 1298 ns | runtime = 26910 ns
+86331000: 86331: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 86201 ns ---> 86331 ns | period = 130 ns | runtime = 27040 ns
+87902000: 87902: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 85342 ns ---> 87902 ns | period = 2560 ns | uti = 0.800 | runtime = 33360 ns | matmul id = 13
+87902000: 87902: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 85342 ns ---> 87902 ns | period = 2560 ns | uti = 0.800 | runtime = 33360 ns | matmul id = 13
+87902000: 87902: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 85342 ns ---> 87902 ns | period = 2560 ns | uti = 0.800 | runtime = 33360 ns | matmul id = 13
+88169000: 88169: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 87908 ns ---> 88169 ns | period = 261 ns | runtime = 8049 ns | id = 25
+88169000: 88169: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 87908 ns ---> 88169 ns | period = 261 ns | runtime = 8049 ns | id = 25
+88169000: 88169: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 87908 ns ---> 88169 ns | period = 261 ns | runtime = 8049 ns | id = 25
+88186000: 88186: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 85330 ns ---> 88186 ns | period = 2856 ns | uti = 0.717 | runtime = 35321 ns | matmul id = 13
+88453000: 88453: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 88192 ns ---> 88453 ns | period = 261 ns | runtime = 8049 ns | id = 25
+88547000: 88547: [/chip/ctrl_registers/trace                                      ] Global Barrier at 88547 ns
+88628000: 88628: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 88609 ns ---> 88628 ns | period = 19 ns | runtime = 17782 ns
+88628000: 88628: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 88609 ns ---> 88628 ns | period = 19 ns | runtime = 17775 ns
+88629000: 88629: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 88609 ns ---> 88629 ns | period = 20 ns | runtime = 17796 ns
+88798000: 88798: [/chip/ctrl_registers/trace                                      ] Global Barrier at 88798 ns
+88855000: 88855: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 88835 ns ---> 88855 ns | period = 20 ns | runtime = 27060 ns
+88855000: 88855: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 88835 ns ---> 88855 ns | period = 20 ns | runtime = 17802 ns
+88855000: 88855: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 88835 ns ---> 88855 ns | period = 20 ns | runtime = 17795 ns
+88855000: 88855: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 88836 ns ---> 88855 ns | period = 19 ns | runtime = 17815 ns
+88974000: 88974: [/chip/ctrl_registers/trace                                      ] Global Barrier at 88974 ns
+89250000: 89250: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 88988 ns ---> 89250 ns | period = 262 ns | runtime = 8311 ns | id = 26
+89250000: 89250: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 88988 ns ---> 89250 ns | period = 262 ns | runtime = 8311 ns | id = 26
+89250000: 89250: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 88988 ns ---> 89250 ns | period = 262 ns | runtime = 8311 ns | id = 26
+89254000: 89254: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 88992 ns ---> 89254 ns | period = 262 ns | runtime = 8311 ns | id = 26
+89514000: 89514: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 89253 ns ---> 89514 ns | period = 261 ns | runtime = 8572 ns | id = 27
+89514000: 89514: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 89253 ns ---> 89514 ns | period = 261 ns | runtime = 8572 ns | id = 27
+89514000: 89514: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 89253 ns ---> 89514 ns | period = 261 ns | runtime = 8572 ns | id = 27
+89518000: 89518: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 89257 ns ---> 89518 ns | period = 261 ns | runtime = 8572 ns | id = 27
+89631000: 89631: [/chip/ctrl_registers/trace                                      ] Global Barrier at 89631 ns
+89687000: 89687: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 89668 ns ---> 89687 ns | period = 19 ns | runtime = 17821 ns
+89687000: 89687: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 89668 ns ---> 89687 ns | period = 19 ns | runtime = 17814 ns
+89688000: 89688: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 89668 ns ---> 89688 ns | period = 20 ns | runtime = 17835 ns
+89804000: 89804: [/chip/ctrl_registers/trace                                      ] Global Barrier at 89804 ns
+89862000: 89862: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 89842 ns ---> 89862 ns | period = 20 ns | runtime = 17855 ns
+89870000: 89870: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 89851 ns ---> 89870 ns | period = 19 ns | runtime = 17833 ns
+89870000: 89870: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 89851 ns ---> 89870 ns | period = 19 ns | runtime = 27079 ns
+89871000: 89871: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 89851 ns ---> 89871 ns | period = 20 ns | runtime = 17841 ns
+90013000: 90013: [/chip/ctrl_registers/trace                                      ] Global Barrier at 90013 ns
+90555000: 90555: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 90041 ns ---> 90555 ns | period = 514 ns | runtime = 9086 ns | id = 28
+90555000: 90555: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 90041 ns ---> 90555 ns | period = 514 ns | runtime = 9086 ns | id = 28
+90555000: 90555: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 90041 ns ---> 90555 ns | period = 514 ns | runtime = 9086 ns | id = 28
+90556000: 90556: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 90042 ns ---> 90556 ns | period = 514 ns | runtime = 9086 ns | id = 28
+90666000: 90666: [/chip/ctrl_registers/trace                                      ] Global Barrier at 90666 ns
+91246000: 91246: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 90720 ns ---> 91246 ns | period = 526 ns | runtime = 18367 ns
+91246000: 91246: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 90720 ns ---> 91246 ns | period = 526 ns | runtime = 18359 ns
+91247000: 91247: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 90720 ns ---> 91247 ns | period = 527 ns | runtime = 18382 ns
+91363000: 91363: [/chip/ctrl_registers/trace                                      ] Global Barrier at 91363 ns
+92655000: 92655: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 91440 ns ---> 92655 ns | period = 1215 ns | runtime = 19582 ns
+92655000: 92655: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 91440 ns ---> 92655 ns | period = 1215 ns | runtime = 19574 ns
+92656000: 92656: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 91441 ns ---> 92656 ns | period = 1215 ns | runtime = 19597 ns
+93804000: 93804: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 91441 ns ---> 93804 ns | period = 2363 ns | runtime = 29442 ns
+93954000: 93954: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 91378 ns ---> 93954 ns | period = 2576 ns | uti = 0.795 | runtime = 35936 ns | matmul id = 14
+93954000: 93954: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 91378 ns ---> 93954 ns | period = 2576 ns | uti = 0.795 | runtime = 35936 ns | matmul id = 14
+93954000: 93954: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 91378 ns ---> 93954 ns | period = 2576 ns | uti = 0.795 | runtime = 37897 ns | matmul id = 14
+93955000: 93955: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 91379 ns ---> 93955 ns | period = 2576 ns | uti = 0.795 | runtime = 35936 ns | matmul id = 14
+94055000: 94055: [/chip/ctrl_registers/trace                                      ] Global Barrier at 94055 ns
+94643000: 94643: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 94117 ns ---> 94643 ns | period = 526 ns | runtime = 29968 ns
+94644000: 94644: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 94117 ns ---> 94644 ns | period = 527 ns | runtime = 20109 ns
+94644000: 94644: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 94117 ns ---> 94644 ns | period = 527 ns | runtime = 20101 ns
+94644000: 94644: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 94117 ns ---> 94644 ns | period = 527 ns | runtime = 20124 ns
+94772000: 94772: [/chip/ctrl_registers/trace                                      ] Global Barrier at 94772 ns
+95522000: 95522: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 94995 ns ---> 95522 ns | period = 527 ns | runtime = 20636 ns
+95523000: 95523: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 94996 ns ---> 95523 ns | period = 527 ns | runtime = 20628 ns
+95524000: 95524: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 94997 ns ---> 95524 ns | period = 527 ns | runtime = 20651 ns
+95673000: 95673: [/chip/ctrl_registers/trace                                      ] Global Barrier at 95673 ns
+96353000: 96353: [/chip/ctrl_registers/trace                                      ] Global Barrier at 96353 ns
+97766000: 97766: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 96404 ns ---> 97766 ns | period = 1362 ns | runtime = 31330 ns
+97947000: 97947: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 97817 ns ---> 97947 ns | period = 130 ns | runtime = 31460 ns
+99454000: 99454: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 96894 ns ---> 99454 ns | period = 2560 ns | uti = 0.800 | runtime = 38496 ns | matmul id = 15
+99454000: 99454: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 96894 ns ---> 99454 ns | period = 2560 ns | uti = 0.800 | runtime = 38496 ns | matmul id = 15
+99454000: 99454: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 96894 ns ---> 99454 ns | period = 2560 ns | uti = 0.800 | runtime = 38496 ns | matmul id = 15
+99721000: 99721: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 99460 ns ---> 99721 ns | period = 261 ns | runtime = 9347 ns | id = 29
+99721000: 99721: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 99460 ns ---> 99721 ns | period = 261 ns | runtime = 9347 ns | id = 29
+99721000: 99721: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 99460 ns ---> 99721 ns | period = 261 ns | runtime = 9347 ns | id = 29
+99746000: 99746: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 96882 ns ---> 99746 ns | period = 2864 ns | uti = 0.715 | runtime = 40761 ns | matmul id = 15
+100013000: 100013: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 99752 ns ---> 100013 ns | period = 261 ns | runtime = 9347 ns | id = 29
+100107000: 100107: [/chip/ctrl_registers/trace                                      ] Global Barrier at 100107 ns
+100188000: 100188: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 100169 ns ---> 100188 ns | period = 19 ns | runtime = 20655 ns
+100188000: 100188: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 100169 ns ---> 100188 ns | period = 19 ns | runtime = 20647 ns
+100189000: 100189: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 100169 ns ---> 100189 ns | period = 20 ns | runtime = 20671 ns
+100358000: 100358: [/chip/ctrl_registers/trace                                      ] Global Barrier at 100358 ns
+100415000: 100415: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 100395 ns ---> 100415 ns | period = 20 ns | runtime = 31480 ns
+100415000: 100415: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 100395 ns ---> 100415 ns | period = 20 ns | runtime = 20675 ns
+100415000: 100415: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 100395 ns ---> 100415 ns | period = 20 ns | runtime = 20667 ns
+100415000: 100415: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 100396 ns ---> 100415 ns | period = 19 ns | runtime = 20690 ns
+100534000: 100534: [/chip/ctrl_registers/trace                                      ] Global Barrier at 100534 ns
+100810000: 100810: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 100548 ns ---> 100810 ns | period = 262 ns | runtime = 9609 ns | id = 30
+100810000: 100810: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 100548 ns ---> 100810 ns | period = 262 ns | runtime = 9609 ns | id = 30
+100810000: 100810: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 100548 ns ---> 100810 ns | period = 262 ns | runtime = 9609 ns | id = 30
+100814000: 100814: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 100552 ns ---> 100814 ns | period = 262 ns | runtime = 9609 ns | id = 30
+101074000: 101074: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 100813 ns ---> 101074 ns | period = 261 ns | runtime = 9870 ns | id = 31
+101074000: 101074: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 100813 ns ---> 101074 ns | period = 261 ns | runtime = 9870 ns | id = 31
+101074000: 101074: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 100813 ns ---> 101074 ns | period = 261 ns | runtime = 9870 ns | id = 31
+101078000: 101078: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 100817 ns ---> 101078 ns | period = 261 ns | runtime = 9870 ns | id = 31
+101191000: 101191: [/chip/ctrl_registers/trace                                      ] Global Barrier at 101191 ns
+101247000: 101247: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 101228 ns ---> 101247 ns | period = 19 ns | runtime = 20694 ns
+101247000: 101247: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 101228 ns ---> 101247 ns | period = 19 ns | runtime = 20686 ns
+101248000: 101248: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 101228 ns ---> 101248 ns | period = 20 ns | runtime = 20710 ns
+101364000: 101364: [/chip/ctrl_registers/trace                                      ] Global Barrier at 101364 ns
+101422000: 101422: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 101402 ns ---> 101422 ns | period = 20 ns | runtime = 20730 ns
+101430000: 101430: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 101411 ns ---> 101430 ns | period = 19 ns | runtime = 20705 ns
+101430000: 101430: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 101411 ns ---> 101430 ns | period = 19 ns | runtime = 31499 ns
+101431000: 101431: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 101411 ns ---> 101431 ns | period = 20 ns | runtime = 20714 ns
+101572000: 101572: [/chip/ctrl_registers/trace                                      ] Global Barrier at 101572 ns
+102114000: 102114: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 101600 ns ---> 102114 ns | period = 514 ns | runtime = 10384 ns | id = 32
+102114000: 102114: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 101600 ns ---> 102114 ns | period = 514 ns | runtime = 10384 ns | id = 32
+102114000: 102114: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 101600 ns ---> 102114 ns | period = 514 ns | runtime = 10384 ns | id = 32
+102114000: 102114: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 101600 ns ---> 102114 ns | period = 514 ns | runtime = 10384 ns | id = 32
+102225000: 102225: [/chip/ctrl_registers/trace                                      ] Global Barrier at 102225 ns
+102805000: 102805: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 102279 ns ---> 102805 ns | period = 526 ns | runtime = 21240 ns
+102805000: 102805: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 102279 ns ---> 102805 ns | period = 526 ns | runtime = 21231 ns
+102806000: 102806: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 102279 ns ---> 102806 ns | period = 527 ns | runtime = 21257 ns
+102922000: 102922: [/chip/ctrl_registers/trace                                      ] Global Barrier at 102922 ns
+104214000: 104214: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 102999 ns ---> 104214 ns | period = 1215 ns | runtime = 22446 ns
+104214000: 104214: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 102999 ns ---> 104214 ns | period = 1215 ns | runtime = 22455 ns
+104215000: 104215: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 103000 ns ---> 104215 ns | period = 1215 ns | runtime = 22472 ns
+105229000: 105229: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 103000 ns ---> 105229 ns | period = 2229 ns | runtime = 33728 ns
+105513000: 105513: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 102937 ns ---> 105513 ns | period = 2576 ns | uti = 0.795 | runtime = 41072 ns | matmul id = 16
+105513000: 105513: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 102937 ns ---> 105513 ns | period = 2576 ns | uti = 0.795 | runtime = 41072 ns | matmul id = 16
+105513000: 105513: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 102937 ns ---> 105513 ns | period = 2576 ns | uti = 0.795 | runtime = 43337 ns | matmul id = 16
+105514000: 105514: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 102938 ns ---> 105514 ns | period = 2576 ns | uti = 0.795 | runtime = 41072 ns | matmul id = 16
+105614000: 105614: [/chip/ctrl_registers/trace                                      ] Global Barrier at 105614 ns
+106202000: 106202: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 105676 ns ---> 106202 ns | period = 526 ns | runtime = 34254 ns
+106203000: 106203: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 105676 ns ---> 106203 ns | period = 527 ns | runtime = 22982 ns
+106203000: 106203: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 105676 ns ---> 106203 ns | period = 527 ns | runtime = 22973 ns
+106203000: 106203: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 105676 ns ---> 106203 ns | period = 527 ns | runtime = 22999 ns
+106331000: 106331: [/chip/ctrl_registers/trace                                      ] Global Barrier at 106331 ns
+107105000: 107105: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 106578 ns ---> 107105 ns | period = 527 ns | runtime = 23509 ns
+107106000: 107106: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 106579 ns ---> 107106 ns | period = 527 ns | runtime = 23500 ns
+107107000: 107107: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 106580 ns ---> 107107 ns | period = 527 ns | runtime = 23526 ns
+107256000: 107256: [/chip/ctrl_registers/trace                                      ] Global Barrier at 107256 ns
+107936000: 107936: [/chip/ctrl_registers/trace                                      ] Global Barrier at 107936 ns
+109202000: 109202: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 107987 ns ---> 109202 ns | period = 1215 ns | runtime = 35469 ns
+109384000: 109384: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 109254 ns ---> 109384 ns | period = 130 ns | runtime = 35599 ns
+111037000: 111037: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 108477 ns ---> 111037 ns | period = 2560 ns | uti = 0.800 | runtime = 43632 ns | matmul id = 17
+111037000: 111037: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 108477 ns ---> 111037 ns | period = 2560 ns | uti = 0.800 | runtime = 43632 ns | matmul id = 17
+111037000: 111037: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 108477 ns ---> 111037 ns | period = 2560 ns | uti = 0.800 | runtime = 43632 ns | matmul id = 17
+111304000: 111304: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 111043 ns ---> 111304 ns | period = 261 ns | runtime = 10645 ns | id = 33
+111304000: 111304: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 111043 ns ---> 111304 ns | period = 261 ns | runtime = 10645 ns | id = 33
+111304000: 111304: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 111043 ns ---> 111304 ns | period = 261 ns | runtime = 10645 ns | id = 33
+111304000: 111304: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 108465 ns ---> 111304 ns | period = 2839 ns | uti = 0.721 | runtime = 46176 ns | matmul id = 17
+111571000: 111571: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 111310 ns ---> 111571 ns | period = 261 ns | runtime = 10645 ns | id = 33
+111665000: 111665: [/chip/ctrl_registers/trace                                      ] Global Barrier at 111665 ns
+111746000: 111746: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 111727 ns ---> 111746 ns | period = 19 ns | runtime = 23528 ns
+111746000: 111746: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 111727 ns ---> 111746 ns | period = 19 ns | runtime = 23519 ns
+111747000: 111747: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 111727 ns ---> 111747 ns | period = 20 ns | runtime = 23546 ns
+111916000: 111916: [/chip/ctrl_registers/trace                                      ] Global Barrier at 111916 ns
+111973000: 111973: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 111953 ns ---> 111973 ns | period = 20 ns | runtime = 35619 ns
+111973000: 111973: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 111953 ns ---> 111973 ns | period = 20 ns | runtime = 23548 ns
+111973000: 111973: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 111953 ns ---> 111973 ns | period = 20 ns | runtime = 23539 ns
+111973000: 111973: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 111954 ns ---> 111973 ns | period = 19 ns | runtime = 23565 ns
+112092000: 112092: [/chip/ctrl_registers/trace                                      ] Global Barrier at 112092 ns
+112368000: 112368: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 112106 ns ---> 112368 ns | period = 262 ns | runtime = 10907 ns | id = 34
+112368000: 112368: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 112106 ns ---> 112368 ns | period = 262 ns | runtime = 10907 ns | id = 34
+112368000: 112368: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 112106 ns ---> 112368 ns | period = 262 ns | runtime = 10907 ns | id = 34
+112372000: 112372: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 112110 ns ---> 112372 ns | period = 262 ns | runtime = 10907 ns | id = 34
+112632000: 112632: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 112371 ns ---> 112632 ns | period = 261 ns | runtime = 11168 ns | id = 35
+112632000: 112632: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 112371 ns ---> 112632 ns | period = 261 ns | runtime = 11168 ns | id = 35
+112632000: 112632: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 112371 ns ---> 112632 ns | period = 261 ns | runtime = 11168 ns | id = 35
+112636000: 112636: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 112375 ns ---> 112636 ns | period = 261 ns | runtime = 11168 ns | id = 35
+112749000: 112749: [/chip/ctrl_registers/trace                                      ] Global Barrier at 112749 ns
+112805000: 112805: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 112786 ns ---> 112805 ns | period = 19 ns | runtime = 23567 ns
+112805000: 112805: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 112786 ns ---> 112805 ns | period = 19 ns | runtime = 23558 ns
+112806000: 112806: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 112786 ns ---> 112806 ns | period = 20 ns | runtime = 23585 ns
+112922000: 112922: [/chip/ctrl_registers/trace                                      ] Global Barrier at 112922 ns
+112980000: 112980: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 112960 ns ---> 112980 ns | period = 20 ns | runtime = 23605 ns
+112988000: 112988: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 112969 ns ---> 112988 ns | period = 19 ns | runtime = 23577 ns
+112988000: 112988: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 112969 ns ---> 112988 ns | period = 19 ns | runtime = 35638 ns
+112989000: 112989: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 112969 ns ---> 112989 ns | period = 20 ns | runtime = 23587 ns
+113131000: 113131: [/chip/ctrl_registers/trace                                      ] Global Barrier at 113131 ns
+113673000: 113673: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 113159 ns ---> 113673 ns | period = 514 ns | runtime = 11682 ns | id = 36
+113673000: 113673: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 113159 ns ---> 113673 ns | period = 514 ns | runtime = 11682 ns | id = 36
+113673000: 113673: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 113159 ns ---> 113673 ns | period = 514 ns | runtime = 11682 ns | id = 36
+113674000: 113674: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 113160 ns ---> 113674 ns | period = 514 ns | runtime = 11682 ns | id = 36
+113782000: 113782: [/chip/ctrl_registers/trace                                      ] Global Barrier at 113782 ns
+114362000: 114362: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 113836 ns ---> 114362 ns | period = 526 ns | runtime = 24113 ns
+114362000: 114362: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 113836 ns ---> 114362 ns | period = 526 ns | runtime = 24103 ns
+114363000: 114363: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 113836 ns ---> 114363 ns | period = 527 ns | runtime = 24132 ns
+114479000: 114479: [/chip/ctrl_registers/trace                                      ] Global Barrier at 114479 ns
+115771000: 115771: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 114556 ns ---> 115771 ns | period = 1215 ns | runtime = 25318 ns
+115771000: 115771: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 114556 ns ---> 115771 ns | period = 1215 ns | runtime = 25328 ns
+115772000: 115772: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 114557 ns ---> 115772 ns | period = 1215 ns | runtime = 25347 ns
+116786000: 116786: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 114557 ns ---> 116786 ns | period = 2229 ns | runtime = 37867 ns
+117070000: 117070: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 114494 ns ---> 117070 ns | period = 2576 ns | uti = 0.795 | runtime = 46208 ns | matmul id = 18
+117070000: 117070: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 114494 ns ---> 117070 ns | period = 2576 ns | uti = 0.795 | runtime = 46208 ns | matmul id = 18
+117070000: 117070: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 114494 ns ---> 117070 ns | period = 2576 ns | uti = 0.795 | runtime = 48752 ns | matmul id = 18
+117071000: 117071: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 114495 ns ---> 117071 ns | period = 2576 ns | uti = 0.795 | runtime = 46208 ns | matmul id = 18
+117171000: 117171: [/chip/ctrl_registers/trace                                      ] Global Barrier at 117171 ns
+117759000: 117759: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 117233 ns ---> 117759 ns | period = 526 ns | runtime = 38393 ns
+117760000: 117760: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 117233 ns ---> 117760 ns | period = 527 ns | runtime = 25855 ns
+117760000: 117760: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 117233 ns ---> 117760 ns | period = 527 ns | runtime = 25845 ns
+117760000: 117760: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 117233 ns ---> 117760 ns | period = 527 ns | runtime = 25874 ns
+117887000: 117887: [/chip/ctrl_registers/trace                                      ] Global Barrier at 117887 ns
+118629000: 118629: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 118102 ns ---> 118629 ns | period = 527 ns | runtime = 26401 ns
+118637000: 118637: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 118110 ns ---> 118637 ns | period = 527 ns | runtime = 26382 ns
+118637000: 118637: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 118111 ns ---> 118637 ns | period = 526 ns | runtime = 26371 ns
+118787000: 118787: [/chip/ctrl_registers/trace                                      ] Global Barrier at 118787 ns
+119467000: 119467: [/chip/ctrl_registers/trace                                      ] Global Barrier at 119467 ns
+120733000: 120733: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 119518 ns ---> 120733 ns | period = 1215 ns | runtime = 39608 ns
+120915000: 120915: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 120785 ns ---> 120915 ns | period = 130 ns | runtime = 39738 ns
+122568000: 122568: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 120008 ns ---> 122568 ns | period = 2560 ns | uti = 0.800 | runtime = 48768 ns | matmul id = 19
+122568000: 122568: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 120008 ns ---> 122568 ns | period = 2560 ns | uti = 0.800 | runtime = 48768 ns | matmul id = 19
+122568000: 122568: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 120008 ns ---> 122568 ns | period = 2560 ns | uti = 0.800 | runtime = 48768 ns | matmul id = 19
+122828000: 122828: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 119996 ns ---> 122828 ns | period = 2832 ns | uti = 0.723 | runtime = 51584 ns | matmul id = 19
+122835000: 122835: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 122574 ns ---> 122835 ns | period = 261 ns | runtime = 11943 ns | id = 37
+122835000: 122835: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 122574 ns ---> 122835 ns | period = 261 ns | runtime = 11943 ns | id = 37
+122835000: 122835: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 122574 ns ---> 122835 ns | period = 261 ns | runtime = 11943 ns | id = 37
+123095000: 123095: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 122834 ns ---> 123095 ns | period = 261 ns | runtime = 11943 ns | id = 37
+123189000: 123189: [/chip/ctrl_registers/trace                                      ] Global Barrier at 123189 ns
+123270000: 123270: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 123251 ns ---> 123270 ns | period = 19 ns | runtime = 26401 ns
+123270000: 123270: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 123251 ns ---> 123270 ns | period = 19 ns | runtime = 26390 ns
+123271000: 123271: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 123251 ns ---> 123271 ns | period = 20 ns | runtime = 26421 ns
+123440000: 123440: [/chip/ctrl_registers/trace                                      ] Global Barrier at 123440 ns
+123497000: 123497: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 123477 ns ---> 123497 ns | period = 20 ns | runtime = 39758 ns
+123497000: 123497: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 123477 ns ---> 123497 ns | period = 20 ns | runtime = 26421 ns
+123497000: 123497: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 123477 ns ---> 123497 ns | period = 20 ns | runtime = 26410 ns
+123497000: 123497: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 123478 ns ---> 123497 ns | period = 19 ns | runtime = 26440 ns
+123616000: 123616: [/chip/ctrl_registers/trace                                      ] Global Barrier at 123616 ns
+123892000: 123892: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 123630 ns ---> 123892 ns | period = 262 ns | runtime = 12205 ns | id = 38
+123892000: 123892: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 123630 ns ---> 123892 ns | period = 262 ns | runtime = 12205 ns | id = 38
+123892000: 123892: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 123630 ns ---> 123892 ns | period = 262 ns | runtime = 12205 ns | id = 38
+123896000: 123896: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 123634 ns ---> 123896 ns | period = 262 ns | runtime = 12205 ns | id = 38
+124156000: 124156: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 123895 ns ---> 124156 ns | period = 261 ns | runtime = 12466 ns | id = 39
+124156000: 124156: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 123895 ns ---> 124156 ns | period = 261 ns | runtime = 12466 ns | id = 39
+124156000: 124156: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 123895 ns ---> 124156 ns | period = 261 ns | runtime = 12466 ns | id = 39
+124160000: 124160: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 123899 ns ---> 124160 ns | period = 261 ns | runtime = 12466 ns | id = 39
+124273000: 124273: [/chip/ctrl_registers/trace                                      ] Global Barrier at 124273 ns
+124329000: 124329: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 124310 ns ---> 124329 ns | period = 19 ns | runtime = 26440 ns
+124329000: 124329: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 124310 ns ---> 124329 ns | period = 19 ns | runtime = 26429 ns
+124330000: 124330: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 124310 ns ---> 124330 ns | period = 20 ns | runtime = 26460 ns
+124446000: 124446: [/chip/ctrl_registers/trace                                      ] Global Barrier at 124446 ns
+124504000: 124504: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 124484 ns ---> 124504 ns | period = 20 ns | runtime = 26480 ns
+124512000: 124512: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 124493 ns ---> 124512 ns | period = 19 ns | runtime = 26448 ns
+124512000: 124512: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 124493 ns ---> 124512 ns | period = 19 ns | runtime = 39777 ns
+124513000: 124513: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 124493 ns ---> 124513 ns | period = 20 ns | runtime = 26460 ns
+124654000: 124654: [/chip/ctrl_registers/trace                                      ] Global Barrier at 124654 ns
+125196000: 125196: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 124682 ns ---> 125196 ns | period = 514 ns | runtime = 12980 ns | id = 40
+125196000: 125196: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 124682 ns ---> 125196 ns | period = 514 ns | runtime = 12980 ns | id = 40
+125196000: 125196: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 124682 ns ---> 125196 ns | period = 514 ns | runtime = 12980 ns | id = 40
+125196000: 125196: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 124682 ns ---> 125196 ns | period = 514 ns | runtime = 12980 ns | id = 40
+125307000: 125307: [/chip/ctrl_registers/trace                                      ] Global Barrier at 125307 ns
+125887000: 125887: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 125361 ns ---> 125887 ns | period = 526 ns | runtime = 26986 ns
+125887000: 125887: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 125361 ns ---> 125887 ns | period = 526 ns | runtime = 26974 ns
+125888000: 125888: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 125361 ns ---> 125888 ns | period = 527 ns | runtime = 27007 ns
+126004000: 126004: [/chip/ctrl_registers/trace                                      ] Global Barrier at 126004 ns
+127296000: 127296: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 126081 ns ---> 127296 ns | period = 1215 ns | runtime = 28201 ns
+127296000: 127296: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 126081 ns ---> 127296 ns | period = 1215 ns | runtime = 28189 ns
+127297000: 127297: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 126082 ns ---> 127297 ns | period = 1215 ns | runtime = 28222 ns
+128311000: 128311: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 126082 ns ---> 128311 ns | period = 2229 ns | runtime = 42006 ns
+128595000: 128595: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 126019 ns ---> 128595 ns | period = 2576 ns | uti = 0.795 | runtime = 51344 ns | matmul id = 20
+128595000: 128595: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 126019 ns ---> 128595 ns | period = 2576 ns | uti = 0.795 | runtime = 51344 ns | matmul id = 20
+128595000: 128595: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 126019 ns ---> 128595 ns | period = 2576 ns | uti = 0.795 | runtime = 54160 ns | matmul id = 20
+128596000: 128596: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 126020 ns ---> 128596 ns | period = 2576 ns | uti = 0.795 | runtime = 51344 ns | matmul id = 20
+128696000: 128696: [/chip/ctrl_registers/trace                                      ] Global Barrier at 128696 ns
+129284000: 129284: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 128758 ns ---> 129284 ns | period = 526 ns | runtime = 42532 ns
+129285000: 129285: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 128758 ns ---> 129285 ns | period = 527 ns | runtime = 28728 ns
+129285000: 129285: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 128758 ns ---> 129285 ns | period = 527 ns | runtime = 28716 ns
+129285000: 129285: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 128758 ns ---> 129285 ns | period = 527 ns | runtime = 28749 ns
+129413000: 129413: [/chip/ctrl_registers/trace                                      ] Global Barrier at 129413 ns
+130187000: 130187: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 129660 ns ---> 130187 ns | period = 527 ns | runtime = 29255 ns
+130188000: 130188: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 129661 ns ---> 130188 ns | period = 527 ns | runtime = 29243 ns
+130189000: 130189: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 129662 ns ---> 130189 ns | period = 527 ns | runtime = 29276 ns
+130338000: 130338: [/chip/ctrl_registers/trace                                      ] Global Barrier at 130338 ns
+131018000: 131018: [/chip/ctrl_registers/trace                                      ] Global Barrier at 131018 ns
+132284000: 132284: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 131069 ns ---> 132284 ns | period = 1215 ns | runtime = 43747 ns
+132466000: 132466: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 132336 ns ---> 132466 ns | period = 130 ns | runtime = 43877 ns
+134119000: 134119: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 131559 ns ---> 134119 ns | period = 2560 ns | uti = 0.800 | runtime = 53904 ns | matmul id = 21
+134119000: 134119: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 131559 ns ---> 134119 ns | period = 2560 ns | uti = 0.800 | runtime = 53904 ns | matmul id = 21
+134119000: 134119: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 131559 ns ---> 134119 ns | period = 2560 ns | uti = 0.800 | runtime = 53904 ns | matmul id = 21
+134379000: 134379: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 131547 ns ---> 134379 ns | period = 2832 ns | uti = 0.723 | runtime = 56992 ns | matmul id = 21
+134386000: 134386: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 134125 ns ---> 134386 ns | period = 261 ns | runtime = 13241 ns | id = 41
+134386000: 134386: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 134125 ns ---> 134386 ns | period = 261 ns | runtime = 13241 ns | id = 41
+134386000: 134386: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 134125 ns ---> 134386 ns | period = 261 ns | runtime = 13241 ns | id = 41
+134646000: 134646: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 134385 ns ---> 134646 ns | period = 261 ns | runtime = 13241 ns | id = 41
+134740000: 134740: [/chip/ctrl_registers/trace                                      ] Global Barrier at 134740 ns
+134821000: 134821: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 134802 ns ---> 134821 ns | period = 19 ns | runtime = 29274 ns
+134821000: 134821: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 134802 ns ---> 134821 ns | period = 19 ns | runtime = 29262 ns
+134822000: 134822: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 134802 ns ---> 134822 ns | period = 20 ns | runtime = 29296 ns
+134991000: 134991: [/chip/ctrl_registers/trace                                      ] Global Barrier at 134991 ns
+135048000: 135048: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 135028 ns ---> 135048 ns | period = 20 ns | runtime = 43897 ns
+135048000: 135048: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 135028 ns ---> 135048 ns | period = 20 ns | runtime = 29294 ns
+135048000: 135048: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 135028 ns ---> 135048 ns | period = 20 ns | runtime = 29282 ns
+135048000: 135048: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 135029 ns ---> 135048 ns | period = 19 ns | runtime = 29315 ns
+135166000: 135166: [/chip/ctrl_registers/trace                                      ] Global Barrier at 135166 ns
+135442000: 135442: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 135180 ns ---> 135442 ns | period = 262 ns | runtime = 13503 ns | id = 42
+135442000: 135442: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 135180 ns ---> 135442 ns | period = 262 ns | runtime = 13503 ns | id = 42
+135442000: 135442: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 135180 ns ---> 135442 ns | period = 262 ns | runtime = 13503 ns | id = 42
+135446000: 135446: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 135184 ns ---> 135446 ns | period = 262 ns | runtime = 13503 ns | id = 42
+135706000: 135706: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 135445 ns ---> 135706 ns | period = 261 ns | runtime = 13764 ns | id = 43
+135706000: 135706: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 135445 ns ---> 135706 ns | period = 261 ns | runtime = 13764 ns | id = 43
+135706000: 135706: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 135445 ns ---> 135706 ns | period = 261 ns | runtime = 13764 ns | id = 43
+135710000: 135710: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 135449 ns ---> 135710 ns | period = 261 ns | runtime = 13764 ns | id = 43
+135822000: 135822: [/chip/ctrl_registers/trace                                      ] Global Barrier at 135822 ns
+135878000: 135878: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 135859 ns ---> 135878 ns | period = 19 ns | runtime = 29313 ns
+135879000: 135879: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 135859 ns ---> 135879 ns | period = 20 ns | runtime = 29302 ns
+135880000: 135880: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 135860 ns ---> 135880 ns | period = 20 ns | runtime = 29335 ns
+135995000: 135995: [/chip/ctrl_registers/trace                                      ] Global Barrier at 135995 ns
+136053000: 136053: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 136033 ns ---> 136053 ns | period = 20 ns | runtime = 29355 ns
+136061000: 136061: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 136042 ns ---> 136061 ns | period = 19 ns | runtime = 29321 ns
+136061000: 136061: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 136042 ns ---> 136061 ns | period = 19 ns | runtime = 43916 ns
+136062000: 136062: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 136042 ns ---> 136062 ns | period = 20 ns | runtime = 29333 ns
+136203000: 136203: [/chip/ctrl_registers/trace                                      ] Global Barrier at 136203 ns
+136745000: 136745: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 136231 ns ---> 136745 ns | period = 514 ns | runtime = 14278 ns | id = 44
+136745000: 136745: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 136231 ns ---> 136745 ns | period = 514 ns | runtime = 14278 ns | id = 44
+136745000: 136745: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 136231 ns ---> 136745 ns | period = 514 ns | runtime = 14278 ns | id = 44
+136745000: 136745: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 136231 ns ---> 136745 ns | period = 514 ns | runtime = 14278 ns | id = 44
+136855000: 136855: [/chip/ctrl_registers/trace                                      ] Global Barrier at 136855 ns
+137435000: 137435: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 136909 ns ---> 137435 ns | period = 526 ns | runtime = 29859 ns
+137435000: 137435: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 136909 ns ---> 137435 ns | period = 526 ns | runtime = 29847 ns
+137436000: 137436: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 136909 ns ---> 137436 ns | period = 527 ns | runtime = 29882 ns
+137552000: 137552: [/chip/ctrl_registers/trace                                      ] Global Barrier at 137552 ns
+138844000: 138844: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 137629 ns ---> 138844 ns | period = 1215 ns | runtime = 31062 ns
+138844000: 138844: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 137629 ns ---> 138844 ns | period = 1215 ns | runtime = 31074 ns
+138845000: 138845: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 137630 ns ---> 138845 ns | period = 1215 ns | runtime = 31097 ns
+139861000: 139861: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 137630 ns ---> 139861 ns | period = 2231 ns | runtime = 46147 ns
+140143000: 140143: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 137567 ns ---> 140143 ns | period = 2576 ns | uti = 0.795 | runtime = 56480 ns | matmul id = 22
+140143000: 140143: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 137567 ns ---> 140143 ns | period = 2576 ns | uti = 0.795 | runtime = 56480 ns | matmul id = 22
+140143000: 140143: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 137567 ns ---> 140143 ns | period = 2576 ns | uti = 0.795 | runtime = 59568 ns | matmul id = 22
+140144000: 140144: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 137568 ns ---> 140144 ns | period = 2576 ns | uti = 0.795 | runtime = 56480 ns | matmul id = 22
+140245000: 140245: [/chip/ctrl_registers/trace                                      ] Global Barrier at 140245 ns
+140833000: 140833: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 140307 ns ---> 140833 ns | period = 526 ns | runtime = 46673 ns
+140834000: 140834: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 140307 ns ---> 140834 ns | period = 527 ns | runtime = 31601 ns
+140834000: 140834: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 140307 ns ---> 140834 ns | period = 527 ns | runtime = 31589 ns
+140834000: 140834: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 140307 ns ---> 140834 ns | period = 527 ns | runtime = 31624 ns
+140962000: 140962: [/chip/ctrl_registers/trace                                      ] Global Barrier at 140962 ns
+141736000: 141736: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 141209 ns ---> 141736 ns | period = 527 ns | runtime = 32128 ns
+141737000: 141737: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 141210 ns ---> 141737 ns | period = 527 ns | runtime = 32116 ns
+141738000: 141738: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 141211 ns ---> 141738 ns | period = 527 ns | runtime = 32151 ns
+141887000: 141887: [/chip/ctrl_registers/trace                                      ] Global Barrier at 141887 ns
+142567000: 142567: [/chip/ctrl_registers/trace                                      ] Global Barrier at 142567 ns
+143833000: 143833: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 142618 ns ---> 143833 ns | period = 1215 ns | runtime = 47888 ns
+144015000: 144015: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 143885 ns ---> 144015 ns | period = 130 ns | runtime = 48018 ns
+145668000: 145668: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 143108 ns ---> 145668 ns | period = 2560 ns | uti = 0.800 | runtime = 59040 ns | matmul id = 23
+145668000: 145668: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 143108 ns ---> 145668 ns | period = 2560 ns | uti = 0.800 | runtime = 59040 ns | matmul id = 23
+145668000: 145668: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 143108 ns ---> 145668 ns | period = 2560 ns | uti = 0.800 | runtime = 59040 ns | matmul id = 23
+145935000: 145935: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 145674 ns ---> 145935 ns | period = 261 ns | runtime = 14539 ns | id = 45
+145935000: 145935: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 145674 ns ---> 145935 ns | period = 261 ns | runtime = 14539 ns | id = 45
+145935000: 145935: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 145674 ns ---> 145935 ns | period = 261 ns | runtime = 14539 ns | id = 45
+145935000: 145935: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 143096 ns ---> 145935 ns | period = 2839 ns | uti = 0.721 | runtime = 62407 ns | matmul id = 23
+146202000: 146202: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 145941 ns ---> 146202 ns | period = 261 ns | runtime = 14539 ns | id = 45
+146296000: 146296: [/chip/ctrl_registers/trace                                      ] Global Barrier at 146296 ns
+146377000: 146377: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 146358 ns ---> 146377 ns | period = 19 ns | runtime = 32147 ns
+146377000: 146377: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 146358 ns ---> 146377 ns | period = 19 ns | runtime = 32135 ns
+146378000: 146378: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 146358 ns ---> 146378 ns | period = 20 ns | runtime = 32171 ns
+146547000: 146547: [/chip/ctrl_registers/trace                                      ] Global Barrier at 146547 ns
+146604000: 146604: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 146584 ns ---> 146604 ns | period = 20 ns | runtime = 48038 ns
+146604000: 146604: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 146584 ns ---> 146604 ns | period = 20 ns | runtime = 32167 ns
+146604000: 146604: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 146584 ns ---> 146604 ns | period = 20 ns | runtime = 32155 ns
+146604000: 146604: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 146585 ns ---> 146604 ns | period = 19 ns | runtime = 32190 ns
+146722000: 146722: [/chip/ctrl_registers/trace                                      ] Global Barrier at 146722 ns
+146998000: 146998: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 146736 ns ---> 146998 ns | period = 262 ns | runtime = 14801 ns | id = 46
+146998000: 146998: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 146736 ns ---> 146998 ns | period = 262 ns | runtime = 14801 ns | id = 46
+146998000: 146998: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 146736 ns ---> 146998 ns | period = 262 ns | runtime = 14801 ns | id = 46
+147002000: 147002: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 146740 ns ---> 147002 ns | period = 262 ns | runtime = 14801 ns | id = 46
+147262000: 147262: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 147001 ns ---> 147262 ns | period = 261 ns | runtime = 15062 ns | id = 47
+147262000: 147262: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 147001 ns ---> 147262 ns | period = 261 ns | runtime = 15062 ns | id = 47
+147262000: 147262: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 147001 ns ---> 147262 ns | period = 261 ns | runtime = 15062 ns | id = 47
+147266000: 147266: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 147005 ns ---> 147266 ns | period = 261 ns | runtime = 15062 ns | id = 47
+147378000: 147378: [/chip/ctrl_registers/trace                                      ] Global Barrier at 147378 ns
+147434000: 147434: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 147415 ns ---> 147434 ns | period = 19 ns | runtime = 32186 ns
+147435000: 147435: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 147415 ns ---> 147435 ns | period = 20 ns | runtime = 32175 ns
+147436000: 147436: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 147416 ns ---> 147436 ns | period = 20 ns | runtime = 32210 ns
+147551000: 147551: [/chip/ctrl_registers/trace                                      ] Global Barrier at 147551 ns
+147609000: 147609: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 147589 ns ---> 147609 ns | period = 20 ns | runtime = 32230 ns
+147617000: 147617: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 147598 ns ---> 147617 ns | period = 19 ns | runtime = 32194 ns
+147617000: 147617: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 147598 ns ---> 147617 ns | period = 19 ns | runtime = 48057 ns
+147618000: 147618: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 147598 ns ---> 147618 ns | period = 20 ns | runtime = 32206 ns
+147759000: 147759: [/chip/ctrl_registers/trace                                      ] Global Barrier at 147759 ns
+148301000: 148301: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 147787 ns ---> 148301 ns | period = 514 ns | runtime = 15576 ns | id = 48
+148301000: 148301: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 147787 ns ---> 148301 ns | period = 514 ns | runtime = 15576 ns | id = 48
+148301000: 148301: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 147787 ns ---> 148301 ns | period = 514 ns | runtime = 15576 ns | id = 48
+148301000: 148301: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 147787 ns ---> 148301 ns | period = 514 ns | runtime = 15576 ns | id = 48
+148411000: 148411: [/chip/ctrl_registers/trace                                      ] Global Barrier at 148411 ns
+148991000: 148991: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 148465 ns ---> 148991 ns | period = 526 ns | runtime = 32732 ns
+148991000: 148991: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 148465 ns ---> 148991 ns | period = 526 ns | runtime = 32720 ns
+148992000: 148992: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 148465 ns ---> 148992 ns | period = 527 ns | runtime = 32757 ns
+149108000: 149108: [/chip/ctrl_registers/trace                                      ] Global Barrier at 149108 ns
+150500000: 150500: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 149185 ns ---> 150500 ns | period = 1315 ns | runtime = 34047 ns
+150500000: 150500: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 149185 ns ---> 150500 ns | period = 1315 ns | runtime = 34035 ns
+150500000: 150500: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 149186 ns ---> 150500 ns | period = 1314 ns | runtime = 34071 ns
+151515000: 151515: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 149186 ns ---> 151515 ns | period = 2329 ns | runtime = 50386 ns
+151683000: 151683: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 149123 ns ---> 151683 ns | period = 2560 ns | uti = 0.800 | runtime = 61600 ns | matmul id = 24
+151683000: 151683: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 149123 ns ---> 151683 ns | period = 2560 ns | uti = 0.800 | runtime = 61600 ns | matmul id = 24
+151683000: 151683: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 149123 ns ---> 151683 ns | period = 2560 ns | uti = 0.800 | runtime = 64967 ns | matmul id = 24
+151684000: 151684: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 149124 ns ---> 151684 ns | period = 2560 ns | uti = 0.800 | runtime = 61600 ns | matmul id = 24
+151780000: 151780: [/chip/ctrl_registers/trace                                      ] Global Barrier at 151780 ns
+152368000: 152368: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 151842 ns ---> 152368 ns | period = 526 ns | runtime = 50912 ns
+152369000: 152369: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 151842 ns ---> 152369 ns | period = 527 ns | runtime = 34574 ns
+152369000: 152369: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 151842 ns ---> 152369 ns | period = 527 ns | runtime = 34562 ns
+152369000: 152369: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 151842 ns ---> 152369 ns | period = 527 ns | runtime = 34598 ns
+152497000: 152497: [/chip/ctrl_registers/trace                                      ] Global Barrier at 152497 ns
+153247000: 153247: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 152720 ns ---> 153247 ns | period = 527 ns | runtime = 35101 ns
+153248000: 153248: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 152721 ns ---> 153248 ns | period = 527 ns | runtime = 35089 ns
+153249000: 153249: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 152722 ns ---> 153249 ns | period = 527 ns | runtime = 35125 ns
+153398000: 153398: [/chip/ctrl_registers/trace                                      ] Global Barrier at 153398 ns
+154078000: 154078: [/chip/ctrl_registers/trace                                      ] Global Barrier at 154078 ns
+155355000: 155355: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 154129 ns ---> 155355 ns | period = 1226 ns | runtime = 52138 ns
+155536000: 155536: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 155406 ns ---> 155536 ns | period = 130 ns | runtime = 52268 ns
+157179000: 157179: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 154619 ns ---> 157179 ns | period = 2560 ns | uti = 0.800 | runtime = 64160 ns | matmul id = 25
+157179000: 157179: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 154619 ns ---> 157179 ns | period = 2560 ns | uti = 0.800 | runtime = 64160 ns | matmul id = 25
+157179000: 157179: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 154619 ns ---> 157179 ns | period = 2560 ns | uti = 0.800 | runtime = 64160 ns | matmul id = 25
+157446000: 157446: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 157185 ns ---> 157446 ns | period = 261 ns | runtime = 15837 ns | id = 49
+157446000: 157446: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 157185 ns ---> 157446 ns | period = 261 ns | runtime = 15837 ns | id = 49
+157446000: 157446: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 157185 ns ---> 157446 ns | period = 261 ns | runtime = 15837 ns | id = 49
+157455000: 157455: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 154607 ns ---> 157455 ns | period = 2848 ns | uti = 0.719 | runtime = 67815 ns | matmul id = 25
+157722000: 157722: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 157461 ns ---> 157722 ns | period = 261 ns | runtime = 15837 ns | id = 49
+157816000: 157816: [/chip/ctrl_registers/trace                                      ] Global Barrier at 157816 ns
+157897000: 157897: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 157878 ns ---> 157897 ns | period = 19 ns | runtime = 35120 ns
+157897000: 157897: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 157878 ns ---> 157897 ns | period = 19 ns | runtime = 35108 ns
+157898000: 157898: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 157878 ns ---> 157898 ns | period = 20 ns | runtime = 35145 ns
+158067000: 158067: [/chip/ctrl_registers/trace                                      ] Global Barrier at 158067 ns
+158124000: 158124: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 158104 ns ---> 158124 ns | period = 20 ns | runtime = 52288 ns
+158124000: 158124: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 158104 ns ---> 158124 ns | period = 20 ns | runtime = 35140 ns
+158124000: 158124: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 158104 ns ---> 158124 ns | period = 20 ns | runtime = 35128 ns
+158124000: 158124: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 158105 ns ---> 158124 ns | period = 19 ns | runtime = 35164 ns
+158243000: 158243: [/chip/ctrl_registers/trace                                      ] Global Barrier at 158243 ns
+158519000: 158519: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 158257 ns ---> 158519 ns | period = 262 ns | runtime = 16099 ns | id = 50
+158519000: 158519: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 158257 ns ---> 158519 ns | period = 262 ns | runtime = 16099 ns | id = 50
+158519000: 158519: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 158257 ns ---> 158519 ns | period = 262 ns | runtime = 16099 ns | id = 50
+158523000: 158523: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 158261 ns ---> 158523 ns | period = 262 ns | runtime = 16099 ns | id = 50
+158783000: 158783: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 158522 ns ---> 158783 ns | period = 261 ns | runtime = 16360 ns | id = 51
+158783000: 158783: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 158522 ns ---> 158783 ns | period = 261 ns | runtime = 16360 ns | id = 51
+158783000: 158783: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 158522 ns ---> 158783 ns | period = 261 ns | runtime = 16360 ns | id = 51
+158787000: 158787: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 158526 ns ---> 158787 ns | period = 261 ns | runtime = 16360 ns | id = 51
+158900000: 158900: [/chip/ctrl_registers/trace                                      ] Global Barrier at 158900 ns
+158956000: 158956: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 158937 ns ---> 158956 ns | period = 19 ns | runtime = 35159 ns
+158956000: 158956: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 158937 ns ---> 158956 ns | period = 19 ns | runtime = 35147 ns
+158957000: 158957: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 158937 ns ---> 158957 ns | period = 20 ns | runtime = 35184 ns
+159073000: 159073: [/chip/ctrl_registers/trace                                      ] Global Barrier at 159073 ns
+159131000: 159131: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 159111 ns ---> 159131 ns | period = 20 ns | runtime = 35204 ns
+159139000: 159139: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 159120 ns ---> 159139 ns | period = 19 ns | runtime = 35166 ns
+159139000: 159139: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 159120 ns ---> 159139 ns | period = 19 ns | runtime = 52307 ns
+159140000: 159140: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 159120 ns ---> 159140 ns | period = 20 ns | runtime = 35179 ns
+159282000: 159282: [/chip/ctrl_registers/trace                                      ] Global Barrier at 159282 ns
+159824000: 159824: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 159310 ns ---> 159824 ns | period = 514 ns | runtime = 16874 ns | id = 52
+159824000: 159824: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 159310 ns ---> 159824 ns | period = 514 ns | runtime = 16874 ns | id = 52
+159824000: 159824: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 159310 ns ---> 159824 ns | period = 514 ns | runtime = 16874 ns | id = 52
+159825000: 159825: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 159311 ns ---> 159825 ns | period = 514 ns | runtime = 16874 ns | id = 52
+159937000: 159937: [/chip/ctrl_registers/trace                                      ] Global Barrier at 159937 ns
+160517000: 160517: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 159991 ns ---> 160517 ns | period = 526 ns | runtime = 35705 ns
+160517000: 160517: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 159991 ns ---> 160517 ns | period = 526 ns | runtime = 35692 ns
+160518000: 160518: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 159991 ns ---> 160518 ns | period = 527 ns | runtime = 35731 ns
+160635000: 160635: [/chip/ctrl_registers/trace                                      ] Global Barrier at 160635 ns
+162061000: 162061: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 160712 ns ---> 162061 ns | period = 1349 ns | runtime = 37041 ns
+162061000: 162061: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 160712 ns ---> 162061 ns | period = 1349 ns | runtime = 37054 ns
+162062000: 162062: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 160713 ns ---> 162062 ns | period = 1349 ns | runtime = 37080 ns
+163075000: 163075: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 160713 ns ---> 163075 ns | period = 2362 ns | runtime = 54669 ns
+163226000: 163226: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 160650 ns ---> 163226 ns | period = 2576 ns | uti = 0.795 | runtime = 66736 ns | matmul id = 26
+163226000: 163226: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 160650 ns ---> 163226 ns | period = 2576 ns | uti = 0.795 | runtime = 66736 ns | matmul id = 26
+163226000: 163226: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 160650 ns ---> 163226 ns | period = 2576 ns | uti = 0.795 | runtime = 70391 ns | matmul id = 26
+163227000: 163227: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 160651 ns ---> 163227 ns | period = 2576 ns | uti = 0.795 | runtime = 66736 ns | matmul id = 26
+163327000: 163327: [/chip/ctrl_registers/trace                                      ] Global Barrier at 163327 ns
+163915000: 163915: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 163389 ns ---> 163915 ns | period = 526 ns | runtime = 55195 ns
+163916000: 163916: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 163389 ns ---> 163916 ns | period = 527 ns | runtime = 37581 ns
+163916000: 163916: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 163389 ns ---> 163916 ns | period = 527 ns | runtime = 37568 ns
+163916000: 163916: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 163389 ns ---> 163916 ns | period = 527 ns | runtime = 37607 ns
+164043000: 164043: [/chip/ctrl_registers/trace                                      ] Global Barrier at 164043 ns
+164810000: 164810: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 164283 ns ---> 164810 ns | period = 527 ns | runtime = 38134 ns
+164817000: 164817: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 164290 ns ---> 164817 ns | period = 527 ns | runtime = 38108 ns
+164817000: 164817: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 164291 ns ---> 164817 ns | period = 526 ns | runtime = 38094 ns
+164967000: 164967: [/chip/ctrl_registers/trace                                      ] Global Barrier at 164967 ns
+165647000: 165647: [/chip/ctrl_registers/trace                                      ] Global Barrier at 165647 ns
+166914000: 166914: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 165698 ns ---> 166914 ns | period = 1216 ns | runtime = 56411 ns
+167095000: 167095: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 166965 ns ---> 167095 ns | period = 130 ns | runtime = 56541 ns
+168748000: 168748: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 166188 ns ---> 168748 ns | period = 2560 ns | uti = 0.800 | runtime = 69296 ns | matmul id = 27
+168748000: 168748: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 166188 ns ---> 168748 ns | period = 2560 ns | uti = 0.800 | runtime = 69296 ns | matmul id = 27
+168748000: 168748: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 166188 ns ---> 168748 ns | period = 2560 ns | uti = 0.800 | runtime = 69296 ns | matmul id = 27
+169015000: 169015: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 168754 ns ---> 169015 ns | period = 261 ns | runtime = 17135 ns | id = 53
+169015000: 169015: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 168754 ns ---> 169015 ns | period = 261 ns | runtime = 17135 ns | id = 53
+169015000: 169015: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 168754 ns ---> 169015 ns | period = 261 ns | runtime = 17135 ns | id = 53
+169015000: 169015: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 166176 ns ---> 169015 ns | period = 2839 ns | uti = 0.721 | runtime = 73230 ns | matmul id = 27
+169282000: 169282: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 169021 ns ---> 169282 ns | period = 261 ns | runtime = 17135 ns | id = 53
+169376000: 169376: [/chip/ctrl_registers/trace                                      ] Global Barrier at 169376 ns
+169457000: 169457: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 169438 ns ---> 169457 ns | period = 19 ns | runtime = 38127 ns
+169457000: 169457: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 169438 ns ---> 169457 ns | period = 19 ns | runtime = 38113 ns
+169458000: 169458: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 169438 ns ---> 169458 ns | period = 20 ns | runtime = 38154 ns
+169627000: 169627: [/chip/ctrl_registers/trace                                      ] Global Barrier at 169627 ns
+169684000: 169684: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 169664 ns ---> 169684 ns | period = 20 ns | runtime = 56561 ns
+169684000: 169684: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 169664 ns ---> 169684 ns | period = 20 ns | runtime = 38147 ns
+169684000: 169684: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 169664 ns ---> 169684 ns | period = 20 ns | runtime = 38133 ns
+169684000: 169684: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 169665 ns ---> 169684 ns | period = 19 ns | runtime = 38173 ns
+169803000: 169803: [/chip/ctrl_registers/trace                                      ] Global Barrier at 169803 ns
+170079000: 170079: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 169817 ns ---> 170079 ns | period = 262 ns | runtime = 17397 ns | id = 54
+170079000: 170079: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 169817 ns ---> 170079 ns | period = 262 ns | runtime = 17397 ns | id = 54
+170079000: 170079: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 169817 ns ---> 170079 ns | period = 262 ns | runtime = 17397 ns | id = 54
+170083000: 170083: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 169821 ns ---> 170083 ns | period = 262 ns | runtime = 17397 ns | id = 54
+170343000: 170343: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 170082 ns ---> 170343 ns | period = 261 ns | runtime = 17658 ns | id = 55
+170343000: 170343: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 170082 ns ---> 170343 ns | period = 261 ns | runtime = 17658 ns | id = 55
+170343000: 170343: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 170082 ns ---> 170343 ns | period = 261 ns | runtime = 17658 ns | id = 55
+170347000: 170347: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 170086 ns ---> 170347 ns | period = 261 ns | runtime = 17658 ns | id = 55
+170460000: 170460: [/chip/ctrl_registers/trace                                      ] Global Barrier at 170460 ns
+170516000: 170516: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 170497 ns ---> 170516 ns | period = 19 ns | runtime = 38166 ns
+170516000: 170516: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 170497 ns ---> 170516 ns | period = 19 ns | runtime = 38152 ns
+170517000: 170517: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 170497 ns ---> 170517 ns | period = 20 ns | runtime = 38193 ns
+170633000: 170633: [/chip/ctrl_registers/trace                                      ] Global Barrier at 170633 ns
+170691000: 170691: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 170671 ns ---> 170691 ns | period = 20 ns | runtime = 38213 ns
+170699000: 170699: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 170680 ns ---> 170699 ns | period = 19 ns | runtime = 38171 ns
+170699000: 170699: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 170680 ns ---> 170699 ns | period = 19 ns | runtime = 56580 ns
+170700000: 170700: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 170680 ns ---> 170700 ns | period = 20 ns | runtime = 38186 ns
+170841000: 170841: [/chip/ctrl_registers/trace                                      ] Global Barrier at 170841 ns
+171383000: 171383: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 170869 ns ---> 171383 ns | period = 514 ns | runtime = 18172 ns | id = 56
+171383000: 171383: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 170869 ns ---> 171383 ns | period = 514 ns | runtime = 18172 ns | id = 56
+171383000: 171383: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 170869 ns ---> 171383 ns | period = 514 ns | runtime = 18172 ns | id = 56
+171383000: 171383: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 170869 ns ---> 171383 ns | period = 514 ns | runtime = 18172 ns | id = 56
+171494000: 171494: [/chip/ctrl_registers/trace                                      ] Global Barrier at 171494 ns
+172074000: 172074: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 171548 ns ---> 172074 ns | period = 526 ns | runtime = 38712 ns
+172074000: 172074: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 171548 ns ---> 172074 ns | period = 526 ns | runtime = 38697 ns
+172075000: 172075: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 171548 ns ---> 172075 ns | period = 527 ns | runtime = 38740 ns
+172191000: 172191: [/chip/ctrl_registers/trace                                      ] Global Barrier at 172191 ns
+173483000: 173483: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 172268 ns ---> 173483 ns | period = 1215 ns | runtime = 39927 ns
+173483000: 173483: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 172268 ns ---> 173483 ns | period = 1215 ns | runtime = 39912 ns
+173484000: 173484: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 172269 ns ---> 173484 ns | period = 1215 ns | runtime = 39955 ns
+174636000: 174636: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 172269 ns ---> 174636 ns | period = 2367 ns | runtime = 58947 ns
+174782000: 174782: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 172206 ns ---> 174782 ns | period = 2576 ns | uti = 0.795 | runtime = 71872 ns | matmul id = 28
+174782000: 174782: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 172206 ns ---> 174782 ns | period = 2576 ns | uti = 0.795 | runtime = 71872 ns | matmul id = 28
+174782000: 174782: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 172206 ns ---> 174782 ns | period = 2576 ns | uti = 0.795 | runtime = 75806 ns | matmul id = 28
+174783000: 174783: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 172207 ns ---> 174783 ns | period = 2576 ns | uti = 0.795 | runtime = 71872 ns | matmul id = 28
+174883000: 174883: [/chip/ctrl_registers/trace                                      ] Global Barrier at 174883 ns
+175471000: 175471: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 174945 ns ---> 175471 ns | period = 526 ns | runtime = 59473 ns
+175472000: 175472: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 174945 ns ---> 175472 ns | period = 527 ns | runtime = 40454 ns
+175472000: 175472: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 174945 ns ---> 175472 ns | period = 527 ns | runtime = 40439 ns
+175472000: 175472: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 174945 ns ---> 175472 ns | period = 527 ns | runtime = 40482 ns
+175600000: 175600: [/chip/ctrl_registers/trace                                      ] Global Barrier at 175600 ns
+176350000: 176350: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 175823 ns ---> 176350 ns | period = 527 ns | runtime = 40981 ns
+176351000: 176351: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 175824 ns ---> 176351 ns | period = 527 ns | runtime = 40966 ns
+176352000: 176352: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 175825 ns ---> 176352 ns | period = 527 ns | runtime = 41009 ns
+176501000: 176501: [/chip/ctrl_registers/trace                                      ] Global Barrier at 176501 ns
+177181000: 177181: [/chip/ctrl_registers/trace                                      ] Global Barrier at 177181 ns
+178447000: 178447: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 177232 ns ---> 178447 ns | period = 1215 ns | runtime = 60688 ns
+178629000: 178629: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 178499 ns ---> 178629 ns | period = 130 ns | runtime = 60818 ns
+180282000: 180282: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 177722 ns ---> 180282 ns | period = 2560 ns | uti = 0.800 | runtime = 74432 ns | matmul id = 29
+180282000: 180282: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 177722 ns ---> 180282 ns | period = 2560 ns | uti = 0.800 | runtime = 74432 ns | matmul id = 29
+180282000: 180282: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 177722 ns ---> 180282 ns | period = 2560 ns | uti = 0.800 | runtime = 74432 ns | matmul id = 29
+180549000: 180549: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 180288 ns ---> 180549 ns | period = 261 ns | runtime = 18433 ns | id = 57
+180549000: 180549: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 180288 ns ---> 180549 ns | period = 261 ns | runtime = 18433 ns | id = 57
+180549000: 180549: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 180288 ns ---> 180549 ns | period = 261 ns | runtime = 18433 ns | id = 57
+180549000: 180549: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 177710 ns ---> 180549 ns | period = 2839 ns | uti = 0.721 | runtime = 78645 ns | matmul id = 29
+180816000: 180816: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 180555 ns ---> 180816 ns | period = 261 ns | runtime = 18433 ns | id = 57
+180910000: 180910: [/chip/ctrl_registers/trace                                      ] Global Barrier at 180910 ns
+180991000: 180991: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 180972 ns ---> 180991 ns | period = 19 ns | runtime = 41000 ns
+180991000: 180991: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 180972 ns ---> 180991 ns | period = 19 ns | runtime = 40985 ns
+180992000: 180992: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 180972 ns ---> 180992 ns | period = 20 ns | runtime = 41029 ns
+181161000: 181161: [/chip/ctrl_registers/trace                                      ] Global Barrier at 181161 ns
+181218000: 181218: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 181198 ns ---> 181218 ns | period = 20 ns | runtime = 60838 ns
+181218000: 181218: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 181198 ns ---> 181218 ns | period = 20 ns | runtime = 41020 ns
+181218000: 181218: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 181198 ns ---> 181218 ns | period = 20 ns | runtime = 41005 ns
+181218000: 181218: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 181199 ns ---> 181218 ns | period = 19 ns | runtime = 41048 ns
+181336000: 181336: [/chip/ctrl_registers/trace                                      ] Global Barrier at 181336 ns
+181612000: 181612: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 181350 ns ---> 181612 ns | period = 262 ns | runtime = 18695 ns | id = 58
+181612000: 181612: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 181350 ns ---> 181612 ns | period = 262 ns | runtime = 18695 ns | id = 58
+181612000: 181612: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 181350 ns ---> 181612 ns | period = 262 ns | runtime = 18695 ns | id = 58
+181612000: 181612: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 181350 ns ---> 181612 ns | period = 262 ns | runtime = 18695 ns | id = 58
+181876000: 181876: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 181615 ns ---> 181876 ns | period = 261 ns | runtime = 18956 ns | id = 59
+181876000: 181876: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 181615 ns ---> 181876 ns | period = 261 ns | runtime = 18956 ns | id = 59
+181876000: 181876: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 181615 ns ---> 181876 ns | period = 261 ns | runtime = 18956 ns | id = 59
+181876000: 181876: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 181615 ns ---> 181876 ns | period = 261 ns | runtime = 18956 ns | id = 59
+181992000: 181992: [/chip/ctrl_registers/trace                                      ] Global Barrier at 181992 ns
+182048000: 182048: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 182029 ns ---> 182048 ns | period = 19 ns | runtime = 41039 ns
+182048000: 182048: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 182029 ns ---> 182048 ns | period = 19 ns | runtime = 41024 ns
+182049000: 182049: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 182029 ns ---> 182049 ns | period = 20 ns | runtime = 41068 ns
+182165000: 182165: [/chip/ctrl_registers/trace                                      ] Global Barrier at 182165 ns
+182223000: 182223: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 182203 ns ---> 182223 ns | period = 20 ns | runtime = 41088 ns
+182231000: 182231: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 182212 ns ---> 182231 ns | period = 19 ns | runtime = 41043 ns
+182231000: 182231: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 182212 ns ---> 182231 ns | period = 19 ns | runtime = 60857 ns
+182232000: 182232: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 182212 ns ---> 182232 ns | period = 20 ns | runtime = 41059 ns
+182373000: 182373: [/chip/ctrl_registers/trace                                      ] Global Barrier at 182373 ns
+182915000: 182915: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 182401 ns ---> 182915 ns | period = 514 ns | runtime = 19470 ns | id = 60
+182915000: 182915: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 182401 ns ---> 182915 ns | period = 514 ns | runtime = 19470 ns | id = 60
+182915000: 182915: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 182401 ns ---> 182915 ns | period = 514 ns | runtime = 19470 ns | id = 60
+182915000: 182915: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 182401 ns ---> 182915 ns | period = 514 ns | runtime = 19470 ns | id = 60
+183026000: 183026: [/chip/ctrl_registers/trace                                      ] Global Barrier at 183026 ns
+183606000: 183606: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 183080 ns ---> 183606 ns | period = 526 ns | runtime = 41585 ns
+183606000: 183606: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 183080 ns ---> 183606 ns | period = 526 ns | runtime = 41569 ns
+183607000: 183607: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 183080 ns ---> 183607 ns | period = 527 ns | runtime = 41615 ns
+183724000: 183724: [/chip/ctrl_registers/trace                                      ] Global Barrier at 183724 ns
+185016000: 185016: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 183801 ns ---> 185016 ns | period = 1215 ns | runtime = 42784 ns
+185016000: 185016: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 183801 ns ---> 185016 ns | period = 1215 ns | runtime = 42800 ns
+185017000: 185017: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 183802 ns ---> 185017 ns | period = 1215 ns | runtime = 42830 ns
+186166000: 186166: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 183802 ns ---> 186166 ns | period = 2364 ns | runtime = 63221 ns
+186315000: 186315: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 183739 ns ---> 186315 ns | period = 2576 ns | uti = 0.795 | runtime = 77008 ns | matmul id = 30
+186315000: 186315: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 183739 ns ---> 186315 ns | period = 2576 ns | uti = 0.795 | runtime = 77008 ns | matmul id = 30
+186315000: 186315: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 183739 ns ---> 186315 ns | period = 2576 ns | uti = 0.795 | runtime = 81221 ns | matmul id = 30
+186316000: 186316: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 183740 ns ---> 186316 ns | period = 2576 ns | uti = 0.795 | runtime = 77008 ns | matmul id = 30
+186416000: 186416: [/chip/ctrl_registers/trace                                      ] Global Barrier at 186416 ns
+187004000: 187004: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 186478 ns ---> 187004 ns | period = 526 ns | runtime = 63747 ns
+187005000: 187005: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 186478 ns ---> 187005 ns | period = 527 ns | runtime = 43327 ns
+187005000: 187005: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 186478 ns ---> 187005 ns | period = 527 ns | runtime = 43311 ns
+187005000: 187005: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 186478 ns ---> 187005 ns | period = 527 ns | runtime = 43357 ns
+187133000: 187133: [/chip/ctrl_registers/trace                                      ] Global Barrier at 187133 ns
+187883000: 187883: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 187356 ns ---> 187883 ns | period = 527 ns | runtime = 43854 ns
+187884000: 187884: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 187357 ns ---> 187884 ns | period = 527 ns | runtime = 43838 ns
+187885000: 187885: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 187358 ns ---> 187885 ns | period = 527 ns | runtime = 43884 ns
+188034000: 188034: [/chip/ctrl_registers/trace                                      ] Global Barrier at 188034 ns
+188714000: 188714: [/chip/ctrl_registers/trace                                      ] Global Barrier at 188714 ns
+189993000: 189993: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 188765 ns ---> 189993 ns | period = 1228 ns | runtime = 64975 ns
+190174000: 190174: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 190044 ns ---> 190174 ns | period = 130 ns | runtime = 65105 ns
+191815000: 191815: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 189255 ns ---> 191815 ns | period = 2560 ns | uti = 0.800 | runtime = 79568 ns | matmul id = 31
+191815000: 191815: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 189255 ns ---> 191815 ns | period = 2560 ns | uti = 0.800 | runtime = 79568 ns | matmul id = 31
+191815000: 191815: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 189255 ns ---> 191815 ns | period = 2560 ns | uti = 0.800 | runtime = 79568 ns | matmul id = 31
+192082000: 192082: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 191821 ns ---> 192082 ns | period = 261 ns | runtime = 19731 ns | id = 61
+192082000: 192082: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 191821 ns ---> 192082 ns | period = 261 ns | runtime = 19731 ns | id = 61
+192082000: 192082: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 191821 ns ---> 192082 ns | period = 261 ns | runtime = 19731 ns | id = 61
+192083000: 192083: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 189243 ns ---> 192083 ns | period = 2840 ns | uti = 0.721 | runtime = 84061 ns | matmul id = 31
+192350000: 192350: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 192089 ns ---> 192350 ns | period = 261 ns | runtime = 19731 ns | id = 61
+192444000: 192444: [/chip/ctrl_registers/trace                                      ] Global Barrier at 192444 ns
+192525000: 192525: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 192506 ns ---> 192525 ns | period = 19 ns | runtime = 43873 ns
+192525000: 192525: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 192506 ns ---> 192525 ns | period = 19 ns | runtime = 43857 ns
+192526000: 192526: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 192506 ns ---> 192526 ns | period = 20 ns | runtime = 43904 ns
+192695000: 192695: [/chip/ctrl_registers/trace                                      ] Global Barrier at 192695 ns
+192752000: 192752: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 192732 ns ---> 192752 ns | period = 20 ns | runtime = 65125 ns
+192752000: 192752: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 192732 ns ---> 192752 ns | period = 20 ns | runtime = 43893 ns
+192752000: 192752: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 192732 ns ---> 192752 ns | period = 20 ns | runtime = 43877 ns
+192752000: 192752: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 192733 ns ---> 192752 ns | period = 19 ns | runtime = 43923 ns
+192871000: 192871: [/chip/ctrl_registers/trace                                      ] Global Barrier at 192871 ns
+193147000: 193147: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 192885 ns ---> 193147 ns | period = 262 ns | runtime = 19993 ns | id = 62
+193147000: 193147: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 192885 ns ---> 193147 ns | period = 262 ns | runtime = 19993 ns | id = 62
+193147000: 193147: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 192885 ns ---> 193147 ns | period = 262 ns | runtime = 19993 ns | id = 62
+193151000: 193151: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 192889 ns ---> 193151 ns | period = 262 ns | runtime = 19993 ns | id = 62
+193411000: 193411: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 193150 ns ---> 193411 ns | period = 261 ns | runtime = 20254 ns | id = 63
+193411000: 193411: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 193150 ns ---> 193411 ns | period = 261 ns | runtime = 20254 ns | id = 63
+193411000: 193411: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 193150 ns ---> 193411 ns | period = 261 ns | runtime = 20254 ns | id = 63
+193415000: 193415: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 193154 ns ---> 193415 ns | period = 261 ns | runtime = 20254 ns | id = 63
+193528000: 193528: [/chip/ctrl_registers/trace                                      ] Global Barrier at 193528 ns
+193584000: 193584: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 193565 ns ---> 193584 ns | period = 19 ns | runtime = 43912 ns
+193584000: 193584: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 193565 ns ---> 193584 ns | period = 19 ns | runtime = 43896 ns
+193585000: 193585: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 193565 ns ---> 193585 ns | period = 20 ns | runtime = 43943 ns
+193701000: 193701: [/chip/ctrl_registers/trace                                      ] Global Barrier at 193701 ns
+193759000: 193759: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 193739 ns ---> 193759 ns | period = 20 ns | runtime = 43963 ns
+193767000: 193767: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 193748 ns ---> 193767 ns | period = 19 ns | runtime = 43915 ns
+193767000: 193767: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 193748 ns ---> 193767 ns | period = 19 ns | runtime = 65144 ns
+193768000: 193768: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 193748 ns ---> 193768 ns | period = 20 ns | runtime = 43932 ns
+193909000: 193909: [/chip/ctrl_registers/trace                                      ] Global Barrier at 193909 ns
+194451000: 194451: [/chip/cluster_1/vecteng/trace                                   ] [LightVectEng] Finished : 193937 ns ---> 194451 ns | period = 514 ns | runtime = 20768 ns | id = 64
+194451000: 194451: [/chip/cluster_2/vecteng/trace                                   ] [LightVectEng] Finished : 193937 ns ---> 194451 ns | period = 514 ns | runtime = 20768 ns | id = 64
+194451000: 194451: [/chip/cluster_3/vecteng/trace                                   ] [LightVectEng] Finished : 193937 ns ---> 194451 ns | period = 514 ns | runtime = 20768 ns | id = 64
+194451000: 194451: [/chip/cluster_0/vecteng/trace                                   ] [LightVectEng] Finished : 193937 ns ---> 194451 ns | period = 514 ns | runtime = 20768 ns | id = 64
+194562000: 194562: [/chip/ctrl_registers/trace                                      ] Global Barrier at 194562 ns
+195142000: 195142: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 194616 ns ---> 195142 ns | period = 526 ns | runtime = 44458 ns
+195142000: 195142: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 194616 ns ---> 195142 ns | period = 526 ns | runtime = 44441 ns
+195143000: 195143: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 194616 ns ---> 195143 ns | period = 527 ns | runtime = 44490 ns
+195258000: 195258: [/chip/ctrl_registers/trace                                      ] Global Barrier at 195258 ns
+196563000: 196563: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 195335 ns ---> 196563 ns | period = 1228 ns | runtime = 45669 ns
+196563000: 196563: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 195335 ns ---> 196563 ns | period = 1228 ns | runtime = 45718 ns
+196563000: 196563: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 195335 ns ---> 196563 ns | period = 1228 ns | runtime = 45686 ns
+197713000: 197713: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 195336 ns ---> 197713 ns | period = 2377 ns | runtime = 67521 ns
+197849000: 197849: [/chip/cluster_1/redmule_0/trace                                 ] [LightRedmule] Finished : 195273 ns ---> 197849 ns | period = 2576 ns | uti = 0.795 | runtime = 82144 ns | matmul id = 32
+197849000: 197849: [/chip/cluster_2/redmule_0/trace                                 ] [LightRedmule] Finished : 195273 ns ---> 197849 ns | period = 2576 ns | uti = 0.795 | runtime = 82144 ns | matmul id = 32
+197849000: 197849: [/chip/cluster_3/redmule_0/trace                                 ] [LightRedmule] Finished : 195273 ns ---> 197849 ns | period = 2576 ns | uti = 0.795 | runtime = 82144 ns | matmul id = 32
+197849000: 197849: [/chip/cluster_0/redmule_0/trace                                 ] [LightRedmule] Finished : 195273 ns ---> 197849 ns | period = 2576 ns | uti = 0.795 | runtime = 86637 ns | matmul id = 32
+197950000: 197950: [/chip/ctrl_registers/trace                                      ] Global Barrier at 197950 ns
+198538000: 198538: [/chip/cluster_0/idma/fe/trace                                   ] [iDMA] Finished : 198012 ns ---> 198538 ns | period = 526 ns | runtime = 68047 ns
+198539000: 198539: [/chip/cluster_3/idma/fe/trace                                   ] [iDMA] Finished : 198012 ns ---> 198539 ns | period = 527 ns | runtime = 46213 ns
+198539000: 198539: [/chip/cluster_2/idma/fe/trace                                   ] [iDMA] Finished : 198012 ns ---> 198539 ns | period = 527 ns | runtime = 46196 ns
+198539000: 198539: [/chip/cluster_1/idma/fe/trace                                   ] [iDMA] Finished : 198012 ns ---> 198539 ns | period = 527 ns | runtime = 46245 ns
+198667000: 198667: [/chip/ctrl_registers/trace                                      ] Global Barrier at 198667 ns
+198839000: 198839: [/chip/ctrl_registers/trace                                      ] Global Barrier at 198839 ns
+[Performance Counter]: Execution period is 184963 ns
+198848000: 198848: [/chip/ctrl_registers/trace                                      ] Global Barrier at 198848 ns

@@ -1,0 +1,15 @@
+{
+    "simulation": {
+        "addressmapping": "paulsc_am_hbm2e_16Gb_pc_brc.json",
+        "mcconfig": "fr_fcfs.json",
+        "memspec": "JEDEC_16Gb_HBM2E-4000.json",
+        "simconfig": "example.json",
+        "simulationid": "hbm2e-example",
+        "tracesetup": [
+            {
+                "clkMhz": 1000,
+                "name": "example.stl"
+            }
+        ]
+    }
+}
