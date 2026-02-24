@@ -1,0 +1,48 @@
+{
+  "memspec": {
+      "memarchitecturespec": {
+          "burstLength": 4,
+          "dataRate": 2,
+          "nbrOfBankGroups": 8,
+          "nbrOfBanks": 32,
+          "nbrOfColumns": 128,
+          "nbrOfPseudoChannels": 2,
+          "nbrOfRows": 32768,
+          "width": 64,
+          "nbrOfDevices": 1,
+          "nbrOfChannels": 1
+      },
+      "memoryId": "16Gb Single Channel JEDEC HBM2E",
+      "memoryType": "HBM2",
+      "memtimingspec": {
+          "CCDL": 4,
+          "CCDS": 2,
+          "CKE": 8,
+          "DQSCK": 2,
+          "FAW": 9,
+          "PL": 2,
+          "RAS": 30,
+          "RC": 45,
+          "RCDRD": 12,
+          "RCDWR": 10,
+          "REFI": 3000,
+          "REFISB": 122,
+          "RFC": 260,
+          "RFCSB": 200,
+          "RL": 35,
+          "RP": 12,
+          "RRDL": 2,
+          "RRDS": 2,
+          "RREFD": 6,
+          "RTP": 2,
+          "RTW": 12,
+          "WL": 8,
+          "WR": 35,
+          "WTRL": 6,
+          "WTRS": 4,
+          "XP": 10,
+          "XS": 200,
+          "clkMhz": 2000
+      }
+  }
+}
