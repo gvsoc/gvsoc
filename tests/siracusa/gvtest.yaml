@@ -1,0 +1,3 @@
+targets:
+  siracusa:
+    sourceme: ${SIRACUSA_SDK_HOME}/configs/siracusa.sh
