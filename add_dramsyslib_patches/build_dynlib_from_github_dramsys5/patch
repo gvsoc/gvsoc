@@ -1,348 +1,121 @@
-diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
-index 2dbaacd..33ced83 100644
---- a/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
-+++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.cpp
-@@ -126,6 +126,64 @@ const Configuration& DRAMSys::getConfig() const
-     return config;
- }
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f48ae86..7c9d327 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -114,6 +114,8 @@ if (DRAMSYS_USE_FETCH_CONTENT)
+     endif()
  
-+unsigned char * DRAMSys::getDramBasePointer()
-+{
-+    unsigned char * ptr = nullptr;
-+    for (auto& dram : drams)
-+        ptr = dram->getDramBasePointer();
-+    return ptr;
-+}
-+
-+void DRAMSys::perloadByte(uint64_t addr, unsigned char data)
-+{
-+    if (config.storeMode == Configuration::StoreMode::Store )
-+    {
-+        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
-+        for (auto& dram : drams)
-+            dram->perloadByteInDram(addr,data);
-+    }else{
-+        SC_REPORT_FATAL(this->name(), "Storage not configured!");
-+    }
-+    
-+}
-+
-+unsigned char DRAMSys::checkByte(uint64_t addr)
-+{
-+    if (config.storeMode == Configuration::StoreMode::Store )
-+    {
-+        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
-+        for (auto& dram : drams)
-+            return dram->checkByte(addr);
-+    }else{
-+        SC_REPORT_FATAL(this->name(), "Storage not configured!");
-+    }
-+    return 0;
-+}
-+
-+void DRAMSys::togglePim(int channel)
-+{
-+    drams[channel]->togglePim();
-+}
-+
-+void DRAMSys::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth)
-+{
-+    uint i = 0;
-+    for (auto& dram : drams)
-+    {
-+        dram->registerCBPimMeth(instance, pim_meth, i++);
-+    }
-+}
-+
-+void DRAMSys::pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
-+{
-+    drams[channel]->pimRead(base_addr, length, stride, count, buf);
-+}
-+
-+void DRAMSys::pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
-+{
-+    drams[channel]->pimWrite(base_addr, length, stride, count, buf);
-+}
-+
- void DRAMSys::end_of_simulation()
- {
-     if (config.powerAnalysis)
-diff --git a/src/libdramsys/DRAMSys/simulation/DRAMSys.h b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
-index 3202b88..d4d9e39 100644
---- a/src/libdramsys/DRAMSys/simulation/DRAMSys.h
-+++ b/src/libdramsys/DRAMSys/simulation/DRAMSys.h
-@@ -71,6 +71,14 @@ public:
+     if (DRAMSYS_USE_FETCH_CONTENT_SQLITE3)
++        # Enable Position Independent Code for SQLite3 to allow linking into shared libraries
++        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+         add_subdirectory(${DRAMSYS_LIBRARY_DIR}/sqlite3)
+     endif()
  
-     const Configuration& getConfig() const;
-     const AddressDecoder& getAddressDecoder() const { return *addressDecoder; }
-+    
-+    unsigned char * getDramBasePointer();
-+    void perloadByte(uint64_t addr, unsigned char data);
-+    unsigned char checkByte(uint64_t addr);
-+    void togglePim(int channel);
-+    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth);
-+    void pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
-+    void pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
+@@ -126,6 +128,9 @@ if (DRAMSYS_USE_FETCH_CONTENT)
+             OVERRIDE_FIND_PACKAGE
+         )
  
-     /**
-      * Returns true if all memory controllers are in idle state.
-diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
-index a2c21dc..f202523 100644
---- a/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
-+++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.cpp
-@@ -73,6 +73,10 @@ Dram::Dram(const sc_module_name& name, const Configuration& config) :
-     powerAnalysis(config.powerAnalysis),
-     channelSize(memSpec.getSimMemSizeInBytes() / memSpec.numberOfChannels),
-     useMalloc(config.useMalloc),
-+    channelIdx(0),
-+    pimEnable(0),
-+    async_callback_instance(nullptr),
-+    async_callback_pim_meth(nullptr),
-     tSocket("socket")
- {
-     if (storeMode == Configuration::StoreMode::Store)
-@@ -111,6 +115,60 @@ Dram::~Dram()
-         free(memory);
- }
- 
-+unsigned char * Dram::getDramBasePointer()
-+{
-+    return memory;
-+}
++        # Enable Position Independent Code for SystemC to allow linking into shared libraries
++        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 +
-+void Dram::perloadByteInDram(uint64_t addr, unsigned char data)
-+{
-+    unsigned char *phyAddr = memory + addr;
-+    *phyAddr = data;
-+}
-+
-+unsigned char Dram::checkByte(uint64_t addr)
-+{
-+    unsigned char *phyAddr = memory + addr;
-+    unsigned char check_data = *phyAddr;
-+    return check_data;
-+}
-+
-+void Dram::togglePim()
-+{
-+    pimEnable = !pimEnable;
-+}
-+
-+void Dram::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx)
-+{
-+    async_callback_instance = instance;
-+    async_callback_pim_meth = pim_meth;
-+    channelIdx = _channelIdx;
-+}
-+
-+void Dram::pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
-+{
-+    unsigned char* phyAddr = memory + base_addr;    // Obtain physical address
-+
-+    for (uint64_t i = 0; i < count; i++) {
-+        // Calculate stride address
-+        unsigned char* strideAddr = phyAddr + i * stride;   
-+        // Copy data from DRAM to buffer compactly
-+        memcpy((unsigned char*)buf + i * length, strideAddr, length);
-+    }
-+}
-+
-+void Dram::pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
-+{
-+    unsigned char* phyAddr = memory + base_addr;
-+    
-+    for (uint64_t i = 0; i < count; i++) {
-+        // Calculate stride address
-+        unsigned char* strideAddr = phyAddr + i * stride;   
-+        // Copy data from buffer to DRAM with stride
-+        memcpy(strideAddr, (unsigned char*)buf + i * length, length);
-+    }
-+}
-+
- void Dram::reportPower()
- {
- #ifdef DRAMPOWER
-@@ -162,6 +220,20 @@ tlm_sync_enum Dram::nb_transport_fw(tlm_generic_payload& trans, tlm_phase& phase
-                     }
-                 }
-             }
-+            // PIM callback when a read is issued
-+            if (pimEnable && async_callback_instance && async_callback_pim_meth)
-+            {
-+                PimInfo pimInfo;
-+                pimInfo.isWrite = 0; // Read operation
-+                pimInfo.address = trans.get_address();
-+                pimInfo.channel = channelIdx;
-+                pimInfo.rank = uint(ControllerExtension::getRank(trans));
-+                pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
-+                pimInfo.bank = uint(ControllerExtension::getBank(trans));
-+                pimInfo.row = uint(ControllerExtension::getRow(trans));
-+                pimInfo.column = uint(ControllerExtension::getColumn(trans));
-+                async_callback_pim_meth(async_callback_instance, pimInfo);
-+            }  
-         }
-         else if (phase == BEGIN_WR || phase == BEGIN_WRA || phase == BEGIN_MWR ||
-                  phase == BEGIN_MWRA)
-@@ -183,6 +255,20 @@ tlm_sync_enum Dram::nb_transport_fw(tlm_generic_payload& trans, tlm_phase& phase
-                     }
-                 }
-             }
-+            // PIM callback when a write is issued
-+            if (pimEnable && async_callback_instance && async_callback_pim_meth)
-+            {
-+                PimInfo pimInfo;
-+                pimInfo.isWrite = 1; // Write operation
-+                pimInfo.address = trans.get_address();
-+                pimInfo.channel = channelIdx;
-+                pimInfo.rank = uint(ControllerExtension::getRank(trans));
-+                pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
-+                pimInfo.bank = uint(ControllerExtension::getBank(trans));
-+                pimInfo.row = uint(ControllerExtension::getRow(trans));
-+                pimInfo.column = uint(ControllerExtension::getColumn(trans));
-+                async_callback_pim_meth(async_callback_instance, pimInfo);
-+            }  
-         }
-     }
+         FetchContent_MakeAvailable(SystemCLanguage)
  
-diff --git a/src/libdramsys/DRAMSys/simulation/dram/Dram.h b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
-index d800406..d70c03e 100644
---- a/src/libdramsys/DRAMSys/simulation/dram/Dram.h
-+++ b/src/libdramsys/DRAMSys/simulation/dram/Dram.h
-@@ -51,6 +51,20 @@
- #include <tlm>
- #include <tlm_utils/simple_target_socket.h>
+         # Set include directories to SYSTEM to suppress warnings
+@@ -133,6 +138,9 @@ if (DRAMSYS_USE_FETCH_CONTENT)
+     endif()
  
-+struct PimInfo {
-+    uint isWrite;
-+    uint address;
-+    uint channel;
-+    uint rank;
-+    uint bankGroup;
-+    uint bank;
-+    uint row;
-+    uint column;
-+};
-+
-+typedef void*   CallbackInstance_t;
-+typedef void    (AsynCallbackPim_Meth)(CallbackInstance_t instance, PimInfo pimInfo);
-+
- class libDRAMPower;
+     if (DRAMSYS_USE_FETCH_CONTENT_INTERNAL)
++        # Enable Position Independent Code for internal dependencies to allow linking into shared libraries
++        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
++        
+         FetchContent_Declare(
+             DRAMUtils
+             URL "https://github.com/tukl-msd/DRAMUtils/archive/refs/tags/v1.13.1.tar.gz"
+diff --git a/apps/simulator/CMakeLists.txt b/apps/simulator/CMakeLists.txt
+index 46bc659..5eb16f4 100644
+--- a/apps/simulator/CMakeLists.txt
++++ b/apps/simulator/CMakeLists.txt
+@@ -40,9 +40,10 @@
  
- namespace DRAMSys
-@@ -71,6 +85,12 @@ protected:
-     const uint64_t channelSize;
-     const bool useMalloc;
+ find_package(Threads)
  
-+    // PIM related variables
-+    uint channelIdx;
-+    uint pimEnable;                      // PIM enable flag (if not supported, remains 0)
-+    CallbackInstance_t      async_callback_instance;    // PIM callback instance
-+    AsynCallbackPim_Meth*   async_callback_pim_meth;    // PIM callback
-+
- #ifdef DRAMPOWER
-     std::unique_ptr<libDRAMPower> DRAMPower;
- #endif
-@@ -88,6 +108,16 @@ public:
- 
-     tlm_utils::simple_target_socket<Dram> tSocket;
- 
-+    unsigned char * getDramBasePointer();
-+    void perloadByteInDram(uint64_t addr, unsigned char data);
-+    unsigned char checkByte(uint64_t addr);
-+
-+    // Enable PIM and register PIM callback
-+    void togglePim();
-+    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx);
-+    void pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
-+    void pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
-+    
-     virtual void reportPower();
- 
-     void serialize(std::ostream& stream) const override;
-diff --git a/src/simulator/CMakeLists.txt b/src/simulator/CMakeLists.txt
-index a485bbd..8bfb5cf 100644
---- a/src/simulator/CMakeLists.txt
-+++ b/src/simulator/CMakeLists.txt
-@@ -40,28 +40,25 @@
- 
- project(DRAMSys_Simulator)
- 
-+# Gather all source and header files
- file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
- file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS *.h;*.hpp)
- 
-+# Exclude main.cpp from the source files list
- list(FILTER SOURCE_FILES EXCLUDE REGEX "main.cpp")
- 
--add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} ${HEADER_FILES})
-+# Create a shared library instead of a static library
-+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
- 
-+# Specify include directories
- target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
- 
-+# Link libraries
- target_link_libraries(${PROJECT_NAME}
-     PUBLIC
-         Threads::Threads
-         DRAMSys::libdramsys
+-add_library(simulator OBJECT
++add_library(simulator SHARED
+     simulator/Cache.cpp
+     simulator/Simulator.cpp
++    simulator/dramsys_lib.cpp
+     simulator/generator/RandomState.cpp
+     simulator/generator/SequentialState.cpp
+     simulator/generator/TrafficGenerator.cpp
+@@ -57,10 +58,15 @@ target_include_directories(simulator
+         ${CMAKE_CURRENT_SOURCE_DIR}
  )
  
--add_executable(DRAMSys
++set_target_properties(simulator PROPERTIES 
++    POSITION_INDEPENDENT_CODE ON
++    OUTPUT_NAME "DRAMSys_Simulator"
++)
++
+ target_link_libraries(simulator
+     PUBLIC
+         DRAMSys::DRAMSys
+-    PRIVATE
++    # PRIVATE
+         Threads::Threads
+ )
+ 
+@@ -71,15 +77,20 @@ target_compile_definitions(simulator
+ 
+ add_library(DRAMSys::simulator ALIAS simulator)
+ 
+-add_executable(dramsys_bin
 -    main.cpp
 -)
--
--target_link_libraries(DRAMSys
++# add_executable(dramsys_bin
++#     main.cpp
++# )
+ 
+-set_target_properties(dramsys_bin PROPERTIES OUTPUT_NAME "DRAMSys")
++# set_target_properties(dramsys_bin PROPERTIES OUTPUT_NAME "DRAMSys")
+ 
+-target_link_libraries(dramsys_bin
 -    PRIVATE
--        DRAMSys_Simulator
+-        DRAMSys::simulator
 -)
--
-+# Source group for better organization in IDEs
- build_source_group()
-diff --git a/src/simulator/simulator/MemoryManager.cpp b/src/simulator/simulator/MemoryManager.cpp
-index 44d6502..8283798 100644
---- a/src/simulator/simulator/MemoryManager.cpp
-+++ b/src/simulator/simulator/MemoryManager.cpp
-@@ -53,6 +53,8 @@ MemoryManager::~MemoryManager()
-             tlm_generic_payload* payload = innerBuffer.second.top();
-             if (storageEnabled)
-                 delete[] payload->get_data_ptr();
-+            if (payload->get_byte_enable_ptr())
-+                delete[] payload->get_byte_enable_ptr();
-             payload->reset();
-             delete payload;
-             innerBuffer.second.pop();
-@@ -92,5 +94,9 @@ tlm_generic_payload& MemoryManager::allocate(unsigned dataLength)
- void MemoryManager::free(tlm_generic_payload* payload)
- {
-     unsigned dataLength = payload->get_data_length();
-+    if (payload->get_byte_enable_ptr()){
-+        delete[] payload->get_byte_enable_ptr();
-+        payload->set_byte_enable_ptr(nullptr);
-+    }
-     freePayloads[dataLength].push(payload);
- }
-diff --git a/src/simulator/simulator/Simulator.h b/src/simulator/simulator/Simulator.h
-index 35f2ddf..3cff9dd 100644
---- a/src/simulator/simulator/Simulator.h
-+++ b/src/simulator/simulator/Simulator.h
-@@ -37,6 +37,7 @@
++# target_link_libraries(dramsys_bin
++#     PRIVATE
++#         DRAMSys::simulator
++# )
++
++# install(TARGETS dramsys_bin)
  
- #include "Initiator.h"
- #include "MemoryManager.h"
-+#include "dramsys_conv.h"
+-install(TARGETS dramsys_bin)
++install(TARGETS simulator
++        LIBRARY DESTINATION lib
++        ARCHIVE DESTINATION lib
++        RUNTIME DESTINATION bin)
+\ No newline at end of file
+diff --git a/apps/simulator/simulator/Simulator.h b/apps/simulator/simulator/Simulator.h
+index 5a4799a..90cfe13 100644
+--- a/apps/simulator/simulator/Simulator.h
++++ b/apps/simulator/simulator/Simulator.h
+@@ -36,6 +36,7 @@
+ #pragma once
  
- #include <DRAMSys/config/DRAMSysConfiguration.h>
- #include <DRAMSys/simulation/DRAMSysRecordable.h>
-diff --git a/src/simulator/simulator/dramsys_conv.h b/src/simulator/simulator/dramsys_conv.h
+ #include "simulator/request/RequestIssuer.h"
++#include "simulator/dramsys_conv.h"
+ 
+ #include <DRAMSys/common/MemoryManager.h>
+ #include <DRAMSys/configuration/json/DRAMSysConfiguration.h>
+diff --git a/apps/simulator/simulator/dramsys_conv.h b/apps/simulator/simulator/dramsys_conv.h
 new file mode 100644
-index 0000000..2949a20
+index 0000000..21ff73f
 --- /dev/null
-+++ b/src/simulator/simulator/dramsys_conv.h
++++ b/apps/simulator/simulator/dramsys_conv.h
 @@ -0,0 +1,362 @@
 +#pragma once
 +
-+#include "simulator/MemoryManager.h"
++#include <DRAMSys/common/MemoryManager.h>
 +
 +#include <systemc>
 +#include <iostream>
@@ -398,7 +171,7 @@ index 0000000..2949a20
 +    //tlm utilities
 +    tlm_utils::simple_initiator_socket<dramsys_conv>  iSocket;
 +    tlm_utils::peq_with_cb_and_phase<dramsys_conv>    payloadEventQueue;
-+    MemoryManager                                     memoryManager;
++    DRAMSys::MemoryManager                            memoryManager;
 +
 +    //callback function of iSocket
 +    tlm_sync_enum nb_transport_bw(tlm_generic_payload &payload, tlm_phase &phase, sc_time &bwDelay){
@@ -573,23 +346,23 @@ index 0000000..2949a20
 +    void dram_send_req(uint64_t addr, uint64_t length , uint64_t is_write, uint64_t strob_enable, uint8_t * buf, uint8_t * strb_buf)
 +    {
 +        req_t req;
-+        tlm_generic_payload& payload = memoryManager.allocate(length);
++        tlm_generic_payload* payload = memoryManager.allocate(length);
 +
 +        req.addr = addr;
 +        req.len  = length;
 +        req.is_write = is_write;
-+        payload.acquire();
-+        payload.set_address(addr);
-+        payload.set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
-+        payload.set_dmi_allowed(false);
++        payload->acquire();
++        payload->set_address(addr);
++        payload->set_response_status(tlm::TLM_INCOMPLETE_RESPONSE);
++        payload->set_dmi_allowed(false);
 +        if (strob_enable)
 +        {
 +            // std::cout << sc_time_stamp() <<"  ---- Write With Strobe-----" << std::endl;
-+            payload.set_byte_enable_length(length);
++            payload->set_byte_enable_length(length);
 +            // Allocate a strobe buffer, this strobe buffer will be deleted with payload delete
 +            auto* strb = new unsigned char[length];
-+            payload.set_byte_enable_ptr(strb);
-+            memcpy(payload.get_byte_enable_ptr(), strb_buf , length);
++            payload->set_byte_enable_ptr(strb);
++            memcpy(payload->get_byte_enable_ptr(), strb_buf , length);
 +            // std::cout << "Strb: ";
 +            // for (int i = 0; i < length; ++i)
 +            // {
@@ -604,23 +377,23 @@ index 0000000..2949a20
 +            //     }
 +            // }
 +            // std::cout << std::endl;
-+            // std::cout << std::dec << (long long int)payload.get_byte_enable_ptr() << std::endl;
++            // std::cout << std::dec << (long long int)payload->get_byte_enable_ptr() << std::endl;
 +        }else{
 +            // std::cout << sc_time_stamp() <<"  ---- Without Strobe-----" << std::endl;
-+            payload.set_byte_enable_length(0);
++            payload->set_byte_enable_length(0);
 +        }
-+        payload.set_data_length(length);
-+        payload.set_streaming_width(length);
++        payload->set_data_length(length);
++        payload->set_streaming_width(length);
 +
 +        if (is_write)
 +        {
-+            memcpy(payload.get_data_ptr(), buf , payload.get_data_length());
-+            payload.set_command(tlm::TLM_WRITE_COMMAND);
-+            sendToTarget(payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
++            memcpy(payload->get_data_ptr(), buf , payload->get_data_length());
++            payload->set_command(tlm::TLM_WRITE_COMMAND);
++            sendToTarget(*payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
 +            all_req_list.push_back(req);
 +        } else {
-+            payload.set_command(tlm::TLM_READ_COMMAND);
-+            sendToTarget(payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
++            payload->set_command(tlm::TLM_READ_COMMAND);
++            sendToTarget(*payload,tlm::BEGIN_REQ,SC_ZERO_TIME);
 +            all_req_list.push_back(req);
 +        }
 +
@@ -702,17 +475,18 @@ index 0000000..2949a20
 +
 +
 +
-diff --git a/src/simulator/simulator/dramsys_lib.cpp b/src/simulator/simulator/dramsys_lib.cpp
+diff --git a/apps/simulator/simulator/dramsys_lib.cpp b/apps/simulator/simulator/dramsys_lib.cpp
 new file mode 100644
-index 0000000..bc541a2
+index 0000000..dc8095d
 --- /dev/null
-+++ b/src/simulator/simulator/dramsys_lib.cpp
-@@ -0,0 +1,308 @@
-+#include "Simulator.h"
++++ b/apps/simulator/simulator/dramsys_lib.cpp
+@@ -0,0 +1,305 @@
++#include "simulator/Simulator.h"
 +
-+#include <DRAMSys/config/DRAMSysConfiguration.h>
++#include <DRAMSys/configuration/json/DRAMSysConfiguration.h>
++#include <DRAMSys/simulation/AddressDecoder.h>
 +#include <filesystem>
-+#include "elfloader.h"
++#include "simulator/elfloader.h"
 +
 +#define svOpenArrayHandle void*
 +
@@ -757,7 +531,7 @@ index 0000000..bc541a2
 +    }
 +
 +    DRAMSys::Config::Configuration configuration =
-+        DRAMSys::Config::from_path(baseConfig.c_str(), resourceDirectory.c_str());
++        DRAMSys::Config::from_path(baseConfig.c_str());
 +
 +    DRAMSys::DRAMSys * dramSys;
 +    dramsys_conv * conv;
@@ -768,14 +542,7 @@ index 0000000..bc541a2
 +    dramsys_name = dramsys_name + id_str;
 +    conv_name = conv_name + id_str;
 +
-+    if (configuration.simconfig.DatabaseRecording.value_or(false))
-+    {
-+        dramSys = new DRAMSys::DRAMSysRecordable(dramsys_name.c_str(), configuration);
-+    }
-+    else
-+    {
-+        dramSys = new DRAMSys::DRAMSys(dramsys_name.c_str(), configuration);
-+    }
++    dramSys = new DRAMSys::DRAMSys(dramsys_name.c_str(), configuration);
 +
 +    conv = new dramsys_conv(conv_name.c_str());
 +
@@ -788,10 +555,8 @@ index 0000000..bc541a2
 +        sc_set_stop_mode(SC_STOP_FINISH_DELTA);
 +    }
 +
-+    DRAMSys::Configuration config;
-+    config.loadMemSpec(configuration.memspec);
-+    uint64_t dramChannelSize = config.memSpec->getSimMemSizeInBytes() / config.memSpec->numberOfChannels;
-+    uint64_t dramMaxBurstByte = config.memSpec->maxBytesPerBurst;
++    uint64_t dramChannelSize = dramSys->getMemSpec().getSimMemSizeInBytes() / dramSys->getMemSpec().numberOfChannels;
++    uint64_t dramMaxBurstByte = dramSys->getMemSpec().maxBytesPerBurst;
 +
 +    //put them into vector container
 +    list_of_DRAMsys.push_back(dramSys);
@@ -812,21 +577,26 @@ index 0000000..bc541a2
 +    if (memspec != nullptr)
 +    {
 +        memspec->access_size = dramMaxBurstByte;
-+        memspec->nb_channels = config.memSpec->numberOfChannels;
-+        memspec->nb_pseudo_channels = config.memSpec->pseudoChannelsPerChannel;
-+        memspec->nb_ranks = config.memSpec->ranksPerChannel;
-+        memspec->nb_bank_groups = config.memSpec->groupsPerRank;
-+        memspec->nb_banks = config.memSpec->banksPerGroup;
-+        memspec->nb_rows = config.memSpec->rowsPerBank;
-+        memspec->nb_columns = config.memSpec->columnsPerRow;
++        memspec->nb_channels = dramSys->getMemSpec().numberOfChannels;
++        memspec->nb_ranks = dramSys->getMemSpec().ranksPerChannel;
++        if (dramSys->getMemSpec().pseudoChannelMode())
++        {
++            memspec->nb_pseudo_channels = dramSys->getMemSpec().ranksPerChannel;    // HBM overlays pseudo channel with rank
++            memspec->nb_bank_groups = dramSys->getMemSpec().groupsPerRank / dramSys->getMemSpec().ranksPerChannel;
++        } else {
++            memspec->nb_pseudo_channels = 1;
++            memspec->nb_bank_groups = dramSys->getMemSpec().groupsPerRank;
++        }
++        memspec->nb_banks = dramSys->getMemSpec().banksPerGroup;
++        memspec->nb_rows = dramSys->getMemSpec().rowsPerBank;
++        memspec->nb_columns = dramSys->getMemSpec().columnsPerRow;
 +
-+        DRAMSys::AddressDecoder addressDecoder = dramSys->getAddressDecoder();
-+        memspec->channel_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(1,0,0,0,0,0,0));
-+        memspec->rank_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,1,0,0,0,0,0));
-+        memspec->bankgroup_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,1,0,0,0,0));
-+        memspec->bank_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,1,0,0,0));
-+        memspec->row_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,1,0,0));
-+        memspec->column_stride = addressDecoder.encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,0,1,0));
++        memspec->channel_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(1,0,0,0,0,0,0));
++        memspec->rank_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(0,1,0,0,0,0,0));
++        memspec->bankgroup_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(0,0,0,1,0,0,0));
++        memspec->bank_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,1,0,0));
++        memspec->row_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,0,1,0));
++        memspec->column_stride = dramSys->getAddressDecoder().encodeAddress(DRAMSys::DecodedAddress(0,0,0,0,0,0,1));
 +    }
 +
 +    int res = id;
@@ -1016,13 +786,13 @@ index 0000000..bc541a2
 +}
 +     
 +
-diff --git a/src/simulator/simulator/elfloader.cpp b/src/simulator/simulator/elfloader.cpp
+diff --git a/apps/simulator/simulator/elfloader.cpp b/apps/simulator/simulator/elfloader.cpp
 new file mode 100644
-index 0000000..57d7b6d
+index 0000000..69799fc
 --- /dev/null
-+++ b/src/simulator/simulator/elfloader.cpp
++++ b/apps/simulator/simulator/elfloader.cpp
 @@ -0,0 +1,106 @@
-+#include "elfloader.h"
++#include "simulator/elfloader.h"
 +
 +#define SHT_PROGBITS 0x1
 +#define SHT_GROUP 0x11
@@ -1129,11 +899,11 @@ index 0000000..57d7b6d
 +  munmap(buf, size);
 +}
 \ No newline at end of file
-diff --git a/src/simulator/simulator/elfloader.h b/src/simulator/simulator/elfloader.h
+diff --git a/apps/simulator/simulator/elfloader.h b/apps/simulator/simulator/elfloader.h
 new file mode 100644
 index 0000000..52c37b0
 --- /dev/null
-+++ b/src/simulator/simulator/elfloader.h
++++ b/apps/simulator/simulator/elfloader.h
 @@ -0,0 +1,200 @@
 +#ifndef _ELFLOADER_H
 +#define _ELFLOADER_H
@@ -1336,3 +1106,324 @@ index 0000000..52c37b0
 +
 +#endif
 \ No newline at end of file
+diff --git a/configs/simconfig/example.json b/configs/simconfig/example.json
+index 3459a49..70191d3 100644
+--- a/configs/simconfig/example.json
++++ b/configs/simconfig/example.json
+@@ -7,7 +7,7 @@
+         "PowerAnalysis": false,
+         "SimulationName": "example",
+         "SimulationProgressBar": true,
+-        "StoreMode": "NoStorage",
++        "StoreMode": "Store",
+         "UseMalloc": false,
+         "WindowSize": 1000,
+         "TogglingRate": {
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index f206853..98e13ef 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -126,6 +126,8 @@ target_compile_definitions(dramsys
+         $<$<BOOL:${DRAMPower_FOUND}>:USE_DRAMPOWER>
+ )
+ 
++set_target_properties(dramsys PROPERTIES POSITION_INDEPENDENT_CODE ON)
++
+ target_link_libraries(dramsys
+     PUBLIC
+         SystemC::systemc
+diff --git a/src/DRAMSys/DRAMSys.cpp b/src/DRAMSys/DRAMSys.cpp
+index afe359c..d595d0d 100644
+--- a/src/DRAMSys/DRAMSys.cpp
++++ b/src/DRAMSys/DRAMSys.cpp
+@@ -242,6 +242,64 @@ void DRAMSys::registerIdleCallback(const std::function<void()>& idleCallback)
+     }
+ }
+ 
++unsigned char * DRAMSys::getDramBasePointer()
++{
++    unsigned char * ptr = nullptr;
++    for (auto& dram : drams)
++        ptr = dram->getDramBasePointer();
++    return ptr;
++}
++
++void DRAMSys::perloadByte(uint64_t addr, unsigned char data)
++{
++    if (simConfig->storeMode == Config::StoreModeType::Store)
++    {
++        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
++        for (auto& dram : drams)
++            dram->perloadByteInDram(addr,data);
++    }else{
++        SC_REPORT_FATAL(this->name(), "Storage not configured!");
++    }
++    
++}
++
++unsigned char DRAMSys::checkByte(uint64_t addr)
++{
++    if (simConfig->storeMode == Config::StoreModeType::Store)
++    {
++        // uint64_t phy_addr = addressDecoder->decodeAddress(addr);
++        for (auto& dram : drams)
++            return dram->checkByte(addr);
++    }else{
++        SC_REPORT_FATAL(this->name(), "Storage not configured!");
++    }
++    return 0;
++}
++
++void DRAMSys::togglePim(int channel)
++{
++    drams[channel]->togglePim();
++}
++
++void DRAMSys::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth)
++{
++    uint i = 0;
++    for (auto& dram : drams)
++    {
++        dram->registerCBPimMeth(instance, pim_meth, i++);
++    }
++}
++
++void DRAMSys::pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    drams[channel]->pimRead(base_addr, length, stride, count, buf);
++}
++
++void DRAMSys::pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    drams[channel]->pimWrite(base_addr, length, stride, count, buf);
++}
++
+ void DRAMSys::end_of_simulation()
+ {
+     if (simConfig->powerAnalysis)
+diff --git a/src/DRAMSys/DRAMSys.h b/src/DRAMSys/DRAMSys.h
+index d9ebe7c..5b0dcab 100644
+--- a/src/DRAMSys/DRAMSys.h
++++ b/src/DRAMSys/DRAMSys.h
+@@ -43,6 +43,7 @@
+ #define DRAMSYS_H
+ 
+ #include "DRAMSys/configuration/json/DRAMSysConfiguration.h"
++#include "DRAMSys/simulation/Dram.h"
+ 
+ #include <memory>
+ #include <string>
+@@ -99,6 +100,14 @@ public:
+      */
+     void registerIdleCallback(const std::function<void()>& idleCallback);
+ 
++    unsigned char * getDramBasePointer();
++    void perloadByte(uint64_t addr, unsigned char data);
++    unsigned char checkByte(uint64_t addr);
++    void togglePim(int channel);
++    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth);
++    void pimRead(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++    void pimWrite(int channel, uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++
+ private:
+     static void logo();
+     static std::unique_ptr<const MemSpec>
+diff --git a/src/DRAMSys/common/MemoryManager.cpp b/src/DRAMSys/common/MemoryManager.cpp
+index bb93407..3f2fc99 100644
+--- a/src/DRAMSys/common/MemoryManager.cpp
++++ b/src/DRAMSys/common/MemoryManager.cpp
+@@ -59,6 +59,8 @@ MemoryManager::~MemoryManager()
+                     delete[] ptr;
+                 }
+             }
++            if (payload->get_byte_enable_ptr())
++                delete[] payload->get_byte_enable_ptr();
+ 
+             payload->reset();
+             delete payload;
+@@ -95,6 +97,10 @@ tlm::tlm_generic_payload* MemoryManager::allocate(std::size_t dataLength)
+ void MemoryManager::free(tlm::tlm_generic_payload* trans)
+ {
+     unsigned dataLength = trans->get_data_length();
++    if (trans->get_byte_enable_ptr()){
++        delete[] trans->get_byte_enable_ptr();
++        trans->set_byte_enable_ptr(nullptr);
++    }
+     freePayloads[dataLength].push(trans);
+ }
+ 
+diff --git a/src/DRAMSys/simulation/Dram.cpp b/src/DRAMSys/simulation/Dram.cpp
+index 720a815..eb27384 100644
+--- a/src/DRAMSys/simulation/Dram.cpp
++++ b/src/DRAMSys/simulation/Dram.cpp
+@@ -73,7 +73,11 @@ Dram::Dram(const sc_module_name& name,
+     channelSize(memSpec.getSimMemSizeInBytes() / memSpec.numberOfChannels),
+     useMalloc(simConfig.useMalloc),
+     tlmRecorder(tlmRecorder),
+-    powerWindowSize(memSpec.tCK * simConfig.windowSize)
++    powerWindowSize(memSpec.tCK * simConfig.windowSize),
++    channelIdx(0),
++    pimEnable(0),
++    async_callback_instance(nullptr),
++    async_callback_pim_meth(nullptr)
+ {
+     if (storeMode == Config::StoreModeType::Store)
+     {
+@@ -134,6 +138,60 @@ Dram::~Dram()
+         free(memory);
+ }
+ 
++unsigned char * Dram::getDramBasePointer()
++{
++    return memory;
++}
++
++void Dram::perloadByteInDram(uint64_t addr, unsigned char data)
++{
++    unsigned char *phyAddr = memory + addr;
++    *phyAddr = data;
++}
++
++unsigned char Dram::checkByte(uint64_t addr)
++{
++    unsigned char *phyAddr = memory + addr;
++    unsigned char check_data = *phyAddr;
++    return check_data;
++}
++
++void Dram::togglePim()
++{
++    pimEnable = !pimEnable;
++}
++
++void Dram::registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx)
++{
++    async_callback_instance = instance;
++    async_callback_pim_meth = pim_meth;
++    channelIdx = _channelIdx;
++}
++
++void Dram::pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    unsigned char* phyAddr = memory + base_addr;    // Obtain physical address
++
++    for (uint64_t i = 0; i < count; i++) {
++        // Calculate stride address
++        unsigned char* strideAddr = phyAddr + i * stride;   
++        // Copy data from DRAM to buffer compactly
++        memcpy((unsigned char*)buf + i * length, strideAddr, length);
++    }
++}
++
++void Dram::pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf)
++{
++    unsigned char* phyAddr = memory + base_addr;
++    
++    for (uint64_t i = 0; i < count; i++) {
++        // Calculate stride address
++        unsigned char* strideAddr = phyAddr + i * stride;   
++        // Copy data from buffer to DRAM with stride
++        memcpy(strideAddr, (unsigned char*)buf + i * length, length);
++    }
++}
++
+ void Dram::reportPower()
+ {
+     if (!DRAMPower)
+@@ -290,6 +348,20 @@ void Dram::executeRead(tlm::tlm_generic_payload& trans) const
+             }
+         }
+     }
++    // PIM callback when a read is issued
++    if (pimEnable && async_callback_instance && async_callback_pim_meth)
++    {
++        PimInfo pimInfo;
++        pimInfo.isWrite = 0; // Read operation
++        pimInfo.address = trans.get_address();
++        pimInfo.channel = channelIdx;
++        pimInfo.rank = uint(ControllerExtension::getRank(trans));
++        pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
++        pimInfo.bank = uint(ControllerExtension::getBank(trans));
++        pimInfo.row = uint(ControllerExtension::getRow(trans));
++        pimInfo.column = uint(ControllerExtension::getColumn(trans));
++        async_callback_pim_meth(async_callback_instance, pimInfo);
++    }  
+ }
+ 
+ void Dram::executeWrite(const tlm::tlm_generic_payload& trans)
+@@ -311,6 +383,20 @@ void Dram::executeWrite(const tlm::tlm_generic_payload& trans)
+             }
+         }
+     }
++    // PIM callback when a write is issued
++    if (pimEnable && async_callback_instance && async_callback_pim_meth)
++    {
++        PimInfo pimInfo;
++        pimInfo.isWrite = 1; // Write operation
++        pimInfo.address = trans.get_address();
++        pimInfo.channel = channelIdx;
++        pimInfo.rank = uint(ControllerExtension::getRank(trans));
++        pimInfo.bankGroup = uint(ControllerExtension::getBankGroup(trans));
++        pimInfo.bank = uint(ControllerExtension::getBank(trans));
++        pimInfo.row = uint(ControllerExtension::getRow(trans));
++        pimInfo.column = uint(ControllerExtension::getColumn(trans));
++        async_callback_pim_meth(async_callback_instance, pimInfo);
++    }  
+ }
+ 
+ void Dram::serialize(std::ostream& stream) const
+diff --git a/src/DRAMSys/simulation/Dram.h b/src/DRAMSys/simulation/Dram.h
+index 001f880..31d575c 100644
+--- a/src/DRAMSys/simulation/Dram.h
++++ b/src/DRAMSys/simulation/Dram.h
+@@ -55,6 +55,20 @@
+ #include <tlm>
+ #include <tlm_utils/simple_target_socket.h>
+ 
++struct PimInfo {
++    uint isWrite;
++    uint address;
++    uint channel;
++    uint rank;
++    uint bankGroup;
++    uint bank;
++    uint row;
++    uint column;
++};
++
++typedef void*   CallbackInstance_t;
++typedef void    (AsynCallbackPim_Meth)(CallbackInstance_t instance, PimInfo pimInfo);
++
+ namespace DRAMSys
+ {
+ 
+@@ -72,6 +86,12 @@ private:
+     TlmRecorder* const tlmRecorder;
+     sc_core::sc_time powerWindowSize;
+ 
++    // PIM related variables
++    uint channelIdx;
++    uint pimEnable;                      // PIM enable flag (if not supported, remains 0)
++    CallbackInstance_t      async_callback_instance;    // PIM callback instance
++    AsynCallbackPim_Meth*   async_callback_pim_meth;    // PIM callback
++
+     std::unique_ptr<DRAMPower::dram_base<DRAMPower::CmdType>> DRAMPower;
+ 
+     // This Thread is only triggered when Power Simulation is enabled.
+@@ -107,6 +127,16 @@ public:
+ 
+     tlm_utils::simple_target_socket<Dram> tSocket{"tSocket"};
+ 
++    unsigned char * getDramBasePointer();
++    void perloadByteInDram(uint64_t addr, unsigned char data);
++    unsigned char checkByte(uint64_t addr);
++
++    // Enable PIM and register PIM callback
++    void togglePim();
++    void registerCBPimMeth(CallbackInstance_t instance, AsynCallbackPim_Meth* pim_meth, uint _channelIdx);
++    void pimRead(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++    void pimWrite(uint64_t base_addr, uint64_t length, uint64_t stride, uint64_t count, const void* buf);
++
+     virtual void reportPower();
+ 
+     void serialize(std::ostream& stream) const override;

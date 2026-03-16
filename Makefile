@@ -99,7 +99,7 @@ doc:
 ## 				Make Targets for DRAMSys Integration 				##
 ######################################################################
 
-SYSTEMC_VERSION := 2.3.4
+SYSTEMC_VERSION := 3.0.1
 SYSTEMC_GIT_URL := https://github.com/accellera-official/systemc.git
 SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 

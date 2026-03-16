@@ -23,7 +23,7 @@ CMAKE = $(PWD)/$(CMAKE_BUILD_DIR)/bin/cmake
 DRAMSys/src/simulator/simulator/dramsys_lib.cpp:
 	git clone https://github.com/tukl-msd/DRAMSys.git && \
 	cd DRAMSys && \
-	git reset --hard 8e021ea && \
+	git reset --hard 8565f18 && \
 	git apply ../patch
 	echo "DRAMSys setup done"
 
@@ -33,7 +33,10 @@ DRAMSys/build/lib/libDRAMSys_Simulator.so: $(CMAKE) DRAMSys/src/simulator/simula
 	$(CMAKE) \
 	-DCMAKE_CXX_FLAGS=-fPIC \
 	-DCMAKE_C_FLAGS=-fPIC \
-	-D DRAMSYS_WITH_DRAMPOWER=ON .. && \
+	-DDRAMSYS_WITH_DRAMPOWER=ON \
+	-DDRAMSYS_USE_FETCH_CONTENT_SYSTEMC=OFF \
+	-DSystemCLanguage_DIR=$(SYSTEMC_HOME)/lib64/cmake/SystemCLanguage \
+	.. && \
 	make
 
 build: DRAMSys/build/lib/libDRAMSys_Simulator.so

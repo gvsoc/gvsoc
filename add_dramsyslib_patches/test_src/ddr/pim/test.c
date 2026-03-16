@@ -17,13 +17,12 @@
 #define PIM_TOGGLE_ADDR 0xC0000000
 #define L1_SIZE         0x10000
 #define BUFF_SIZE       2048
-#define COL_SIZE        32        // HBM2, LPDDR4
+#define COL_SIZE        32      // HBM2
 #define NB_COPY         4
-#define BANK_STRIDE     0x2000000 // HBM2
-// #define BANK_STRIDE     0x8000000 // LPDDR4
-#define NB_BANKS        16        // HBM2
-// #define NB_BANKS        8         // LPDDR4
-#define STRIDE          0X10000
+#define BANK_STRIDE     0x40    // HBM2
+#define NB_BANKS        16      // HBM2
+#define COL_STRIDE      0x800   // HBM2
+#define STRIDE          0X100000
 
 static char ext_buff0[BUFF_SIZE];
 static char ext_buff1[BUFF_SIZE];
@@ -64,7 +63,9 @@ static void cluster_dram_access(void *arg)
       // Copy a BUFF-sized block
       for (int i=0; i<NB_COPY; i++)
       { 
-        pi_cl_dma_cmd((int)dram_buff + k*BANK_STRIDE + COL_SIZE*j + STRIDE*i, (int)loc_buff + COL_SIZE*j, COL_SIZE, PI_CL_DMA_DIR_LOC2EXT, &copy[i]);
+        // Since columns are interleaved, we need to stride by COL_SIZE to write in sequential columns, and by STRIDE to test different rows
+        pi_cl_dma_cmd((int)dram_buff + k*BANK_STRIDE + j*COL_STRIDE + STRIDE*i, (int)loc_buff + COL_SIZE*j, COL_SIZE, PI_CL_DMA_DIR_LOC2EXT, &copy[i]);
+        // printf("Copying to DRAM at addr %p for bank %d, stride %d\n", dram_buff + k*BANK_STRIDE + j*COL_STRIDE + STRIDE*i, k, i);
       }
       // Wait for transfers
       for (int i=0; i<NB_COPY; i++)
@@ -86,10 +87,10 @@ static void cluster_dram_access(void *arg)
     for (int i=0; i<NB_COPY; i++)
     { 
       // Send reads to multiply by 3 in the PIM
-      pi_cl_dma_cmd((int)dram_buff + COL_SIZE*j + STRIDE*i, (int)loc_buff + COL_SIZE*j, 1, PI_CL_DMA_DIR_EXT2LOC, &copy[0]);
+      pi_cl_dma_cmd((int)dram_buff + COL_STRIDE*j + STRIDE*i, (int)loc_buff + COL_SIZE*j, 1, PI_CL_DMA_DIR_EXT2LOC, &copy[0]);
       pi_cl_dma_cmd_wait(&copy[0]);
       // Write back results to DRAM at the same place
-      pi_cl_dma_cmd((int)dram_buff + 7*BANK_STRIDE + COL_SIZE*j + STRIDE*i, (int)loc_buff + COL_SIZE*j, 1, PI_CL_DMA_DIR_LOC2EXT, &copy[0]);
+      pi_cl_dma_cmd((int)dram_buff + 7*BANK_STRIDE + COL_STRIDE*j + STRIDE*i, (int)loc_buff + COL_SIZE*j, 1, PI_CL_DMA_DIR_LOC2EXT, &copy[0]);
       pi_cl_dma_cmd_wait(&copy[0]);
     }
   }
@@ -128,16 +129,34 @@ static int test_entry()
 
   pi_cluster_send_task_to_cl(&cluster_dev, &cluster_task);
 
-  for (int k=0; k<NB_BANKS; k++)
+  // for (int k=0; k<NB_BANKS; k++)
+  // {
+  //   for (int j=0; j<NB_COPY; j++) // Check DRAM content
+  //   {
+  //     for (int i=0; i<BUFF_SIZE; i++) // Checks that the result of the task is correct
+  //     {
+  //       if (dram_buff[i + STRIDE*j + k*BANK_STRIDE] != (char)(i * 3)) {
+  //         printf("ERROR at index %d / addr %p: at stride %d and bank %d expecting 0x%x, got 0x%x\n",
+  //               i, &dram_buff[i + STRIDE*j + k*BANK_STRIDE], j, k, i*3, dram_buff[i + STRIDE*j + k*BANK_STRIDE]);
+  //         return -1;
+  //       }
+  //     }
+  //   }
+  // }
+
+  for (int l=0; l<NB_BANKS; l++)
   {
-    for (int j=0; j<NB_COPY; j++) // Check DRAM content
+    for (int k=0; k<NB_COPY; k++)
     {
-      for (int i=0; i<BUFF_SIZE; i++) // Checks that the result of the task is correct
+      for (int j=0; j<BUFF_SIZE/COL_SIZE; j++)
       {
-        if (dram_buff[i + STRIDE*j + k*BANK_STRIDE] != (char)(i * 3)) {
-          printf("ERROR at index %d / addr %p: at stride %d and bank %d expecting 0x%x, got 0x%x\n",
-                i, &dram_buff[i + STRIDE*j + k*BANK_STRIDE], j, k, i*3, dram_buff[i + STRIDE*j + k*BANK_STRIDE]);
-          return -1;
+        for (int i=0; i<COL_SIZE; i++)
+        {
+          if (dram_buff[i + COL_STRIDE*j + STRIDE*k + l*BANK_STRIDE] != (char)((i + j*COL_SIZE)*3)) {
+            printf("ERROR at index %d / addr %p: at stride %d, bank %d and column %d expecting 0x%x, got 0x%x\n",
+                  (i + j*COL_SIZE), &dram_buff[i + COL_STRIDE*j + STRIDE*k + l*BANK_STRIDE], k, l, j, (i + j*COL_SIZE)*3, dram_buff[i + COL_STRIDE*j + STRIDE*k + l*BANK_STRIDE]);
+            return -1;
+          }
         }
       }
     }
