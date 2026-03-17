@@ -2,10 +2,12 @@
     "memspec": {
         "memarchitecturespec": {
             "burstLength": 4,
+            "maxBurstLength": 4,
             "dataRate": 2,
-            "nbrOfBankGroups": 4,
-            "nbrOfBanks": 16,
-            "nbrOfColumns": 128,
+            "nbrOfBankGroups": 8,
+            "nbrOfBanks": 32,
+            "nbrOfColumns": 32,
+            "nbrOfStacks": 2,
             "nbrOfPseudoChannels": 2,
             "nbrOfRows": 32768,
             "width": 64,
@@ -17,6 +19,7 @@
         "memtimingspec": {
             "CCDL": 3,
             "CCDS": 2,
+            "CCDR": 2,
             "CKE": 8,
             "DQSCK": 1,
             "FAW": 16,
@@ -42,7 +45,7 @@
             "WTRS": 4,
             "XP": 8,
             "XS": 216,
-            "clkMhz": 1000
+            "tCK": 1e-09
         }
     }
 }
