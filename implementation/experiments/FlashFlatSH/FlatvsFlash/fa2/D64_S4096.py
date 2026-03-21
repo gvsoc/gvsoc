@@ -23,12 +23,12 @@ class FlatAttetion:
         #Attention parameters
         self.dtype                   = 'fp16'
         self.kv_sequence_length      = 4096
-        self.q_sequence_length       = 4096
+        self.q_sequence_length       = 256
         self.speculative_length      = 1
         self.head_dimemsion          = 64
         self.num_head                = 32
         self.num_head_group          = 32
-        self.batch_size              = 2
+        self.batch_size              = 32
 
         #Flatten Settings
         self.use_flash_attention     = 1

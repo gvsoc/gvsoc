@@ -83,7 +83,7 @@ faft-cfg:
 
 faft-pld:
 	@echo "Generating preload files for attention ..."
-	python3 ${CUR_DIR}/scripts/kernels/attn_preload.py \
+	python3 ${CUR_DIR}/scripts/kernels/faft_preload.py \
 			${CUR_DIR}/sw/FA/preload.elf \
 			${CUR_DIR}/sw/FA/include/preload.h \
 			${ARCH_FILE} \

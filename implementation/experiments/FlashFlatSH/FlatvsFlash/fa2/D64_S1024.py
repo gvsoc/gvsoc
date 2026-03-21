@@ -23,18 +23,18 @@ class FlatAttetion:
         #Attention parameters
         self.dtype                   = 'fp16'
         self.kv_sequence_length      = 1024
-        self.q_sequence_length       = 1024
+        self.q_sequence_length       = 64
         self.speculative_length      = 1
         self.head_dimemsion          = 64
         self.num_head                = 32
         self.num_head_group          = 32
-        self.batch_size              = 2
+        self.batch_size              = 32
 
         #Flatten Settings
         self.use_flash_attention     = 1
         ## [Shape]: Attention matrix shape (x=shape, y=shape) that a Group need to handle for each iteration
         self.flatten_shape_x         = 128
-        self.flatten_shape_y         = 128
+        self.flatten_shape_y         = 64
         ## [Async]: Whether to enable asynchronous execution
         self.flatten_async           = 0
         ## [Numer]: Whether to check numerical correctness
