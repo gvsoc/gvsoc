@@ -206,6 +206,9 @@ runv_simple:
 rund:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace-level=6 --trace=/chip/cluster_4/pe0/insn
 
+runf:
+	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster --binary sw_build/softhier.elf run $(preload_arg) --trace=/chip/cluster_0/redmule --trace=/chip/cluster_0/cluster_registers --trace=/chip/cluster_31/redmule --trace=/chip/cluster_31/cluster_registers --trace=/chip/cluster_992/redmule --trace=/chip/cluster_992/cluster_registers --trace=/chip/cluster_1023/redmule --trace=/chip/cluster_1023/cluster_registers | tee sw_build/analyze_trace.txt
+
 run_spatz:
 	./install/bin/gvsoc --target=pulp.chips.flex_cluster.flex_cluster \
 		--binary sw_build/softhier.elf run $(preload_arg) \

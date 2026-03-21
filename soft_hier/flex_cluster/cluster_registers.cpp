@@ -89,6 +89,12 @@ private:
     uint16_t global_sync_enable;
     uint64_t global_sync_timestamp;
 
+    uint64_t spatz_active_timestamp;
+    uint64_t hbm_access_timestamp;
+    uint64_t multicast_timestamp;
+    uint64_t redsum_timestamp;
+    uint64_t redmax_timestamp;
+
 };
 
 ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
@@ -119,6 +125,12 @@ ClusterRegisters::ClusterRegisters(vp::ComponentConf &config)
 
     this->global_sync_enable = 0;
     this->global_sync_timestamp = 0;
+
+    this->spatz_active_timestamp = 0;
+    this->hbm_access_timestamp = 0;
+    this->multicast_timestamp = 0;
+    this->redsum_timestamp = 0;
+    this->redmax_timestamp = 0;
 
     this->barrier_req_itf.resize(this->nb_cores);
     for (int i=0; i<this->nb_cores; i++)
@@ -203,11 +215,11 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         } else {
             uint32_t type = data[0];
             _this->global_sync_enable = 0;
-            _this->trace.msg("Cluster Sync: %d ns -> %d ns | period = %d ns | Type = %d\n",
-                _this->global_sync_timestamp,
-                _this->time.get_time()/1000,
-                _this->time.get_time()/1000 - _this->global_sync_timestamp,
-                type);
+            // _this->trace.msg("Cluster Sync: %d ns -> %d ns | period = %d ns | Type = %d\n",
+            //     _this->global_sync_timestamp,
+            //     _this->time.get_time()/1000,
+            //     _this->time.get_time()/1000 - _this->global_sync_timestamp,
+            //     type);
         }
     }
 
@@ -238,6 +250,62 @@ vp::IoReqStatus ClusterRegisters::req(vp::Block *__this, vp::IoReq *req)
         if (status == vp::IO_REQ_INVALID)
         {
             _this->trace.fatal("[Global Sync] There was an error while broadcating wakeup signal\n");
+        }
+    }
+
+    if(offset == 36){
+        if (is_write) {
+            _this->spatz_active_timestamp = _this->time.get_time()/1000;
+        } else {
+            _this->trace.msg("Spatz Active: %d ns -> %d ns | period = %d ns \n",
+            _this->spatz_active_timestamp,
+            _this->time.get_time()/1000,
+            _this->time.get_time()/1000 - _this->spatz_active_timestamp);
+        }
+    }
+
+    if(offset == 40){
+        if (is_write) {
+            _this->hbm_access_timestamp = _this->time.get_time()/1000;
+        } else {
+            _this->trace.msg("HBM Access: %d ns -> %d ns | period = %d ns \n",
+            _this->hbm_access_timestamp,
+            _this->time.get_time()/1000,
+            _this->time.get_time()/1000 - _this->hbm_access_timestamp);
+        }
+    }
+
+    if(offset == 44){
+        if (is_write) {
+            _this->multicast_timestamp = _this->time.get_time()/1000;
+        } else {
+            _this->trace.msg("Multicast: %d ns -> %d ns | period = %d ns \n",
+            _this->multicast_timestamp,
+            _this->time.get_time()/1000,
+            _this->time.get_time()/1000 - _this->multicast_timestamp);
+        }
+    }
+
+
+    if(offset == 48){
+        if (is_write) {
+            _this->redsum_timestamp = _this->time.get_time()/1000;
+        } else {
+            _this->trace.msg("RedSum: %d ns -> %d ns | period = %d ns \n",
+            _this->redsum_timestamp,
+            _this->time.get_time()/1000,
+            _this->time.get_time()/1000 - _this->redsum_timestamp);
+        }
+    }
+
+    if(offset == 52){
+        if (is_write) {
+            _this->redmax_timestamp = _this->time.get_time()/1000;
+        } else {
+            _this->trace.msg("RedMax: %d ns -> %d ns | period = %d ns \n",
+            _this->redmax_timestamp,
+            _this->time.get_time()/1000,
+            _this->time.get_time()/1000 - _this->redmax_timestamp);
         }
     }
 

@@ -370,6 +370,57 @@ void flex_global_barrier_xy_polling(){
     flex_intra_cluster_sync();
 }
 
+
+uint32_t flex_record_start_spatz(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+36);
+    *record_reg = 33;
+}
+
+uint32_t flex_record_start_hbmAccess(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+40);
+    *record_reg = 33;
+}
+
+uint32_t flex_record_start_multicast(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+44);
+    *record_reg = 33;
+}
+
+uint32_t flex_record_start_redSum(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+48);
+    *record_reg = 33;
+}
+
+uint32_t flex_record_start_redMax(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+52);
+    *record_reg = 33;
+}
+
+uint32_t flex_record_end_spatz(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+36);
+    return *record_reg;
+}
+
+uint32_t flex_record_end_hbmAccess(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+40);
+    return *record_reg;
+}
+
+uint32_t flex_record_end_multicast(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+44);
+    return *record_reg;
+}
+
+uint32_t flex_record_end_redSum(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+48);
+    return *record_reg;
+}
+
+uint32_t flex_record_end_redMax(){
+    volatile uint32_t * record_reg      = (volatile uint32_t *) (ARCH_CLUSTER_REG_BASE+52);
+    return *record_reg;
+}
+
 /*******************
 *        EoC       *
 *******************/

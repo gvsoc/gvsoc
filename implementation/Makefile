@@ -73,6 +73,44 @@ attn-clean:
 	rm -f ${CUR_DIR}/sw/FlatAttention/include/attn.h ${CUR_DIR}/sw/FlatAttention/preload.elf ${CUR_DIR}/sw/FlatAttention/preload.dump ${CUR_DIR}/sw/FlatAttention/include/preload.h ${SH_DIR}/dump_*
 
 
+#################
+#   FlashFlat   #
+#################
+
+faft-cfg:
+	@echo "Generating configuration files for attention ..."
+	python3 ${CUR_DIR}/scripts/kernels/attn_config.py ${ATTN_FILE} ${CUR_DIR}/sw/FA/include/attn.h
+
+faft-pld:
+	@echo "Generating preload files for attention ..."
+	python3 ${CUR_DIR}/scripts/kernels/attn_preload.py \
+			${CUR_DIR}/sw/FA/preload.elf \
+			${CUR_DIR}/sw/FA/include/preload.h \
+			${ARCH_FILE} \
+			${ATTN_FILE}
+
+faft-hs:
+	@echo "Compiling SoftHier HW & SW for attention ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FA make -C ${SH_DIR} hs
+
+faft-sw:
+	@echo "Compiling SoftHier HW & SW for attention ..."
+	cfg=${ARCH_FILE} app=${CUR_DIR}/sw/FA make -C ${SH_DIR} sw
+
+faft-pre: faft-clean faft-cfg faft-pld faft-hs
+
+faft-run: faft-pre
+	@echo "SoftHier simulation for attention ..."
+	pld=${CUR_DIR}/sw/FA/preload.elf make -C ${SH_DIR} run
+
+faft-run%: faft-pre
+	@echo "SoftHier simulation for attention ..."
+	pld=${CUR_DIR}/sw/FA/preload.elf make -C ${SH_DIR} run$*
+
+faft-clean:
+	@echo "clean up intermidiate files generated for attention ..."
+	rm -f ${CUR_DIR}/sw/FA/include/attn.h ${CUR_DIR}/sw/FA/preload.elf ${CUR_DIR}/sw/FA/preload.dump ${CUR_DIR}/sw/FA/include/preload.h ${SH_DIR}/dump_*
+
 
 #############
 #   GEMM    #

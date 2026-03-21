@@ -155,17 +155,20 @@ void flatcoll_run(FlatAttentionInfo* info){
                     }
 
                     if (info->cluster_for_rowwise == 1 && j == 0) {
+                        flex_record_start_hbmAccess();
                         //load Qi_sy
                         flex_dma_async_1d(
                             info->L1_Q,
                             info->HBM_Q + heads * info->heads_QO_size/*head offset*/ + i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                             info->L1_Q_size);
                         flex_dma_async_wait_all();
+                        flex_record_end_hbmAccess();
                     }
 
 
                     if (info->cluster_for_colwise == 1)
                     {
+                        flex_record_start_hbmAccess();
                         //load Vj_sx
                         flex_dma_async_1d(
                             info->L1_V,
@@ -177,6 +180,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                             info->HBM_K + heads * info->heads_KTV_size/*head offset*/ + j * info->block_KTV_size/*j block offset*/ + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                             info->L1_KT_size);
                         flex_dma_async_wait_all();
+                        flex_record_end_hbmAccess();
                         //transpose K
                         flex_transpose_engine_config(info->Bc_s,info->d,info->L1_KT,info->L1_KT,DATA_TYPE_BYTE);
                         flex_transpose_engine_trigger();
@@ -191,19 +195,23 @@ void flatcoll_run(FlatAttentionInfo* info){
                  ********************************************************************/
                 if (j == 0 && info->flatten_slice_x > 1) {
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_start_multicast();
                     flat_attention_broadcast_rowwise(
                         info,
                         info->L1_Q,
                         info->L1_Q_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_multicast();
                 }
                 if (info->flatten_slice_y > 1) {
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_start_multicast();
                     flat_attention_broadcast_colwise(
                         info,
                         info->L1_KT,
                         info->L1_KT_size + info->L1_V_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_multicast();
                 }
 
 
@@ -227,6 +235,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                 flex_intra_cluster_sync();
                 if (info->spatz_attached)
                 {
+                    if (flex_is_first_core()) flex_record_start_spatz();
                     // m = max(mr, rowmax(Att))
                     flat_attention_vector_rowmax_MV_V(
                         info->Bc_s,
@@ -236,6 +245,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                         info->L1SP_m,
                         info->sqrt_dim
                         );
+                    if (flex_is_first_core()) flex_record_end_spatz();
                 }
                 flex_intra_cluster_sync();
 
@@ -245,16 +255,20 @@ void flatcoll_run(FlatAttentionInfo* info){
                  ********************************************************************/
                 if (info->flatten_slice_x > 1) {
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_start_redMax();
                     flat_attention_redmax_rowwise(
                         info,
                         info->L1_m,
                         info->L1_m_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_redMax();
+                    if (flex_is_dm_core()) flex_record_start_multicast();
                     flat_attention_broadcast_rowwise(
                         info,
                         info->L1_m,
                         info->L1_m_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_multicast();
                 }
 
 
@@ -266,6 +280,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                  ********************************************************************/
                 if (info->spatz_attached)
                 {
+                    if (flex_is_first_core()) flex_record_start_spatz();
                     //p = exp(att - m)
                     flat_attention_vector_EXP_MV(
                         info->Bc_s,
@@ -281,6 +296,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                         info->L1SP_A,
                         info->L1SP_l
                         );
+                    if (flex_is_first_core()) flex_record_end_spatz();
                 }
                 flex_intra_cluster_sync();
 
@@ -290,16 +306,20 @@ void flatcoll_run(FlatAttentionInfo* info){
                  ********************************************************************/
                 if (info->flatten_slice_x > 1) {
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_start_redSum();
                     flat_attention_redsum_rowwise(
                         info,
                         info->L1_l,
                         info->L1_l_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_redSum();
+                    if (flex_is_dm_core()) flex_record_start_multicast();
                     flat_attention_broadcast_rowwise(
                         info,
                         info->L1_l,
                         info->L1_l_size);
                     grid_sync_group_barrier_xy(&(info->group));
+                    if (flex_is_dm_core()) flex_record_end_multicast();
                 }
 
 
@@ -310,6 +330,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                  ********************************************************************/
                 if (info->spatz_attached && j != 0)
                 {
+                    if (flex_is_first_core()) flex_record_start_spatz();
                     //Compute e = exp(mr - m)
                     flat_attention_vector_EXP_VV_V(
                         info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -330,6 +351,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                         info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                         info->L1SP_O,
                         info->L1SP_e);
+                    if (flex_is_first_core()) flex_record_end_spatz();
                 }
                 flex_intra_cluster_sync();
                 if (flex_is_first_core())
@@ -350,6 +372,7 @@ void flatcoll_run(FlatAttentionInfo* info){
              *  9. O = O/l                                                      *
              ********************************************************************/
             if (info->spatz_attached){
+                if (flex_is_first_core()) flex_record_start_spatz();
                 //O = O/l
                 flat_attention_vector_M_div_V(
                     info->d,
@@ -357,6 +380,7 @@ void flatcoll_run(FlatAttentionInfo* info){
                     info->L1SP_O,
                     info->L1SP_l
                     );
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
             flex_intra_cluster_sync();
 
@@ -366,22 +390,26 @@ void flatcoll_run(FlatAttentionInfo* info){
              ********************************************************************/
             if (info->flatten_slice_x > 1) {
                 grid_sync_group_barrier_xy(&(info->group));
+                if (flex_is_dm_core()) flex_record_start_redSum();
                 flat_attention_redsum_rowwise(
                     info,
                     info->L1_O,
                     info->L1_O_size);
                 grid_sync_group_barrier_xy(&(info->group));
+                if (flex_is_dm_core()) flex_record_end_redSum();
             }
 
             if (info->cluster_for_rowwise == 1)
             {
                 //11. Store O
                 if(flex_is_dm_core()){
+                    flex_record_start_hbmAccess();
                     flex_dma_async_1d(
                         info->HBM_O + heads * info->heads_QO_size/*head offset*/ + i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                         info->L1_O,
                         info->L1_O_size);
                     flex_dma_async_wait_all();
+                    flex_record_end_hbmAccess();
                 }
             }
             flex_intra_cluster_sync();
@@ -511,14 +539,17 @@ void flatasync_run(FlatAttentionInfo* info){
         flex_dma_async_wait_all();
 
         if (info->cluster_for_rowwise == 1){
+            flex_record_start_hbmAccess();
             flex_dma_async_1d(
                 info->L1_Q,
                 info->HBM_Q + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                 info->L1_Q_size);
             flex_dma_async_wait_all();
+            flex_record_end_hbmAccess();
 
             if (info->flatten_slice_x > 1)
             {
+                flex_record_start_multicast();
                 flex_dma_async_broadcast(
                     info->L1_Q/*dst_offset*/,
                     info->L1_Q/*src_offset*/,
@@ -526,16 +557,19 @@ void flatasync_run(FlatAttentionInfo* info){
                     info->group.wakeup_row_mask/*row_mask*/,
                     (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                 flex_dma_async_wait_all();
+                flex_record_end_multicast();
             }
         }
 
         if (info->cluster_for_colwise == 1)
         {
+            flex_record_start_hbmAccess();
             flex_dma_async_1d(
                 info->L1_KT,
                 info->HBM_K + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                 info->L1_KT_size);
             flex_dma_async_wait_all();
+            flex_record_end_hbmAccess();
             //transpose K
             flex_transpose_engine_config(info->Bc_s,info->d,info->L1_KT,info->L1_KT,DATA_TYPE_BYTE);
             flex_transpose_engine_trigger();
@@ -543,6 +577,7 @@ void flatasync_run(FlatAttentionInfo* info){
 
             if (info->flatten_slice_y > 1)
             {
+                flex_record_start_multicast();
                 flex_dma_async_broadcast(
                     info->L1_KT/*dst_offset*/,
                     info->L1_KT/*src_offset*/,
@@ -550,6 +585,7 @@ void flatasync_run(FlatAttentionInfo* info){
                     (ARCH_NUM_CLUSTER_X - 1)/*row_mask*/,
                     info->group.wakeup_col_mask/*col_mask*/);
                 flex_dma_async_wait_all();
+                flex_record_end_multicast();
             }
         }
     }
@@ -592,6 +628,7 @@ void flatasync_run(FlatAttentionInfo* info){
         if (flex_is_dm_core() && __valid && __iter_j == (info->Tc - 1))
         {
             if(info->cluster_for_rowwise == 1 && info->flatten_slice_x > 1){
+                flex_record_start_redSum();
                 flex_dma_async_reduction(
                     info->DB_L1_O/*dst_offset*/,
                     info->DB_L1_O/*src_offset*/,
@@ -600,6 +637,7 @@ void flatasync_run(FlatAttentionInfo* info){
                     info->group.wakeup_row_mask/*row_mask*/,
                     (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                 flex_dma_async_wait_all();
+                flex_record_end_redSum();
             }
         }
         grid_sync_group_barrier_xy(&(info->group));
@@ -608,11 +646,13 @@ void flatasync_run(FlatAttentionInfo* info){
         if (info->spatz_attached && __valid && __iter_j == (info->Tc - 1))
         {
             if (info->cluster_for_rowwise == 1){
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_M_div_V(
                     info->d,
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->DB_L1SP_O,
                     info->DB_L1SP_l);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
         }
 
@@ -620,14 +660,17 @@ void flatasync_run(FlatAttentionInfo* info){
         if (flex_is_dm_core() && valid && iter_j == 0)
         {
             if (info->cluster_for_rowwise == 1){
+                flex_record_start_hbmAccess();
                 flex_dma_async_1d(
                     info->DB_L1_Q,
                     info->HBM_Q + (2*iter_h + 1) * info->heads_QO_size/*head offset*/ + iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->L1_Q_size);
                 flex_dma_async_wait_all();
+                flex_record_end_hbmAccess();
 
                 if (info->flatten_slice_x > 1)
                 {
+                    flex_record_start_multicast();
                     flex_dma_async_broadcast(
                         info->DB_L1_Q/*dst_offset*/,
                         info->DB_L1_Q/*src_offset*/,
@@ -635,6 +678,7 @@ void flatasync_run(FlatAttentionInfo* info){
                         info->group.wakeup_row_mask/*row_mask*/,
                         (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                     flex_dma_async_wait_all();
+                    flex_record_end_multicast();
                 }
             }
         }
@@ -643,6 +687,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set B: <n-1> m=rowmax(Att)
         if (info->spatz_attached && _valid)
         {
+            if (flex_is_first_core()) flex_record_start_spatz();
             flat_attention_vector_rowmax_MV_V(
                 info->Bc_s,
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -650,17 +695,20 @@ void flatasync_run(FlatAttentionInfo* info){
                 info->DB_L1SP_mr,
                 info->DB_L1SP_m,
                 info->sqrt_dim);
+            if (flex_is_first_core()) flex_record_end_spatz();
         }
 
         //Set B: <n-2> store O
         if (flex_is_dm_core() && __valid && __iter_j == (info->Tc - 1))
         {
             if (info->cluster_for_rowwise == 1){
+                flex_record_start_hbmAccess();
                 flex_dma_async_1d(
                     info->HBM_O + (2*__iter_h + 1) * info->heads_QO_size/*head offset*/ + __iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->DB_L1_O,
                     info->L1_O_size);
                 flex_dma_async_wait_all();
+                flex_record_end_hbmAccess();
             }
 
             flex_dma_async_1d(info->DB_L1_mr,zomem(0),info->L1_m_size+info->L1_l_size);
@@ -677,16 +725,20 @@ void flatasync_run(FlatAttentionInfo* info){
         if (_valid && info->flatten_slice_x > 1)
         {
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_start_redMax();
             flat_attention_redmax_rowwise(
                 info,
                 info->DB_L1_m,
                 info->L1_m_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_redMax();
+            if (flex_is_dm_core()) flex_record_start_multicast();
             flat_attention_broadcast_rowwise(
                 info,
                 info->DB_L1_m,
                 info->L1_m_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_multicast();
         }
 
         //Set B: <n-1> e=exp(mr-m)
@@ -694,11 +746,13 @@ void flatasync_run(FlatAttentionInfo* info){
         {
             if (info->spatz_attached)
             {
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_EXP_VV_V(
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->DB_L1SP_mr,
                     info->DB_L1SP_m,
                     info->DB_L1SP_e);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
             flex_intra_cluster_sync();
         }
@@ -755,6 +809,7 @@ void flatasync_run(FlatAttentionInfo* info){
 
         //Set B: <n-1> p=exp(Att-m) and <n-1> l=rowsum(p)
         if (info->spatz_attached && _valid){
+            if (flex_is_first_core()) flex_record_start_spatz();
             flat_attention_vector_EXP_MV(
                 info->Bc_s,
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -766,6 +821,7 @@ void flatasync_run(FlatAttentionInfo* info){
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                 info->DB_L1SP_A,
                 info->DB_L1SP_l);
+            if (flex_is_first_core()) flex_record_end_spatz();
         }
 
         if (flex_is_dm_core())
@@ -775,11 +831,13 @@ void flatasync_run(FlatAttentionInfo* info){
                 //Set B: < n > load K_sx
                 if (valid)
                 {
+                    flex_record_start_hbmAccess();
                     flex_dma_async_1d(
                         info->DB_L1_KT,
                         info->HBM_K + (2*iter_h + 1) * info->heads_KTV_size/*head offset*/ + iter_j * info->block_KTV_size/*j block offset*/ + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                         info->L1_KT_size);
                     flex_dma_async_wait_all();
+                    flex_record_end_hbmAccess();
                     //transpose K
                     flex_transpose_engine_config(info->Bc_s,info->d,info->DB_L1_KT,info->DB_L1_KT,DATA_TYPE_BYTE);
                     flex_transpose_engine_trigger();
@@ -789,11 +847,13 @@ void flatasync_run(FlatAttentionInfo* info){
                 //Set B: <n-1> load V_sx
                 if (_valid)
                 {
+                    flex_record_start_hbmAccess();
                     flex_dma_async_1d(
                         info->DB_L1_V,
                         info->HBM_V + (2*_iter_h + 1) * info->heads_KTV_size/*head offset*/ + _iter_j * info->block_KTV_size/*j block offset*/ + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                         info->L1_V_size);
                     flex_dma_async_wait_all();
+                    flex_record_end_hbmAccess();
                 }
 
                 if (info->flatten_slice_y > 1)
@@ -801,6 +861,7 @@ void flatasync_run(FlatAttentionInfo* info){
                     //Set B: < n > Broadcast K_sx
                     if (valid)
                     {
+                        flex_record_start_multicast();
                         flex_dma_async_broadcast(
                             info->DB_L1_KT/*dst_offset*/,
                             info->DB_L1_KT/*src_offset*/,
@@ -808,11 +869,13 @@ void flatasync_run(FlatAttentionInfo* info){
                             (ARCH_NUM_CLUSTER_X - 1)/*row_mask*/,
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all();
+                        flex_record_end_multicast();
                     }
 
                     //Set B: <n-1> Broadcast V_sx
                     if (_valid)
                     {
+                        flex_record_start_multicast();
                         flex_dma_async_broadcast(
                             info->DB_L1_V/*dst_offset*/,
                             info->DB_L1_V/*src_offset*/,
@@ -820,6 +883,7 @@ void flatasync_run(FlatAttentionInfo* info){
                             (ARCH_NUM_CLUSTER_X - 1)/*row_mask*/,
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all();
+                        flex_record_end_multicast();
                     }
                 }
             }
@@ -829,16 +893,20 @@ void flatasync_run(FlatAttentionInfo* info){
         if (_valid && info->flatten_slice_x > 1)
         {
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_start_redSum();
             flat_attention_redsum_rowwise(
                 info,
                 info->DB_L1_l,
                 info->L1_l_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_redSum();
+            if (flex_is_dm_core()) flex_record_start_multicast();
             flat_attention_broadcast_rowwise(
                 info,
                 info->DB_L1_l,
                 info->L1_l_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_multicast();
         }
 
         //Set B: <n-1> l=e*lr+l
@@ -846,11 +914,13 @@ void flatasync_run(FlatAttentionInfo* info){
         {
             if (info->spatz_attached)
             {
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_update_l(
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->DB_L1SP_lr,
                     info->DB_L1SP_e,
                     info->DB_L1SP_l);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
             flex_intra_cluster_sync();
         }
@@ -866,11 +936,13 @@ void flatasync_run(FlatAttentionInfo* info){
             //Set B:  <n-1> O = O*e
             if (_valid && (_iter_j != 0))
             {
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_M_mul_V(
                     info->d,
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->DB_L1SP_O,
                     info->DB_L1SP_e);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
         }
 
@@ -916,6 +988,7 @@ void flatasync_run(FlatAttentionInfo* info){
         if (flex_is_dm_core() && _valid && _iter_j == (info->Tc - 1))
         {
             if(info->cluster_for_rowwise == 1 && info->flatten_slice_x > 1){
+                flex_record_start_redSum();
                 flex_dma_async_reduction(
                     info->L1_O/*dst_offset*/,
                     info->L1_O/*src_offset*/,
@@ -924,6 +997,7 @@ void flatasync_run(FlatAttentionInfo* info){
                     info->group.wakeup_row_mask/*row_mask*/,
                     (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                 flex_dma_async_wait_all();
+                flex_record_end_redSum();
             }
         }
         grid_sync_group_barrier_xy(&(info->group));
@@ -932,11 +1006,13 @@ void flatasync_run(FlatAttentionInfo* info){
         if (info->spatz_attached && _valid && _iter_j == (info->Tc - 1))
         {
             if (info->cluster_for_rowwise == 1){
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_M_div_V(
                     info->d,
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->L1SP_O,
                     info->L1SP_l);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
         }
 
@@ -944,14 +1020,17 @@ void flatasync_run(FlatAttentionInfo* info){
         if (flex_is_dm_core() && valid_ && iter_j_ == 0)
         {
             if (info->cluster_for_rowwise == 1){
+                flex_record_start_hbmAccess();
                 flex_dma_async_1d(
                     info->L1_Q,
                     info->HBM_Q + 2*iter_h_ * info->heads_QO_size/*head offset*/ + iter_i_ * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->L1_Q_size);
                 flex_dma_async_wait_all();
+                flex_record_end_hbmAccess();
 
                 if (info->flatten_slice_x > 1)
                 {
+                    flex_record_start_multicast();
                     flex_dma_async_broadcast(
                         info->L1_Q/*dst_offset*/,
                         info->L1_Q/*src_offset*/,
@@ -959,6 +1038,7 @@ void flatasync_run(FlatAttentionInfo* info){
                         info->group.wakeup_row_mask/*row_mask*/,
                         (ARCH_NUM_CLUSTER_Y - 1)/*col_mask*/);
                     flex_dma_async_wait_all();
+                    flex_record_end_multicast();
                 }
             }
         }
@@ -967,6 +1047,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set A: < n > m=rowmax(Att)
         if (info->spatz_attached && valid)
         {
+            if (flex_is_first_core()) flex_record_start_spatz();
             flat_attention_vector_rowmax_MV_V(
                 info->Bc_s,
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -974,17 +1055,20 @@ void flatasync_run(FlatAttentionInfo* info){
                 info->L1SP_mr,
                 info->L1SP_m,
                 info->sqrt_dim);
+            if (flex_is_first_core()) flex_record_end_spatz();
         }
 
         //Set A: <n-1> store O
         if (flex_is_dm_core() && _valid && _iter_j == (info->Tc - 1))
         {
             if (info->cluster_for_rowwise == 1){
+                flex_record_start_hbmAccess();
                 flex_dma_async_1d(
                     info->HBM_O + 2*_iter_h * info->heads_QO_size/*head offset*/ + _iter_i * info->block_QO_size/*i block offset*/ + info->slice_id_y * info->slice_QO_size/*slice offset*/,
                     info->L1_O,
                     info->L1_O_size);
                 flex_dma_async_wait_all();
+                flex_record_end_hbmAccess();
             }
 
             flex_dma_async_1d(info->L1_mr,zomem(0),info->L1_m_size+info->L1_l_size);
@@ -1001,26 +1085,32 @@ void flatasync_run(FlatAttentionInfo* info){
         if (valid && info->flatten_slice_x > 1)
         {
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_start_redMax();
             flat_attention_redmax_rowwise(
                 info,
                 info->L1_m,
                 info->L1_m_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_redMax();
+            if (flex_is_dm_core()) flex_record_start_multicast();
             flat_attention_broadcast_rowwise(
                 info,
                 info->L1_m,
                 info->L1_m_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_multicast();
         }
 
         //Set A: < n > e=exp(mr-m)
         if (info->spatz_attached && valid && iter_j != 0)
         {
+            if (flex_is_first_core()) flex_record_start_spatz();
             flat_attention_vector_EXP_VV_V(
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                 info->L1SP_mr,
                 info->L1SP_m,
                 info->L1SP_e);
+            if (flex_is_first_core()) flex_record_end_spatz();
         }
         flex_intra_cluster_sync();
 
@@ -1076,6 +1166,7 @@ void flatasync_run(FlatAttentionInfo* info){
 
         //Set A: < n > p=exp(Att-m) and < n > l=rowsum(p)
         if (info->spatz_attached && valid){
+            if (flex_is_first_core()) flex_record_start_spatz();
             flat_attention_vector_EXP_MV(
                 info->Bc_s,
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
@@ -1087,6 +1178,7 @@ void flatasync_run(FlatAttentionInfo* info){
                 info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                 info->L1SP_A,
                 info->L1SP_l);
+            if (flex_is_first_core()) flex_record_end_spatz();
         }
 
         if (flex_is_dm_core())
@@ -1096,11 +1188,13 @@ void flatasync_run(FlatAttentionInfo* info){
                 //Set A: <n+1> load K_sx
                 if (valid_)
                 {
+                    flex_record_start_hbmAccess();
                     flex_dma_async_1d(
                         info->L1_KT,
                         info->HBM_K + 2*iter_h_ * info->heads_KTV_size/*head offset*/ + iter_j_ * info->block_KTV_size/*j block offset*/ + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                         info->L1_KT_size);
                     flex_dma_async_wait_all();
+                    flex_record_end_hbmAccess();
                     //transpose K
                     flex_transpose_engine_config(info->Bc_s,info->d,info->L1_KT,info->L1_KT,DATA_TYPE_BYTE);
                     flex_transpose_engine_trigger();
@@ -1110,11 +1204,13 @@ void flatasync_run(FlatAttentionInfo* info){
                 //Set A: < n > load V_sx
                 if (valid)
                 {
+                    flex_record_start_hbmAccess();
                     flex_dma_async_1d(
                         info->L1_V,
                         info->HBM_V + 2*iter_h * info->heads_KTV_size/*head offset*/ + iter_j * info->block_KTV_size/*j block offset*/ + info->slice_id_x * info->slice_KTV_size/*slice offset*/,
                         info->L1_V_size);
                     flex_dma_async_wait_all();
+                    flex_record_end_hbmAccess();
                 }
 
                 if (info->flatten_slice_y > 1)
@@ -1122,6 +1218,7 @@ void flatasync_run(FlatAttentionInfo* info){
                     //Set A: <n+1> Broadcast K_sx
                     if (valid_)
                     {
+                        flex_record_start_multicast();
                         flex_dma_async_broadcast(
                             info->L1_KT/*dst_offset*/,
                             info->L1_KT/*src_offset*/,
@@ -1129,11 +1226,13 @@ void flatasync_run(FlatAttentionInfo* info){
                             (ARCH_NUM_CLUSTER_X - 1)/*row_mask*/,
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all();
+                        flex_record_end_multicast();
                     }
 
                     //Set A: < n > Broadcast V_sx
                     if (valid)
                     {
+                        flex_record_start_multicast();
                         flex_dma_async_broadcast(
                             info->L1_V/*dst_offset*/,
                             info->L1_V/*src_offset*/,
@@ -1141,6 +1240,7 @@ void flatasync_run(FlatAttentionInfo* info){
                             (ARCH_NUM_CLUSTER_X - 1)/*row_mask*/,
                             info->group.wakeup_col_mask/*col_mask*/);
                         flex_dma_async_wait_all();
+                        flex_record_end_multicast();
                     }
                 }
             }
@@ -1150,16 +1250,20 @@ void flatasync_run(FlatAttentionInfo* info){
         if (valid && info->flatten_slice_x > 1)
         {
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_start_redSum();
             flat_attention_redsum_rowwise(
                 info,
                 info->L1_l,
                 info->L1_l_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_redSum();
+            if (flex_is_dm_core()) flex_record_start_multicast();
             flat_attention_broadcast_rowwise(
                 info,
                 info->L1_l,
                 info->L1_l_size);
             grid_sync_group_barrier_xy(&(info->group));
+            if (flex_is_dm_core()) flex_record_end_multicast();
         }
 
         //Set A: < n > l=e*lr+l
@@ -1167,11 +1271,13 @@ void flatasync_run(FlatAttentionInfo* info){
         {
             if (info->spatz_attached)
             {
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_update_l(
                     info->Br_s / ARCH_SPATZ_ATTACED_CORES,
                     info->L1SP_lr,
                     info->L1SP_e,
                     info->L1SP_l);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
             flex_intra_cluster_sync();
         }
@@ -1187,11 +1293,13 @@ void flatasync_run(FlatAttentionInfo* info){
             //Set A:  < n > O = O*e
             if (valid && (iter_j != 0))
             {
+                if (flex_is_first_core()) flex_record_start_spatz();
                 flat_attention_vector_M_mul_V(
                     info->d / ARCH_SPATZ_ATTACED_CORES,
                     info->Br_s,
                     info->L1SP_O,
                     info->L1SP_e);
+                if (flex_is_first_core()) flex_record_end_spatz();
             }
         }
         if (flex_is_first_core())
