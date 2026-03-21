@@ -569,7 +569,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set B: <n-2> RedSum O
         if (flex_is_dm_core() && __valid && __iter_j == (info->Tc - 1))
         {
-            if(info->cluster_in_group_id_x == 0 && info->flatten_slice_x > 1){
+            if(info->cluster_for_rowwise == 1 && info->flatten_slice_x > 1){
                 flex_dma_async_reduction(
                     info->DB_L1_O/*dst_offset*/,
                     info->DB_L1_O/*src_offset*/,
@@ -893,7 +893,7 @@ void flatasync_run(FlatAttentionInfo* info){
         //Set A: <n-1> RedSum O
         if (flex_is_dm_core() && _valid && _iter_j == (info->Tc - 1))
         {
-            if(info->cluster_in_group_id_x == 0 && info->flatten_slice_x > 1){
+            if(info->cluster_for_rowwise == 1 && info->flatten_slice_x > 1){
                 flex_dma_async_reduction(
                     info->L1_O/*dst_offset*/,
                     info->L1_O/*src_offset*/,
