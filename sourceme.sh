@@ -52,8 +52,7 @@ fi
 if [ ! -d "pyenv_softhier" ]; then
     $PYTHON_CMD -m venv pyenv_softhier
     source pyenv_softhier/bin/activate
-    pip install --upgrade pip
-    pip3 install -r requirements.txt
+    pip3 install --no-cache-dir -r requirements.txt
 else
     echo "Skipping virtual environment creation as 'pyenv_softhier' folder already exists."
 fi
