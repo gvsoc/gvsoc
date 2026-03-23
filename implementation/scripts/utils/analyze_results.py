@@ -60,7 +60,7 @@ def plot_runtime_breakdown_and_utilization_curve(results, save_path, unit = '', 
     # Collect Data
     for kernel in results:
         runtime.append(results[kernel]['runtime'] / scale_div)
-        util.append(results[kernel]['redmule_uti'] * 100)
+        util.append(results[kernel].get('redmule_uti', 0) * 100)
         kernels.append(kernel)
         pass
 

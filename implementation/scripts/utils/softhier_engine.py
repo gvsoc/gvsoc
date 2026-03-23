@@ -37,6 +37,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import utils.kernel_configuration as kc
 import kernels.auto_config.gemm_auto as gemm_optimizer
+import kernels.auto_config.spatz_gemm_auto as spatz_optimizer
 import kernels.auto_config.tmla_auto as tmla_optimizer
 import kernels.auto_config.attn_auto as attn_optimizer
 import kernels.auto_config.moex_auto as moex_optimizer
@@ -244,6 +245,179 @@ class SoftHier(object):
             pass
         return result
         pass
+
+    def spatz_gemm(self, cfg, data, name, dry_run = False):
+        """
+        Spatz Vector Processor GEMM with SUMMA dataflow.
+        Uses the same tiling/optimization as RedMule GEMM but with
+        Spatz vector compute for local tile GEMM.
+        """
+        app_path = self.kernel_root / "Ventaglio_Spatz_GEMM"
+        result = {}
+        gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+        result['FLOP'] = gemm_flop
+
+        # Use Spatz-specific optimizer (larger N_tile for FMA dominance)
+        cfg_list = spatz_optimizer.opt(cfg, self.arch)
+        best_log = None
+
+        for cfg in cfg_list:
+            self.record_info({f"{name}.{cfg.strategy}" : cfg}, subdir="kernels")
+
+            # Generate Configuration Header (same defines as SummaGEMM)
+            gemm_cfg_h = app_path / "include" / "spatz_gemm.h"
+            with open(gemm_cfg_h, 'w') as f:
+                f.write('#ifndef _SPATZ_GEMM_CONFIG_H_\n')
+                f.write('#define _SPATZ_GEMM_CONFIG_H_\n\n')
+                f.write(f'#define GEMM_M_SIZE ((uint64_t){cfg.m_size})\n')
+                f.write(f'#define GEMM_N_SIZE ((uint64_t){cfg.n_size})\n')
+                f.write(f'#define GEMM_K_SIZE ((uint64_t){cfg.k_size})\n')
+                f.write(f'#define GEMM_M_TILE ((uint64_t){cfg.m_tile})\n')
+                f.write(f'#define GEMM_N_TILE ((uint64_t){cfg.n_tile})\n')
+                f.write(f'#define GEMM_K_TILE ((uint64_t){cfg.k_tile})\n')
+                f.write(f'#define GEMM_SUMMA_SCALE_X ((uint64_t){cfg.summa_scale_x})\n')
+                f.write(f'#define GEMM_SUMMA_SCALE_Y ((uint64_t){cfg.summa_scale_y})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_NUMBER ((uint64_t){cfg.summa_group_number})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_REDUCE ((uint64_t){cfg.summa_group_reduce})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_SPLITK ((uint64_t){cfg.summa_group_splitk})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_SPLITN ((uint64_t){cfg.summa_group_splitn})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_X ((uint64_t){cfg.summa_group_gap_x})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_W ((uint64_t){cfg.summa_group_gap_w})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_Z ((uint64_t){cfg.summa_group_gap_z})\n')
+                elem_size = 2 if cfg.dtype == 'fp16' else 4
+                elem_bits = 16 if cfg.dtype == 'fp16' else 32
+                f.write(f'#define DATA_TYPE_WIDTH {elem_bits}\n')
+                f.write(f'#define DATA_TYPE_BYTE {elem_size}\n')
+                f.write(f'#define GEMM_{cfg.dtype.upper()}\n')
+                f.write(f'#define REDMULE_COMPUTE_TYPE REDMULE_NONE_16\n')
+                f.write(f'#define COLLECTIVE_REDSUM_TYPE COLLECTIVE_REDADD_NONE\n')
+                f.write(f'#define COLLECTIVE_REDMAX_TYPE COLLECTIVE_REDMAX_NONE\n')
+                f.write('#define STR(x) #x\n')
+                f.write('#define XSTR(x) STR(x)\n')
+                f.write('\n#endif // _SPATZ_GEMM_CONFIG_H_\n')
+
+            # Generate Preload Header
+            gemm_pld_h = app_path / "include" / "preload.h"
+            X_addr = data["input"]["addr"]
+            W_addr = data["weight"]["addr"]
+            Z_eaddr = data["output"]["addr"]
+            with open(gemm_pld_h, 'w') as f:
+                f.write('#ifndef _GEMM_PRELOAD_H_\n')
+                f.write('#define _GEMM_PRELOAD_H_\n\n')
+                f.write(f'#define X_ADDR ((uint64_t){X_addr:#x})\n')
+                f.write(f'#define Z_EADDR ((uint64_t){Z_eaddr:#x})\n')
+                f.write(f'#define W_ADDR ((uint64_t){W_addr:#x})\n')
+                f.write(f'#define Z_GADDR ((uint64_t){Z_eaddr:#x})\n')
+                f.write('\n#endif // _GEMM_PRELOAD_H_\n')
+
+            # Compile SW
+            cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}.{cfg.strategy}_sw.log 2>&1"
+            assert os.system(cmd) == 0, f"Spatz GEMM SW compilation failed for {name} ({cfg.strategy})"
+
+            if not dry_run:
+                cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.{cfg.strategy}.log 2>&1"
+                assert os.system(cmd) == 0
+
+                test_log = f"{self.output_folder_trace}/{name}.{cfg.strategy}.log"
+                if best_log is None:
+                    best_log = test_log
+                else:
+                    best_log = test_log if (self.get_runtime_ns(best_log) > self.get_runtime_ns(test_log)) else best_log
+
+                runtime = self.get_runtime_ns(best_log)
+                cycles = runtime * self.arch.cycles_per_ns
+                elem_size = 2 if cfg.dtype == 'fp16' else 4
+                arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size))
+                result["runtime"] = runtime
+                result["arithmetic_intensity"] = arithmetic_intensity
+
+        return result
+
+    def spatz_spmm(self, cfg, data, name, dry_run = False):
+        """
+        Spatz SpMM with SUMMA dataflow and N:M sparsity.
+        Same SUMMA tiling as dense GEMM but with sparse tile compute.
+        """
+        app_path = self.kernel_root / "Ventaglio_Spatz_SpMM"
+        result = {}
+        gemm_flop = 2 * cfg.m_size * cfg.n_size * cfg.k_size
+        result['FLOP'] = gemm_flop
+
+        cfg_list = spatz_optimizer.opt(cfg, self.arch)
+        best_log = None
+
+        for cfg in cfg_list:
+            self.record_info({f"{name}.{cfg.strategy}" : cfg}, subdir="kernels")
+
+            # Generate config header with sparsity parameters
+            spmm_cfg_h = app_path / "include" / "spatz_spmm.h"
+            elem_size = 2 if cfg.dtype == 'fp16' else 4
+            elem_bits = 16 if cfg.dtype == 'fp16' else 32
+            with open(spmm_cfg_h, 'w') as f:
+                f.write('#ifndef _SPATZ_SPMM_CONFIG_H_\n')
+                f.write('#define _SPATZ_SPMM_CONFIG_H_\n\n')
+                f.write(f'#define GEMM_M_SIZE ((uint64_t){cfg.m_size})\n')
+                f.write(f'#define GEMM_N_SIZE ((uint64_t){cfg.n_size})\n')
+                f.write(f'#define GEMM_K_SIZE ((uint64_t){cfg.k_size})\n')
+                f.write(f'#define GEMM_M_TILE ((uint64_t){cfg.m_tile})\n')
+                f.write(f'#define GEMM_N_TILE ((uint64_t){cfg.n_tile})\n')
+                f.write(f'#define GEMM_K_TILE ((uint64_t){cfg.k_tile})\n')
+                f.write(f'#define GEMM_SUMMA_SCALE_X ((uint64_t){cfg.summa_scale_x})\n')
+                f.write(f'#define GEMM_SUMMA_SCALE_Y ((uint64_t){cfg.summa_scale_y})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_NUMBER ((uint64_t){cfg.summa_group_number})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_REDUCE ((uint64_t){cfg.summa_group_reduce})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_SPLITK ((uint64_t){cfg.summa_group_splitk})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_SPLITN ((uint64_t){cfg.summa_group_splitn})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_X ((uint64_t){cfg.summa_group_gap_x})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_W ((uint64_t){cfg.summa_group_gap_w})\n')
+                f.write(f'#define GEMM_SUMMA_GROUP_GAP_Z ((uint64_t){cfg.summa_group_gap_z})\n')
+                f.write(f'#define DATA_TYPE_WIDTH {elem_bits}\n')
+                f.write(f'#define DATA_TYPE_BYTE {elem_size}\n')
+                f.write(f'#define SPMM_N_SPARSE {cfg.n_sparse}\n')
+                f.write(f'#define SPMM_M_SPARSE {cfg.m_sparse}\n')
+                f.write(f'#define GEMM_{cfg.dtype.upper()}\n')
+                f.write(f'#define REDMULE_COMPUTE_TYPE REDMULE_NONE_16\n')
+                f.write(f'#define COLLECTIVE_REDSUM_TYPE COLLECTIVE_REDADD_NONE\n')
+                f.write(f'#define COLLECTIVE_REDMAX_TYPE COLLECTIVE_REDMAX_NONE\n')
+                f.write('#define STR(x) #x\n')
+                f.write('#define XSTR(x) STR(x)\n')
+                f.write('\n#endif // _SPATZ_SPMM_CONFIG_H_\n')
+
+            # Preload header
+            spmm_pld_h = app_path / "include" / "preload.h"
+            X_addr = data["input"]["addr"]
+            W_addr = data["weight"]["addr"]
+            Z_eaddr = data["output"]["addr"]
+            with open(spmm_pld_h, 'w') as f:
+                f.write('#ifndef _SPMM_PRELOAD_H_\n')
+                f.write('#define _SPMM_PRELOAD_H_\n\n')
+                f.write(f'#define X_ADDR ((uint64_t){X_addr:#x})\n')
+                f.write(f'#define Z_EADDR ((uint64_t){Z_eaddr:#x})\n')
+                f.write(f'#define W_ADDR ((uint64_t){W_addr:#x})\n')
+                f.write(f'#define Z_GADDR ((uint64_t){Z_eaddr:#x})\n')
+                f.write('\n#endif // _SPMM_PRELOAD_H_\n')
+
+            # Compile
+            cmd = f"cfg={self.arch_path} app={app_path} make -C {self.softhier_root} sw > {self.output_folder_log}/kernel_{name}.{cfg.strategy}_sw.log 2>&1"
+            assert os.system(cmd) == 0, f"Spatz SpMM SW compilation failed for {name} ({cfg.strategy})"
+
+            if not dry_run:
+                cmd = f"make -C {self.softhier_root} {self.run_option} > {self.output_folder_trace}/{name}.{cfg.strategy}.log 2>&1"
+                assert os.system(cmd) == 0
+
+                test_log = f"{self.output_folder_trace}/{name}.{cfg.strategy}.log"
+                if best_log is None:
+                    best_log = test_log
+                else:
+                    best_log = test_log if (self.get_runtime_ns(best_log) > self.get_runtime_ns(test_log)) else best_log
+
+                runtime = self.get_runtime_ns(best_log)
+                cycles = runtime * self.arch.cycles_per_ns
+                arithmetic_intensity = gemm_flop / (elem_size * (cfg.m_size * cfg.k_size + cfg.n_size * cfg.k_size + cfg.m_size * cfg.n_size))
+                result["runtime"] = runtime
+                result["arithmetic_intensity"] = arithmetic_intensity
+
+        return result
 
     def norm(self, cfg, data, name, dry_run = False):
         """

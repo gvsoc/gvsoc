@@ -162,6 +162,18 @@ def softhier_run_flow(chip, run_flow, spaceA_hbm_plan, spaceB_hbm_plan, run_name
             cfg = kernel["cfg"]
             res = chip.gemm_auto(cfg, data, name, dry_run=dry_run)
             push_results(kernel_results, name, kernel, res)
+        elif (kernel["type"] == 'spatz_gemm'):
+            #Spatz Vector GEMM
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
+            cfg = kernel["cfg"]
+            res = chip.spatz_gemm(cfg, data, name, dry_run=dry_run)
+            push_results(kernel_results, name, kernel, res)
+        elif (kernel["type"] == 'spatz_spmm'):
+            #Spatz SpMM with N:M sparsity
+            data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)
+            cfg = kernel["cfg"]
+            res = chip.spatz_spmm(cfg, data, name, dry_run=dry_run)
+            push_results(kernel_results, name, kernel, res)
         elif (kernel["type"] == 'flat_attn'):
             #FlatAttention
             data = pack_data(kernel, spaceA_hbm_plan, spaceB_hbm_plan)

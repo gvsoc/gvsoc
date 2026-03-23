@@ -64,6 +64,15 @@ def generate_config_C_header(header_prefix, config, C_header_file, dtype, numeri
                 file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_UINT_8\n')
                 file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_NONE\n')
                 file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_NONE\n')
+        elif dtype == 'fp32':
+            file.write(f'#define {header_prefix.upper()}_FP32\n')
+            file.write(f'#define DATA_TYPE_WIDTH             32\n')
+            file.write(f'#define DATA_TYPE_BYTE              4\n')
+            file.write(f'typedef uint32_t                    {header_prefix.lower()}_data_t;\n')
+            # fp32 uses Spatz vector, not RedMule
+            file.write(f'#define REDMULE_COMPUTE_TYPE        REDMULE_NONE_16\n')
+            file.write(f'#define COLLECTIVE_REDSUM_TYPE      COLLECTIVE_REDADD_NONE\n')
+            file.write(f'#define COLLECTIVE_REDMAX_TYPE      COLLECTIVE_REDMAX_NONE\n')
 
         if appendix is not None:
             for string in appendix:

@@ -152,7 +152,7 @@ def reoffset_hbm_plans(arch, spaceA_hbm_plan, spaceB_hbm_plan):
 def normal_llm_prefill_layer_plan(llm, work, arch):
 
     #Basic Settings
-    elem_size                           = 1 if llm.dtype == 'fp8' else 2
+    elem_size                           = 1 if llm.dtype == 'fp8' else (4 if llm.dtype == 'fp32' else 2)
     index_size                          = 4 #uint32_t
     kernel_flow                         = {}
     spaceA_hbm_plan                     = {}
@@ -708,7 +708,7 @@ def normal_llm_prefill_layer_plan(llm, work, arch):
 def normal_llm_decode_layer_plan(llm, work, arch):
 
     #Basic Settings
-    elem_size                           = 1 if llm.dtype == 'fp8' else 2
+    elem_size                           = 1 if llm.dtype == 'fp8' else (4 if llm.dtype == 'fp32' else 2)
     index_size                          = 4 #uint32_t
     kernel_flow                         = {}
     spaceA_hbm_plan                     = {}
@@ -1274,7 +1274,7 @@ def normal_llm_decode_layer_plan(llm, work, arch):
 def FFN_layer_plan(llm, work, arch):
 
     #Basic Settings
-    elem_size                           = 1 if llm.dtype == 'fp8' else 2
+    elem_size                           = 1 if llm.dtype == 'fp8' else (4 if llm.dtype == 'fp32' else 2)
     index_size                          = 4 #uint32_t
     sequence_length                     = work.prefill_input_token if work.prefill_enabled == 1 else work.speculative_factor
     kernel_flow                         = {}

@@ -475,6 +475,16 @@ ifdef test
 	TEST_FILE = $(realpath $(test))
 endif
 
+SPATZ_GEMM_FILE ?= ${CUR_DIR}/config/kernels/spatz_gemm.py
+ifdef spatz_gemm
+	SPATZ_GEMM_FILE = $(realpath $(spatz_gemm))
+endif
+
+SPATZ_SPMM_FILE ?= ${CUR_DIR}/config/kernels/spatz_spmm.py
+ifdef spatz_spmm
+	SPATZ_SPMM_FILE = $(realpath $(spatz_spmm))
+endif
+
 llm:
 	mkdir -p ${CUR_DIR}/out
 	python3 ${TEST_FILE} \
@@ -493,7 +503,9 @@ llm:
 			${MOEG_FILE} \
 			${MOED_FILE} \
 			${MOEC_FILE} \
-			${TMLA_FILE}
+			${TMLA_FILE} \
+			${SPATZ_GEMM_FILE} \
+			${SPATZ_SPMM_FILE}
 
 llm-clean:
 	rm -rf ${CUR_DIR}/out
