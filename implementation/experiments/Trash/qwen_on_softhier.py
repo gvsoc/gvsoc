@@ -78,10 +78,10 @@ def test_initialization():
     llm.mlp_acti_algo              = 'silu'
     llm.mlp_acti_bias_enable       = 0
 
-    #work initialization
+    #work initialization — batch=1 speculative decode (M=4, GEMV-like)
     work.prefill_enabled            = 0
     work.decode_enabled             = 1
-    work.batch_size                 = 16
+    work.batch_size                 = 1
     work.numerical_check_enable     = 0
     work.decode_mode                = 'speculative'
     work.speculative_factor         = 4
@@ -140,6 +140,13 @@ def test():
     kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_decode_layer_plan(llm, work, arch)
 
     import copy
+
+    # Fix RoPE contiguous_length for small M (batch=1)
+    seq_len = work.speculative_factor if work.decode_mode == 'speculative' else 1
+    m_actual = work.batch_size * seq_len
+    for kname, kernel in kernel_flow.items():
+        if kernel["type"] == "rope" and hasattr(kernel["cfg"], 'contiguous_length'):
+            kernel["cfg"].contiguous_length = min(kernel["cfg"].contiguous_length, kernel["cfg"].m_size)
 
     # Save original GEMM configs before conversion
     gemm_kernels = {}

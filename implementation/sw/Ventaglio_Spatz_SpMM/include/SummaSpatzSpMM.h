@@ -13,6 +13,7 @@
 #include "flex_dma_pattern.h"
 #include "flex_group_barrier.h"
 #include "spatz_tile_spmm.h"
+#include "spatz_tile_spmv.h"
 #include "spatz_spmm.h"
 
 // PW = N * N_SPARSE / M_SPARSE (compact width)
@@ -282,12 +283,20 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                         }
                     }
 
-                    // Sparse tile compute (4-row unrolled)
+                    // Sparse tile compute
                     if (flex_is_first_core())
                     {
-                        spatz_tile_spmm(
-                            COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W, COMPUTE_L1_W,
-                            info->M_tile, info->K_tile, info->N_tile);
+                        if (info->M_tile <= 1) {
+                            // SpMV path: single row
+                            spatz_tile_spmv(
+                                COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W, COMPUTE_L1_W,
+                                info->K_tile, info->N_tile);
+                        } else {
+                            // SpMM path: 4-row unrolled
+                            spatz_tile_spmm(
+                                COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W, COMPUTE_L1_W,
+                                info->M_tile, info->K_tile, info->N_tile);
+                        }
                     }
                 }
 

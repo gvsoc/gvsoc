@@ -155,6 +155,34 @@ Per-tile: W_tile = 89% of tile DMA (64KB W vs 8KB X per SUMMA K iteration).
 Sparse-aware DMA reduces W transfers proportionally → both DMA and compute
 scale together → near-ideal speedup.
 
+### Batch=1 Decode (GEMV/SpMV): M=4, speculative
+
+```
+=====================================================================================
+  Qwen-7B fp16 DECODE batch=1 (M=4): Dense GEMV vs SpMV 2:4 vs SpMV 1:4
+=====================================================================================
+Kernel               |     Dense |       2:4 |       1:4 | 2:4 spd | 1:4 spd
+-------------------------------------------------------------------------------------
+attn_q_proj          |   280.9 us |   143.5 us |    74.7 us |   1.96x |   3.76x
+attn_k/v_proj (each) |    77.8 us |    40.1 us |    21.2 us |   1.94x |   3.66x
+attn_o_proj          |   280.8 us |   143.5 us |    74.7 us |   1.96x |   3.76x
+ffn_up_proj          |  1601.1 us |   826.0 us |   434.2 us |   1.94x |   3.69x
+ffn_gate_proj        |  1601.1 us |   826.0 us |   434.1 us |   1.94x |   3.69x
+ffn_down_proj        |  1467.9 us |   748.3 us |   388.1 us |   1.96x |   3.78x
+-------------------------------------------------------------------------------------
+Layer TOTAL          |  5428.7 us |  2808.8 us |  1489.7 us |   1.93x |   3.64x
+```
+
+Sparsity speedups consistent across batch sizes (batch=1 vs batch=16).
+GEMV/SpMV tile kernel automatically selected when M_tile <= 1.
+
+### Implementation: GEMV/SpMV Tile Kernels
+
+- `spatz_tile_gemv.h`: Single-row dense GEMV (no M-unrolling, K-loop only)
+- `spatz_tile_spmv.h`: Single-row sparse SpMV with vlx + vfxmacc
+- `SummaSpatzGEMM.h` / `SummaSpatzSpMM.h`: Auto-select GEMV/SpMV when M_tile <= 1
+- `qwen_on_softhier.py`: RoPE contiguous_length fix for small M (batch=1)
+
 Key enablers for near-theoretical speedup:
 1. **Sparse-aware SUMMA DMA** — W tile loads use PW_tile (compact) width, reducing
    memory traffic proportionally to sparsity ratio

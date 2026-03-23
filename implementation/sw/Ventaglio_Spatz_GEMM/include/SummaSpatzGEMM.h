@@ -18,6 +18,7 @@
 #include "flex_dma_pattern.h"
 #include "flex_group_barrier.h"
 #include "spatz_tile_gemm.h"
+#include "spatz_tile_gemv.h"
 #include "spatz_gemm.h"
 
 typedef struct SummaGEMMInfo
@@ -312,16 +313,20 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                         }
                     }
 
-                    // *** LOCAL TILE COMPUTE: Spatz replaces RedMule ***
+                    // *** LOCAL TILE COMPUTE ***
                     if (flex_is_first_core())
                     {
-                        spatz_tile_gemm(
-                            COMPUTE_L1_Z,   // Z tile (accumulate)
-                            COMPUTE_L1_X,   // X tile
-                            COMPUTE_L1_W,   // W tile
-                            info->M_tile,
-                            info->K_tile,
-                            info->N_tile);
+                        if (info->M_tile <= 1) {
+                            // GEMV path: single row, no M-unrolling
+                            spatz_tile_gemv(
+                                COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W,
+                                info->K_tile, info->N_tile);
+                        } else {
+                            // GEMM path: 4-row unrolled
+                            spatz_tile_gemm(
+                                COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W,
+                                info->M_tile, info->K_tile, info->N_tile);
+                        }
                     }
                 }
 
