@@ -78,15 +78,15 @@ def test_initialization():
     llm.mlp_acti_algo              = 'silu'
     llm.mlp_acti_bias_enable       = 0
 
-    #work initialization — batch=1 speculative decode (M=4, GEMV-like)
+    #work initialization — batch=1 auto-regressive decode (M=1, true SpMV)
     work.prefill_enabled            = 0
     work.decode_enabled             = 1
     work.batch_size                 = 1
     work.numerical_check_enable     = 0
-    work.decode_mode                = 'speculative'
-    work.speculative_factor         = 4
+    work.decode_mode                = 'auto-regressive'
+    work.speculative_factor         = 1
     work.speculative_ratio          = 0.75
-    work.kv_cache_length            = 1020
+    work.kv_cache_length            = 1023  # total KV seq = 1 + 1023 = 1024 (divisible by attention tile)
 
     return arch, llm, work
     pass

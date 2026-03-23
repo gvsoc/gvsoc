@@ -173,7 +173,35 @@ ffn_down_proj        |  1467.9 us |   748.3 us |   388.1 us |   1.96x |   3.78x
 Layer TOTAL          |  5428.7 us |  2808.8 us |  1489.7 us |   1.93x |   3.64x
 ```
 
-Sparsity speedups consistent across batch sizes (batch=1 vs batch=16).
+### True M=1 Auto-Regressive Decode (batch=1, speculative=1)
+
+```
+=====================================================================================
+  Qwen-7B fp16 DECODE batch=1, auto-regressive (M=1): TRUE GEMV/SpMV
+=====================================================================================
+Kernel               |     Dense |       2:4 |       1:4 | 2:4 spd | 1:4 spd
+-------------------------------------------------------------------------------------
+attn_q_proj          |   142.9 us |    74.5 us |    40.0 us |   1.92x |   3.57x
+attn_k_proj          |    40.2 us |    22.4 us |    12.5 us |   1.80x |   3.21x
+attn_o_proj          |   142.0 us |    74.5 us |    40.0 us |   1.91x |   3.55x
+ffn_up_proj          |   959.4 us |   513.1 us |   273.1 us |   1.87x |   3.51x
+ffn_gate_proj        |   966.2 us |   515.5 us |   271.8 us |   1.87x |   3.55x
+ffn_down_proj        |   791.6 us |   405.4 us |   206.2 us |   1.95x |   3.84x
+-------------------------------------------------------------------------------------
+Layer TOTAL          |  3123.1 us |  1667.2 us |   895.5 us |   1.87x |   3.49x
+```
+
+Slightly lower speedups than batch=16 (1.87× vs 1.95× for 2:4) because M=1
+has no M-unrolling — scalar overhead per K iteration is proportionally larger.
+Still strong results for the most common LLM inference scenario.
+
+### Summary Across Batch Sizes
+
+| Config | Dense | 2:4 SpMV/SpMM | 1:4 SpMV/SpMM |
+|---|---|---|---|
+| batch=1, M=1 (auto-regressive) | 3123 us | 1667 us (1.87x) | 896 us (3.49x) |
+| batch=16, M=64 (speculative) | 82894 us | 42590 us (1.95x) | 22436 us (3.69x) |
+
 GEMV/SpMV tile kernel automatically selected when M_tile <= 1.
 
 ### Implementation: GEMV/SpMV Tile Kernels
