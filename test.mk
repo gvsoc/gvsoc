@@ -39,7 +39,7 @@ test.checkout.pulp-sdk:
 	fi
 	cd "tests/pulp-sdk" && \
 	git fetch --all && \
-	git checkout 7c407695ac48401f0e1ebcdd4a4cc9c67e81138e
+	git checkout fc996a4bb817d0fed09701ef0eb42ffe8b4d6328
 
 test.build.pulp-sdk: test.checkout.pulp-sdk
 
@@ -162,7 +162,7 @@ test.checkout.magia:
 	fi
 	cd "tests/magia-sdk" && \
 	git fetch --all && \
-	git checkout f663315d4c2ce521a5dd4ae9d08b24f2b957f100
+	git checkout 3530f338042b7f10b564171112f5ebf8b7222196
 
 test.build.magia: test.checkout.magia
 	rm -rf $(CURDIR)/tests/magia-sdk/build
@@ -185,7 +185,7 @@ test.checkout.pulp-nn:
 	fi
 	cd "tests/pulp-nn" && \
 	git fetch --all && \
-	git checkout 415279ec37ef416fe43ded0e476c3fae3d17a6c8
+	git checkout bb458706817d1627b1761e8037334618dacdc2a6
 
 test.build.pulp-nn: test.checkout.pulp-nn
 	cd tests/pulp-nn/generators && python3 pulp_nn_examples_generator.py
