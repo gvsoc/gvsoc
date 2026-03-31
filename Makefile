@@ -62,6 +62,12 @@ gvrun.build:
 	cmake --build $(BUILDDIR)/gvrun $(CMAKE_FLAGS)
 	cmake --install $(BUILDDIR)/gvrun
 
+	$(CMAKE) -S config_tree -B $(BUILDDIR)/config_tree -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR)
+
+	cmake --build $(BUILDDIR)/config_tree $(CMAKE_FLAGS)
+	cmake --install $(BUILDDIR)/config_tree
+
 build: gvrun.build
 	# Change directory to curdir to avoid issue with symbolic links
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
@@ -172,6 +178,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout 95ca11922a760b526275ae3abda65988de2caeab
+	git checkout de4b7d90f82725b0ac737b0811514df9505ba2c8
 	mkdir -p $(INSTALLDIR)
 	cp -r gui-release/* $(INSTALLDIR)

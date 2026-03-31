@@ -13,3 +13,6 @@
 [submodule "gvrun"]
 	path = gvrun
 	url = https://github.com/gvsoc/gvrun.git
+[submodule "config_tree"]
+	path = config_tree
+	url = https://github.com/gvsoc/config_tree.git
