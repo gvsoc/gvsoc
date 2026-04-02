@@ -127,7 +127,7 @@ test.build.spatz:
 	cd tests/spatz/spatz-rtl && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
 		tar xzf bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz
 	cd tests/spatz/spatz-rtl && $(MAKE) sw/toolchain/riscv-opcodes BENDER=$(CURDIR)/tests/spatz/spatz-rtl/install/bin/bender
-	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim TESTS_FLAGS=-DRUNTIME_PRINT=ON GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
+	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim TESTS_FLAGS=-DRUNTIME_PRINT=ON GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
 
 
 #
