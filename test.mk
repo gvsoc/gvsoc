@@ -53,10 +53,10 @@ test.clean.pulp-sdk-siracusa:
 	rm -rf tests/pulp-sdk-siracusa
 
 test.checkout.pulp-sdk-siracusa:
-	@if [ ! -d "tests/pulp-sdk-siracusa" ]; then \
-		git clone "git@github.com:siracusa-soc/pulp-sdk.git" "tests/pulp-sdk-siracusa"; \
+	@if [ ! -d "tests/siracusa/pulp-sdk-siracusa" ]; then \
+		git clone "git@github.com:siracusa-soc/pulp-sdk.git" "tests/siracusa/pulp-sdk-siracusa"; \
 	fi
-	cd "tests/pulp-sdk-siracusa" && \
+	cd "tests/siracusa/pulp-sdk-siracusa" && \
 	git fetch --all && \
 	git checkout 11121ab42fdf0e9d1ff379dcba0ee22bd1fa1d3d
 
