@@ -72,16 +72,16 @@ test.clean.chimera-sdk:
 	rm -rf tests/chimera-sdk
 
 test.checkout.chimera-sdk:
-	@if [ ! -d "tests/chimera-sdk" ]; then \
-		git clone "git@github.com:pulp-platform/chimera-sdk.git" "tests/chimera-sdk"; \
+	@if [ ! -d "tests/chimera-sdk/chimera-sdk" ]; then \
+		git clone "git@github.com:pulp-platform/chimera-sdk.git" "tests/chimera-sdk/chimera-sdk"; \
 	fi
-	cd "tests/chimera-sdk" && \
+	cd "tests/chimera-sdk/chimera-sdk" && \
 	git fetch --all && \
 	git checkout b2392f6efcff75c03f4c65eaf3e12104442b22ea
 
 test.build.chimera-sdk: test.checkout.chimera-sdk
-	cd tests/chimera-sdk && cmake -DTARGET_PLATFORM=chimera-open -DTOOLCHAIN_DIR=$(CHIMERA_LLVM) -B build
-	cd tests/chimera-sdk && cmake --build build -j
+	cd tests/chimera-sdk/chimera-sdk && cmake -DTARGET_PLATFORM=chimera-open -DTOOLCHAIN_DIR=$(CHIMERA_LLVM) -B build
+	cd tests/chimera-sdk/chimera-sdk && cmake --build build -j
 
 
 
@@ -93,19 +93,19 @@ test.clean.snitch:
 	rm -rf tests/snitch
 
 test.checkout.snitch:
-	@if [ ! -d "tests/snitch" ]; then \
-		git clone "git@github.com:haugoug/snitch_cluster.git" "tests/snitch"; \
+	@if [ ! -d "tests/snitch/snitch" ]; then \
+		git clone "git@github.com:haugoug/snitch_cluster.git" "tests/snitch/snitch"; \
 	fi
-	cd "tests/snitch" && \
+	cd "tests/snitch/snitch" && \
 	git fetch --all && \
 	git checkout 4a2fb73b2c948958f47f7109bcb34943dcd79c14 && \
 	git submodule update --recursive --init
 
 test.build.snitch: test.checkout.snitch
-	cd tests/snitch && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
+	cd tests/snitch/snitch && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
 		tar xzf bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz
-	cd tests/snitch && pip install .
-	export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/snitch/target/snitch_cluster && $(MAKE) DEBUG=ON OPENOCD_SEMIHOSTING=ON bin/snitch_cluster.gvsoc sw
+	cd tests/snitch/snitch && pip install .
+	export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/snitch/install/bin:$(PATH) && cd tests/snitch/snitch/target/snitch_cluster && $(MAKE) DEBUG=ON OPENOCD_SEMIHOSTING=ON bin/snitch_cluster.gvsoc sw
 
 
 #
@@ -116,18 +116,18 @@ test.clean.spatz:
 	rm -rf tests/spatz-rtl
 
 test.checkout.spatz:
-	@if [ ! -d "tests/spatz-rtl" ]; then \
-		git clone "git@github.com:haugoug/spatz.git" "tests/spatz-rtl"; \
+	@if [ ! -d "tests/spatz/spatz-rtl" ]; then \
+		git clone "git@github.com:haugoug/spatz.git" "tests/spatz/spatz-rtl"; \
 	fi
-	cd "tests/spatz-rtl" && \
+	cd "tests/spatz/spatz-rtl" && \
 	git fetch --all && \
 	git checkout b6ebc48d845b3304e5dad94e7eb24ab3c84e997b
 
 test.build.spatz:
-	cd tests/spatz-rtl && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
+	cd tests/spatz/spatz-rtl && mkdir -p install/bin && cd install/bin && wget https://github.com/pulp-platform/bender/releases/download/v$(BENDER_VERSION)/bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz && \
 		tar xzf bender-$(BENDER_VERSION)-x86_64-linux-gnu-ubuntu$(UBUNTU_VERSION).tar.gz
-	cd tests/spatz-rtl && $(MAKE) sw/toolchain/riscv-opcodes BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender
-	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim TESTS_FLAGS=-DRUNTIME_PRINT=ON GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
+	cd tests/spatz/spatz-rtl && $(MAKE) sw/toolchain/riscv-opcodes BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender
+	unset CMAKE_GENERATOR && export PATH=$(LLVM_BINROOT):$(CURDIR)/tests/snitch/install/bin:$(PATH) && cd tests/spatz/spatz-rtl/hw/system/spatz_cluster && $(MAKE) sw.vsim TESTS_FLAGS=-DRUNTIME_PRINT=ON GCC_INSTALL_DIR=$(SPATZ_GCC) VSIM_HOME=$(VSIM_HOME) BENDER=$(CURDIR)/tests/spatz-rtl/install/bin/bender CMAKE=cmake VSIM=vsim VLOG=vlog LLVM_INSTALL_DIR=$(SPATZ_LLVM) -j1
 
 
 #
