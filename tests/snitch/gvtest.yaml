@@ -1,0 +1,12 @@
+targets:
+  snitch:
+    properties:
+      target: snitch
+
+  snitch:core_type=fast:
+    properties:
+      target: snitch:core_type=fast
+
+  snitch_cluster_single:
+    properties:
+      target: pulp.snitch.snitch_cluster_single
