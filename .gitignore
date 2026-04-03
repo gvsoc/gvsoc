@@ -17,7 +17,7 @@ tests/ara/ara-rtl/
 tests/chimera-sdk/
 tests/junit-reports/
 tests/pulp-sdk/
-tests/snitch/
+tests/snitch/snitch/
 tests/spatz/spatz-rtl/
 tests/magia-sdk/
 tests/rv64/riscv-tests/
