@@ -137,18 +137,18 @@ test.build.spatz:
 #
 
 test.clean.ara:
-	rm -rf tests/ara-rtl
+	rm -rf tests/ara/ara-rtl
 
 test.checkout.ara:
-	@if [ ! -d "tests/ara-rtl" ]; then \
-		git clone "git@github.com:pulp-platform/ara.git" "tests/ara-rtl"; \
+	@if [ ! -d "tests/ara/ara-rtl" ]; then \
+		git clone "git@github.com:pulp-platform/ara.git" "tests/ara/ara-rtl"; \
 	fi
-	cd "tests/ara-rtl" && \
+	cd "tests/ara/ara-rtl" && \
 	git fetch --all && \
 	git checkout 05c1616d2317d2fda09b3fdf69e8aae4c2e55eaf
 
 test.build.ara: test.checkout.ara
-	cd tests/ara-rtl/apps && make riscv_tests GCC_INSTALL_DIR=$(RISCV_GCC) LLVM_INSTALL_DIR=$(ARA_LLVM)
+	cd tests/ara/ara-rtl/apps && make riscv_tests GCC_INSTALL_DIR=$(RISCV_GCC) LLVM_INSTALL_DIR=$(ARA_LLVM)
 
 
 #
