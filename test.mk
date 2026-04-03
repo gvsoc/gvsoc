@@ -15,10 +15,10 @@ test.clean.riscv-tests:
 	rm -rf tests/riscv-tests
 
 test.checkout.riscv-tests:
-	@if [ ! -d "tests/riscv-tests" ]; then \
-		git clone "git@github.com:gvsoc/riscv-tests.git" "tests/riscv-tests"; \
+	@if [ ! -d "tests/rv64/riscv-tests" ]; then \
+		git clone "git@github.com:gvsoc/riscv-tests.git" "tests/rv64/riscv-tests"; \
 	fi
-	cd "tests/riscv-tests" && \
+	cd "tests/rv64/riscv-tests" && \
 	git fetch --all && \
 	git checkout 934ec4f4bb14f83da32cd83dcc00afa055e8717f
 
