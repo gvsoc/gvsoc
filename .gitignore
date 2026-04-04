@@ -14,7 +14,7 @@ third_party/
 *trace_file.txt
 *tx_uart.log
 tests/ara/ara-rtl/
-tests/chimera-sdk/
+tests/chimera-sdk/chimera-sdk
 tests/junit-reports/
 tests/pulp-sdk/
 tests/snitch/snitch/
