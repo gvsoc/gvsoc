@@ -283,19 +283,20 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                         }
                     }
 
-                    // Sparse tile compute
+                    // Sparse tile compute: 2-core Spatz parallel (ISS workaround)
                     if (flex_is_first_core())
                     {
+                        uint32_t num_spatz_cores = 2;
                         if (info->M_tile <= 1) {
-                            // SpMV path: single row
                             spatz_tile_spmv(
                                 COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W, COMPUTE_L1_W,
-                                info->K_tile, info->N_tile);
+                                info->K_tile, info->N_tile,
+                                0, num_spatz_cores);
                         } else {
-                            // SpMM path: 4-row unrolled
                             spatz_tile_spmm(
                                 COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W, COMPUTE_L1_W,
-                                info->M_tile, info->K_tile, info->N_tile);
+                                info->M_tile, info->K_tile, info->N_tile,
+                                0, num_spatz_cores);
                         }
                     }
                 }

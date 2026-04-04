@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Author: Bowen Wang, ETH Zurich
 //
-// Spatz SpMV tile for SUMMA: z[1 x PW_tile] += x[1 x K_tile] * W_compact[K_tile x PW_tile]
-// Single-row with Ventaglio sparse instructions.
+// Spatz SpMV tile: z[1 x PW_tile] += x[1 x K_tile] * W_compact[K_tile x PW_tile]
+// Multi-core: split PW (compact N) dimension across cores.
 
 #ifndef SPATZ_TILE_SPMV_H
 #define SPATZ_TILE_SPMV_H
@@ -21,17 +21,14 @@ typedef uint16_t svtile_data_t;
 typedef float svtile_data_t;
 #endif
 
-// vlx32.v v20, (rs1)
 #define SPMV_ASM_VLX32_V20(rs1_var) \
     asm volatile(".insn r 0x07, 6, 0x09, x20, %0, x0" ::"r"(rs1_var) : "memory")
-
-// vfxmacc.vf v0, fa0, v16
 #define SPMV_ASM_VFXMACC_V0_FA0 asm volatile(".insn r 0x57, 5, 0x4B, x0, x10, x16")
 
-// SpMV tile: z[PW_tile] += x[K_tile] · W_compact[K_tile x PW_tile]
 static inline void spatz_tile_spmv(
     uint32_t z_addr, uint32_t x_addr, uint32_t w_addr, uint32_t idx_addr,
-    uint32_t K_tile, uint32_t N_tile)
+    uint32_t K_tile, uint32_t N_tile,
+    uint32_t core_id, uint32_t num_cores)
 {
     uint32_t PW_tile = N_tile * SPMM_N_SPARSE / SPMM_M_SPARSE;
 
@@ -40,13 +37,16 @@ static inline void spatz_tile_spmv(
     svtile_data_t *w = (svtile_data_t *)w_addr;
     uint32_t *idx = (uint32_t *)idx_addr;
 
-    uint32_t p = 0;
-    while (p < PW_tile) {
+    // Split PW across cores
+    uint32_t pw_per_core = PW_tile / num_cores;
+    uint32_t pw_start = core_id * pw_per_core;
+    uint32_t pw_end = pw_start + pw_per_core;
+
+    uint32_t p = pw_start;
+    while (p < pw_end) {
         size_t gvl;
         asm volatile("vsetvli %0, %1, e" _XSTR(DATA_TYPE_WIDTH) ", m4, ta, ma"
-                     : "=r"(gvl) : "r"(PW_tile - p));
-
-        // Load existing z (accumulate)
+                     : "=r"(gvl) : "r"(pw_end - p));
         asm volatile("vle" _XSTR(DATA_TYPE_WIDTH) ".v v0, (%0)" ::"r"(z + p) : "memory");
 
         const svtile_data_t *w_col = w + p;
@@ -56,10 +56,9 @@ static inline void spatz_tile_spmv(
             asm volatile("vle" _XSTR(DATA_TYPE_WIDTH) ".v v16, (%0)" ::"r"(w_col) : "memory");
             asm volatile("fld fa0, (%0)" ::"r"(&x[k]));
             SPMV_ASM_VFXMACC_V0_FA0;
-            w_col += PW_tile;
+            w_col += PW_tile;   // stride is full PW_tile
             idx_col += PW_tile;
         }
-
         asm volatile("vse" _XSTR(DATA_TYPE_WIDTH) ".v v0, (%0)" ::"r"(z + p) : "memory");
         p += gvl;
     }

@@ -313,19 +313,25 @@ void SummaGEMMRun(SummaGEMMInfo * info)
                         }
                     }
 
-                    // *** LOCAL TILE COMPUTE ***
+                    // *** LOCAL TILE COMPUTE: 2-core Spatz parallel ***
+                    // ISS workaround: GVSoC processes cores sequentially, not in parallel.
+                    // Model 2-core by having core 0 compute half the work (M/2 rows or N/2 cols).
+                    // In real HW, cores 0 and 1 execute simultaneously on separate FPUs.
                     if (flex_is_first_core())
                     {
+                        uint32_t num_spatz_cores = 2;
                         if (info->M_tile <= 1) {
-                            // GEMV path: single row, no M-unrolling
+                            // GEMV: split N across virtual cores (core 0 does N/2)
                             spatz_tile_gemv(
                                 COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W,
-                                info->K_tile, info->N_tile);
+                                info->K_tile, info->N_tile,
+                                0, num_spatz_cores);
                         } else {
-                            // GEMM path: 4-row unrolled
+                            // GEMM: split M across virtual cores (core 0 does M/2)
                             spatz_tile_gemm(
                                 COMPUTE_L1_Z, COMPUTE_L1_X, COMPUTE_L1_W,
-                                info->M_tile, info->K_tile, info->N_tile);
+                                info->M_tile, info->K_tile, info->N_tile,
+                                0, num_spatz_cores);
                         }
                     }
                 }

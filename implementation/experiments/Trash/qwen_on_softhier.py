@@ -7,19 +7,14 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 # Author: Chi Zhang <chizhang@ethz.ch>
+# Modified: Bowen Wang, ETH Zurich (Spatz/Ventaglio integration)
 
 import os
 import io
 import re
 import sys
+import copy
 import torch
 import shutil
 import argparse
@@ -35,18 +30,12 @@ import utils.console_visualization as cv
 import llm.normal_llm_plan as normal_llm
 
 def import_module_from_path(module_path):
-    """
-    Dynamically import a module from an absolute path and mimic `from module import *`.
-    """
-    module_name = os.path.splitext(os.path.basename(module_path))[0]  # Extract the file name without extension
+    module_name = os.path.splitext(os.path.basename(module_path))[0]
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None:
         raise ImportError(f"Cannot find a module at path: {module_path}")
-    
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    
-    # Mimic `from module import *`
     globals().update(vars(module))
     return module
 
@@ -55,14 +44,105 @@ def print_dict_as_table(data, to_hex = False):
     if to_hex:
         formatted = {k: (f"0x{v:X}" if isinstance(v, int) else v) for k, v in data.items()}
     print(tabulate(formatted.items(), headers=["Key", "Value"]))
-    pass
 
-def test_initialization():
+def run_3way_comparison(chip, kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan, info, label):
+    """Run Dense, SpMM 2:4, SpMM 1:4 and print comparison."""
+
+    # Fix RoPE contiguous_length for small M
+    for kname, kernel in kernel_flow.items():
+        if kernel["type"] == "rope" and hasattr(kernel["cfg"], 'contiguous_length'):
+            kernel["cfg"].contiguous_length = min(kernel["cfg"].contiguous_length, kernel["cfg"].m_size)
+
+    all_results = {}
+
+    configs = [
+        ("Dense fp16", "spatz_gemm", lambda: SpatzGEMM(), None, None),
+        ("SpMM 2:4",   "spatz_spmm", lambda: SpatzSpMM(), 2, 4),
+        ("SpMM 1:4",   "spatz_spmm", lambda: SpatzSpMM(), 1, 4),
+    ]
+
+    for cfg_label, ktype, cfg_factory, n_sp, m_sp in configs:
+        kf = copy.deepcopy(kernel_flow)
+        for kname, kernel in kf.items():
+            if kernel["type"] == "gemm":
+                old_cfg = kernel["cfg"]
+                new_cfg = cfg_factory()
+                new_cfg.dtype = 'fp16'
+                new_cfg.m_size = old_cfg.m_size
+                new_cfg.n_size = old_cfg.n_size
+                new_cfg.k_size = old_cfg.k_size
+                new_cfg.summa_numer = 0
+                if n_sp is not None:
+                    new_cfg.n_sparse = n_sp
+                    new_cfg.m_sparse = m_sp
+                kernel["cfg"] = new_cfg
+                kernel["type"] = ktype
+
+        info_copy = copy.deepcopy(info)
+        info_copy['kernel_flow'] = kf
+
+        run_name = f"{label} {cfg_label}"
+        print(f"\n[yellow]  Running: {run_name}[/yellow]")
+        results = flow.softhier_launch(chip, run_name, kf, spaceA_hbm_plan, spaceB_hbm_plan, info=info_copy)
+        all_results[cfg_label] = results
+
+    # Print comparison
+    d = all_results["Dense fp16"]
+    s24 = all_results["SpMM 2:4"]
+    s14 = all_results["SpMM 1:4"]
+
+    td = sum(v.get('runtime', 0) for v in d.values())
+    t24 = sum(v.get('runtime', 0) for v in s24.values())
+    t14 = sum(v.get('runtime', 0) for v in s14.values())
+
+    print(f"\n[cyan]{'='*80}[/cyan]")
+    print(f"[cyan]  {label}: Dense vs SpMM 2:4 vs SpMM 1:4[/cyan]")
+    print(f"[cyan]{'='*80}[/cyan]")
+    print(f"  Dense:    {td/1000:.1f} us")
+    print(f"  SpMM 2:4: {t24/1000:.1f} us ({td/t24:.2f}x)" if t24 > 0 else "  SpMM 2:4: N/A")
+    print(f"  SpMM 1:4: {t14/1000:.1f} us ({td/t14:.2f}x)" if t14 > 0 else "  SpMM 1:4: N/A")
+
+    for kname in d:
+        dv = d[kname].get('runtime', 0)
+        sv24 = s24.get(kname, {}).get('runtime', 0)
+        sv14 = s14.get(kname, {}).get('runtime', 0)
+        if dv > 0 and 'proj' in kname:
+            spd24 = f"{dv/sv24:.2f}x" if sv24 > 0 else "N/A"
+            spd14 = f"{dv/sv14:.2f}x" if sv14 > 0 else "N/A"
+            print(f"    {kname:20s}: {dv/1000:9.1f} | {sv24/1000:9.1f} ({spd24}) | {sv14/1000:9.1f} ({spd14})")
+
+    return td, t24, t14
+
+def test():
+    parser = argparse.ArgumentParser(description="E2E LLM Flow.")
+    parser.add_argument("softhier_root", type=str)
+    parser.add_argument("kernel_root", type=str)
+    parser.add_argument("output_root", type=str)
+    parser.add_argument("arch_path", type=str)
+    parser.add_argument("module_paths", metavar="module_path", type=str, nargs="+")
+
+    args = parser.parse_args()
+    args.module_paths.append(args.arch_path)
+
+    for module_path in args.module_paths:
+        absolute_path = os.path.abspath(module_path)
+        if not os.path.isfile(absolute_path):
+            continue
+        try:
+            module = import_module_from_path(absolute_path)
+        except Exception as e:
+            print(f"Failed to import {absolute_path}: {e}")
+
+    normal_llm.init(args.module_paths)
+    deepseek.init(args.module_paths)
+    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root,
+                           output_root=args.output_root, tag="qwen_on_softhier")
+
     arch = FlexClusterArch()
     llm = Model()
     work = Workload()
 
-    #llm initialization — real Qwen-7B dimensions
+    # Qwen-7B model
     llm.model_name                 = "Qwen-7B-Chat"
     llm.dtype                      = 'fp16'
     llm.num_layers                 = 32
@@ -77,194 +157,67 @@ def test_initialization():
     llm.mlp_inter_dim              = 22016
     llm.mlp_acti_algo              = 'silu'
     llm.mlp_acti_bias_enable       = 0
-
-    #work initialization — batch=1 auto-regressive decode (M=1, true SpMV)
-    work.prefill_enabled            = 0
-    work.decode_enabled             = 1
-    work.batch_size                 = 1
     work.numerical_check_enable     = 0
-    work.decode_mode                = 'auto-regressive'
-    work.speculative_factor         = 1
-    work.speculative_ratio          = 0.75
-    work.kv_cache_length            = 1023  # total KV seq = 1 + 1023 = 1024 (divisible by attention tile)
 
-    return arch, llm, work
-    pass
-
-def test():
-    # Set up argument parser
-    parser = argparse.ArgumentParser(description="E2E LLM Flow.")
-    parser.add_argument("softhier_root", type=str, help="Path to SoftHier Root Directory")
-    parser.add_argument("kernel_root", type=str, help="Path to Kernel Root Directory")
-    parser.add_argument("output_root", type=str, help="Path to Output Directory")
-    parser.add_argument("arch_path", type=str, help="Path of SoftHier Architecture File")
-    parser.add_argument(
-        "module_paths",
-        metavar="module_path",
-        type=str,
-        nargs="+",
-        help="Paths to Python modules to import (absolute or relative)."
-    )
-
-    args = parser.parse_args()
-    args.module_paths.append(args.arch_path)
-
-    # Process each provided module path
-    for module_path in args.module_paths:
-        # Convert to absolute path
-        absolute_path = os.path.abspath(module_path)
-
-        if not os.path.isfile(absolute_path):
-            print(f"Error: {absolute_path} is not a valid file.")
-            continue
-
-        try:
-            # Import the module dynamically
-            module = import_module_from_path(absolute_path)
-            print(f"Successfully imported: {module.__name__} from {absolute_path}")
-        except Exception as e:
-            print(f"Failed to import {absolute_path}: {e}")
-
-    # Initialize Configuration
-    normal_llm.init(args.module_paths)
-    deepseek.init(args.module_paths)
-    chip = engine.SoftHier(softhier_root=args.softhier_root, kernel_root=args.kernel_root, output_root=args.output_root, tag="qwen_on_softhier")
-
-    # Test Parameter Initialization
-    arch, llm, work = test_initialization()
-
-    # SoftHier Initialization
+    # Compile HW once
     chip.compile_hw(arch=arch, arch_path=args.arch_path)
 
-    # Generate flow
-    kernel_flow, spaceA_hbm_plan, spaceB_hbm_plan = normal_llm.normal_llm_decode_layer_plan(llm, work, arch)
+    # Collect all results for final summary
+    summary = []
 
-    import copy
+    # ===== TARGETED BENCHMARKS (2-core Spatz) =====
+    # 1. Prefill 128 tokens (M=128): large M, 2-core benefits, near-theoretical
+    # 2. Decode batch=1 (M=1): can't split M=1 across cores — shows limitation
+    # 3. Decode batch=16 speculative (M=64): moderate M, 2-core benefits
 
-    # Fix RoPE contiguous_length for small M (batch=1)
-    seq_len = work.speculative_factor if work.decode_mode == 'speculative' else 1
-    m_actual = work.batch_size * seq_len
-    for kname, kernel in kernel_flow.items():
-        if kernel["type"] == "rope" and hasattr(kernel["cfg"], 'contiguous_length'):
-            kernel["cfg"].contiguous_length = min(kernel["cfg"].contiguous_length, kernel["cfg"].m_size)
+    # Prefill
+    for token_len in [128]:
+        work.prefill_enabled        = 1
+        work.decode_enabled         = 0
+        work.batch_size             = 1
+        work.prefill_input_token    = token_len
 
-    # Save original GEMM configs before conversion
-    gemm_kernels = {}
-    for kname, kernel in kernel_flow.items():
-        if kernel["type"] == "gemm":
-            gemm_kernels[kname] = copy.deepcopy(kernel["cfg"])
+        label = f"Prefill {token_len} tokens (M={token_len}, 2-core)"
+        print(f"\n[green]{'#'*80}[/green]")
+        print(f"[green]  {label}[/green]")
+        print(f"[green]{'#'*80}[/green]")
 
-    # ===== RUN 1: Dense GEMM (fp16) =====
-    kernel_flow_dense = copy.deepcopy(kernel_flow)
-    for kname, kernel in kernel_flow_dense.items():
-        if kernel["type"] == "gemm":
-            old_cfg = kernel["cfg"]
-            new_cfg = SpatzGEMM()
-            new_cfg.dtype    = 'fp16'
-            new_cfg.m_size   = old_cfg.m_size
-            new_cfg.n_size   = old_cfg.n_size
-            new_cfg.k_size   = old_cfg.k_size
-            new_cfg.summa_numer = 0
-            kernel["cfg"]  = new_cfg
-            kernel["type"] = "spatz_gemm"
+        kernel_flow, spaceA, spaceB = normal_llm.normal_llm_prefill_layer_plan(llm, work, arch)
+        info = {"llm": llm, "work": work}
+        td, t24, t14 = run_3way_comparison(chip, kernel_flow, spaceA, spaceB, info, label)
+        summary.append((label, td, t24, t14))
 
-    info = {"llm": llm, "work": work}
-    info['kernel_flow'] = kernel_flow_dense
-    info['spaceA_hbm_plan'] = spaceA_hbm_plan
-    info['spaceB_hbm_plan'] = spaceB_hbm_plan
+    # Decode
+    for batch, spec, mode in [(1, 1, 'auto-regressive'), (16, 4, 'speculative')]:
+        work.prefill_enabled        = 0
+        work.decode_enabled         = 1
+        work.batch_size             = batch
+        work.decode_mode            = mode
+        work.speculative_factor     = spec
+        work.speculative_ratio      = 0.75
+        work.kv_cache_length        = 1023
 
-    print(f"\n[yellow]{'='*60}[/yellow]")
-    print(f"[yellow]  RUN 1: Dense fp16 GEMM[/yellow]")
-    print(f"[yellow]{'='*60}[/yellow]")
-    Results_dense = flow.softhier_launch(chip, f"Dense fp16 GEMM", kernel_flow_dense, spaceA_hbm_plan, spaceB_hbm_plan, info=info)
-    print(f"[green][Dense GEMM Runtime Breakdown][/green]")
-    cv.show_breakdown(Results_dense, metric='runtime', unit='us', scale_div=1000)
+        m_val = batch * spec
+        label = f"Decode batch={batch} (M={m_val}, 2-core)"
+        print(f"\n[green]{'#'*80}[/green]")
+        print(f"[green]  {label}[/green]")
+        print(f"[green]{'#'*80}[/green]")
 
-    # ===== RUN 2: SpMM 2:4 (fp16) =====
-    kernel_flow_sparse = copy.deepcopy(kernel_flow)
-    for kname, kernel in kernel_flow_sparse.items():
-        if kernel["type"] == "gemm":
-            old_cfg = kernel["cfg"]
-            new_cfg = SpatzSpMM()
-            new_cfg.dtype    = 'fp16'
-            new_cfg.m_size   = old_cfg.m_size
-            new_cfg.n_size   = old_cfg.n_size
-            new_cfg.k_size   = old_cfg.k_size
-            new_cfg.n_sparse = 2
-            new_cfg.m_sparse = 4
-            new_cfg.summa_numer = 0
-            kernel["cfg"]  = new_cfg
-            kernel["type"] = "spatz_spmm"
+        kernel_flow, spaceA, spaceB = normal_llm.normal_llm_decode_layer_plan(llm, work, arch)
+        info = {"llm": llm, "work": work}
+        td, t24, t14 = run_3way_comparison(chip, kernel_flow, spaceA, spaceB, info, label)
+        summary.append((label, td, t24, t14))
 
-    info['kernel_flow'] = kernel_flow_sparse
-
-    print(f"\n[yellow]{'='*60}[/yellow]")
-    print(f"[yellow]  RUN 2: SpMM 2:4 fp16[/yellow]")
-    print(f"[yellow]{'='*60}[/yellow]")
-    Results_sparse = flow.softhier_launch(chip, f"SpMM 2:4 fp16", kernel_flow_sparse, spaceA_hbm_plan, spaceB_hbm_plan, info=info)
-    print(f"[green][SpMM 2:4 Runtime Breakdown][/green]")
-    cv.show_breakdown(Results_sparse, metric='runtime', unit='us', scale_div=1000)
-
-    # ===== COMPARISON =====
-    print(f"\n[cyan]{'='*60}[/cyan]")
-    print(f"[cyan]  COMPARISON: Dense vs SpMM 2:4[/cyan]")
-    print(f"[cyan]{'='*60}[/cyan]")
-    total_dense = sum(v.get('runtime', 0) for v in Results_dense.values())
-    total_sparse = sum(v.get('runtime', 0) for v in Results_sparse.values())
-    print(f"Dense  TOTAL: {total_dense/1000:.1f} us")
-    print(f"SpMM   TOTAL: {total_sparse/1000:.1f} us")
-    if total_sparse > 0:
-        print(f"Speedup:      {total_dense/total_sparse:.2f}x")
-    for kname in Results_dense:
-        if kname in Results_sparse:
-            d = Results_dense[kname].get('runtime', 0)
-            s = Results_sparse[kname].get('runtime', 0)
-            spd = f"{d/s:.2f}x" if s > 0 else "N/A"
-            print(f"  {kname:20s}: {d/1000:8.1f} vs {s/1000:8.1f} us  ({spd})")
-
-    # ===== RUN 3: SpMM 1:4 (fp16) =====
-    kernel_flow_sparse14 = copy.deepcopy(kernel_flow)
-    for kname, kernel in kernel_flow_sparse14.items():
-        if kernel["type"] == "gemm":
-            old_cfg = kernel["cfg"]
-            new_cfg = SpatzSpMM()
-            new_cfg.dtype    = 'fp16'
-            new_cfg.m_size   = old_cfg.m_size
-            new_cfg.n_size   = old_cfg.n_size
-            new_cfg.k_size   = old_cfg.k_size
-            new_cfg.n_sparse = 1
-            new_cfg.m_sparse = 4
-            new_cfg.summa_numer = 0
-            kernel["cfg"]  = new_cfg
-            kernel["type"] = "spatz_spmm"
-
-    info['kernel_flow'] = kernel_flow_sparse14
-
-    print(f"\n[yellow]{'='*60}[/yellow]")
-    print(f"[yellow]  RUN 3: SpMM 1:4 fp16[/yellow]")
-    print(f"[yellow]{'='*60}[/yellow]")
-    Results_sparse14 = flow.softhier_launch(chip, f"SpMM 1:4 fp16", kernel_flow_sparse14, spaceA_hbm_plan, spaceB_hbm_plan, info=info)
-    print(f"[green][SpMM 1:4 Runtime Breakdown][/green]")
-    cv.show_breakdown(Results_sparse14, metric='runtime', unit='us', scale_div=1000)
-
-    # ===== FINAL COMPARISON =====
-    print(f"\n[cyan]{'='*60}[/cyan]")
-    print(f"[cyan]  FINAL COMPARISON: Dense vs SpMM 2:4 vs SpMM 1:4[/cyan]")
-    print(f"[cyan]{'='*60}[/cyan]")
-    total_14 = sum(v.get('runtime', 0) for v in Results_sparse14.values())
-    print(f"Dense    TOTAL: {total_dense/1000:.1f} us")
-    print(f"SpMM 2:4 TOTAL: {total_sparse/1000:.1f} us  ({total_dense/total_sparse:.2f}x)")
-    print(f"SpMM 1:4 TOTAL: {total_14/1000:.1f} us  ({total_dense/total_14:.2f}x)")
-    print()
-    for kname in Results_dense:
-        d = Results_dense[kname].get('runtime', 0)
-        s24 = Results_sparse.get(kname, {}).get('runtime', 0)
-        s14 = Results_sparse14.get(kname, {}).get('runtime', 0)
-        spd24 = f"{d/s24:.2f}x" if s24 > 0 else "N/A"
-        spd14 = f"{d/s14:.2f}x" if s14 > 0 else "N/A"
-        print(f"  {kname:20s}: {d/1000:7.1f} | {s24/1000:7.1f} ({spd24}) | {s14/1000:7.1f} ({spd14})")
-
-    pass
+    # ===== FINAL SUMMARY =====
+    print(f"\n[cyan]{'='*80}[/cyan]")
+    print(f"[cyan]  FULL BENCHMARK SUMMARY (Qwen-7B fp16, 1 layer)[/cyan]")
+    print(f"[cyan]{'='*80}[/cyan]")
+    print(f"{'Config':<35s} | {'Dense':>10s} | {'2:4':>10s} | {'1:4':>10s} | {'2:4 spd':>7s} | {'1:4 spd':>7s}")
+    print("-" * 90)
+    for label, td, t24, t14 in summary:
+        spd24 = f"{td/t24:.2f}x" if t24 > 0 else "N/A"
+        spd14 = f"{td/t14:.2f}x" if t14 > 0 else "N/A"
+        print(f"{label:<35s} | {td/1000:>8.1f}us | {t24/1000:>8.1f}us | {t14/1000:>8.1f}us | {spd24:>7s} | {spd14:>7s}")
 
 if __name__ == '__main__':
     test()

@@ -218,6 +218,35 @@ Key enablers for near-theoretical speedup:
 3. **4-row unrolled tile compute** — amortizes scalar overhead over 4 FMAs per load
 4. **Real model dimensions** (N=4096, 22016) — FMA completely dominates scalar overhead
 
+### 2-Core Spatz Parallelism
+
+Each cluster has 4 Spatz cores, but initially only core 0 was used for tile compute.
+Implemented 2-core parallelism: split M-dimension (prefill) or N-dimension (decode) across cores 0-1.
+
+**ISS limitation**: GVSoC processes intra-cluster cores sequentially, not in parallel.
+Workaround: core 0 computes half the work (modeling the real HW where 2 cores run simultaneously).
+
+```
+Config                    | Variant |  1-core |  2-core | Core spd | Sparse
+---------------------------------------------------------------------------
+Prefill 128 (M=128)       |  Dense | 165.0ms |  82.9ms |    1.99x |      -
+Prefill 128 (M=128)       |    2:4 |  84.4ms |  42.5ms |    1.99x |  1.95x
+Prefill 128 (M=128)       |    1:4 |  44.1ms |  22.3ms |    1.98x |  3.72x
+Decode batch=1 (M=1)      |  Dense |   3.1ms |   3.1ms |    1.00x |      -
+Decode batch=1 (M=1)      |    2:4 |   1.7ms |   1.7ms |    1.00x |  1.87x
+Decode batch=1 (M=1)      |    1:4 |   0.9ms |   0.9ms |    1.01x |  3.50x
+```
+
+- Prefill: 2-core gives ~2x. Combined 2-core + 1:4 = **7.4× total** over 1-core dense.
+- Decode M=1: N-split doesn't help in ISS (sequential core execution).
+  Real HW projected: Dense ~1.6ms, SpMV 2:4 ~0.8ms, SpMV 1:4 ~0.45ms.
+
+Implementation:
+- `spatz_tile_gemm/spmm.h`: Added `core_id`, `num_cores` params for M-split
+- `spatz_tile_gemv/spmv.h`: Added N-split (each core processes N/num_cores columns)
+- `SummaSpatzGEMM.h` / `SummaSpatzSpMM.h`: ISS workaround — core 0 computes half
+- Decode batch=16 (M=64) crashes on large FFN GEMMs — needs investigation
+
 ### Key Implementation: Spatz Optimizer (`spatz_gemm_auto.py`)
 
 The RedMule optimizer (`gemm_auto.py`) uses small tiles based on `4 × redmule_ce_height = 512`
