@@ -8,6 +8,7 @@ if(CCACHE_FOUND)
     set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 
+add_subdirectory(engine)
 add_subdirectory(core)
 add_subdirectory(gapy)
 add_subdirectory(gvtest)
