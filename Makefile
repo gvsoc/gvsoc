@@ -266,3 +266,11 @@ c2c-hw: c2c-cfg
 
 c2c-run:
 	./install/bin/gvsoc --target=pulp.c2c_platform.c2c_platform run --trace=ctrl --trace=endpoint
+
+
+##############################################################################
+## 				Make Targets for Geometry Information 						##
+##############################################################################
+
+geo:
+	python soft_hier/flex_cluster_utilities/geometery_generator/geogen.py $(config_file) geo.json
