@@ -18,7 +18,7 @@
 
 import gvsoc.runner
 import cpu.iss.riscv as iss
-import memory.memory
+from pulp.chips.flex_cluster.memory import Memory
 import interco.router as router
 from vp.clock_domain import Clock_domain
 import interco.router as router
@@ -213,7 +213,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
 
 
         #Debug Memory
-        debug_mem = memory.memory.Memory(self,'debug_mem', size=1)
+        debug_mem = Memory(self,'debug_mem', size=1)
 
         #HBM Preloader
         hbm_preloader = utils.loader.loader.ElfLoader(self, 'hbm_preloader', binary=preload_binary)

@@ -26,7 +26,7 @@ import math
 Entry Format:
 {
     "name"      : str
-    "type"      : str in ["chip", "die", "comp"]
+    "type"      : str in ["chip", "comp"]
     "shape"     : (,) unit um
     "offset"    : (,) unit um
     "subs"      : [] list of sub entries
@@ -183,7 +183,7 @@ for module_path in [arch_file]:
 arch = FlexClusterArch()
 die_subs, die_shape = gen_die(arch)
 die_info = {
-    "name"  : "SoftHier Compute Die",
+    "name"  : "chip",
     "type"  : "die",
     "shape" : die_shape,
     "offset": (0, 0),

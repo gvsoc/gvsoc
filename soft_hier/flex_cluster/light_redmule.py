@@ -18,6 +18,53 @@
 
 import gvsoc.systree
 
+def get_gemm_tile_pJ(num_tile_mac, tech_node):
+    gemm_tile_pJ ={
+        "22nm" : {
+            "25": {
+                "0.9": {
+                    "any": 4 * num_tile_mac
+                },
+                "1.0": {
+                    "any": 4 * num_tile_mac
+                }
+            }
+        },
+        "12nm" : {
+            "25": {
+                "0.8": {
+                    "any": 2.4 * num_tile_mac
+                },
+                "0.9": {
+                    "any": 2.4 * num_tile_mac
+                }
+            }
+        },
+        "7nm" : {
+            "25": {
+                "0.7": {
+                    "any": 1.6 * num_tile_mac
+                },
+                "0.8": {
+                    "any": 1.6 * num_tile_mac
+                }
+            }
+        },
+        "5nm" : {
+            "25": {
+                "0.6": {
+                    "any": 1.2 * num_tile_mac
+                },
+                "0.7": {
+                    "any": 1.2 * num_tile_mac
+                }
+            }
+        }
+    }
+
+    return gemm_tile_pJ[tech_node]
+    pass
+
 class LightRedmule(gvsoc.systree.Component):
 
     def __init__(self,
@@ -30,7 +77,8 @@ class LightRedmule(gvsoc.systree.Component):
                 ce_width: int,
                 ce_pipe: int,
                 queue_depth: int=128,
-                fold_tiles_mapping: int=0):
+                fold_tiles_mapping: int=0,
+                tech_node: str="5nm"):
 
         super().__init__(parent, name)
 
@@ -45,6 +93,20 @@ class LightRedmule(gvsoc.systree.Component):
             'ce_pipe'           : ce_pipe,
             'queue_depth'       : queue_depth,
             'fold_tiles_mapping': fold_tiles_mapping,
+        })
+
+        self.LOCAL_BUFFER_H    = ce_height;
+        self.LOCAL_BUFFER_N    = tcdm_bank_width * tcdm_bank_number // elem_size;
+        self.LOCAL_BUFFER_W    = ce_width * (ce_pipe + 1);
+
+        self.add_properties({
+            "gemm_tile_energy": {
+                "dynamic": {
+                    "type": "linear",
+                    "unit": "pJ",
+                    "values": get_gemm_tile_pJ(self.LOCAL_BUFFER_H * self.LOCAL_BUFFER_W * self.LOCAL_BUFFER_N, tech_node),
+                }
+            }
         })
 
     def i_INPUT(self) -> gvsoc.systree.SlaveItf:

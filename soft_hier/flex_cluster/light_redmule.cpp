@@ -196,6 +196,9 @@ public:
     uint8_t *           x_buffer;
     uint8_t *           z_buffer_compute;
     uint8_t *           z_buffer_previos;
+
+    //Power
+    vp::PowerSource     gemm_tile_energy;
     
 };
 
@@ -293,6 +296,9 @@ LightRedmule::LightRedmule(vp::ComponentConf &config)
     this->cycle_start       = 0;
     this->total_runtime     = 0;
     this->num_matmul        = 0;
+
+    //Power
+    this->power.new_power_source("gemm_tile_energy", &this->gemm_tile_energy, this->get_js_config()->get("**/gemm_tile_energy"));
 
     this->trace.msg("[LightRedmule] Model Initialization Done!\n");
 }
@@ -448,6 +454,8 @@ void LightRedmule::process_compute(){
     uint32_t buffer_h           = this->ce_height;
     uint32_t buffer_w           = this->ce_width * (this->ce_pipe + 1);
     uint32_t buffer_n           = this->bandwidth / this->elem_size;
+
+    this->gemm_tile_energy.account_energy_quantum();
 
     if (this->compute_able == 1)
     {

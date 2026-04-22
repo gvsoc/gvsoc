@@ -16,7 +16,7 @@
 
 import gvsoc.runner
 import pulp.snitch.snitch_core as iss
-import memory.memory as memory
+import pulp.chips.flex_cluster.memory as memory
 import interco.router as router
 import gvsoc.systree
 from pulp.chips.flex_cluster.cluster_registers import ClusterRegisters

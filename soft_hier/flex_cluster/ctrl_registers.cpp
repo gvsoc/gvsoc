@@ -88,6 +88,7 @@ void CtrlRegisters::reset(bool active)
     {
         std::cout << "[SystemInfo]: num_cluster_x = " << this->num_cluster_x << ", num_cluster_y = " << this->num_cluster_y << std::endl;
         this->event_enqueue(this->hbm_preload_done_to_cluster_event, 300);
+        this->power.get_engine()->start_capture();
     }
 }
 
@@ -137,6 +138,7 @@ vp::IoReqStatus CtrlRegisters::req(vp::Block *__this, vp::IoReq *req)
         if (offset == 0)
         {
             // std::cout << "EOC register return value: 0x" << std::hex << value << std::endl;
+            _this->power.get_engine()->stop_capture();
             _this->time.get_engine()->quit(0);
         }
         if (offset == 4)
