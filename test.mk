@@ -39,7 +39,7 @@ test.checkout.pulp-sdk:
 	fi
 	cd "tests/pulp-sdk" && \
 	git fetch --all && \
-	git checkout fc996a4bb817d0fed09701ef0eb42ffe8b4d6328
+	git checkout d4b5bcdd6e416a402a6e22a3e04f29402424cb21
 
 test.build.pulp-sdk: test.checkout.pulp-sdk
 
@@ -164,13 +164,15 @@ test.checkout.magia:
 	fi
 	cd "tests/magia-sdk" && \
 	git fetch --all && \
-	git checkout 3530f338042b7f10b564171112f5ebf8b7222196
+	git checkout ac3e726cbf189f2107c58d5ca1553205e54daf54
 
 test.build.magia: test.checkout.magia
 	rm -rf $(CURDIR)/tests/magia-sdk/build
+	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=1 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile1
 	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=2 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile2
 	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=4 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile4
 	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=8 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile8
+	export PATH=$(MAGIA_GCC_TOOLCHAIN)/bin:$(PATH) && cd tests/magia-sdk && $(MAKE) build compiler=GCC_PULP tiles=16 CMAKE_BUILDDIR=$(CURDIR)/tests/magia-sdk/build/tile16
 
 
 
