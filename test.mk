@@ -229,6 +229,9 @@ test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk te
 test.run:
 	$(GVTEST_CMD)
 
+test.tui:
+	$(GVTEST_CMD) --tui
+
 test: test.build
 	$(GVTEST_CMD)
 
