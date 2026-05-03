@@ -10,3 +10,5 @@ source sourceme.sh
 export SIRACUSA_SDK_HOME=$SDK_HOME/tests/siracusa/pulp-sdk-siracusa
 export PULP_SDK_HOME=$SDK_HOME/tests/pulp-sdk
 export PULPOS_HOME=$SDK_HOME/pulpos
+export GVSOC_ROOT=$SDK_HOME
+export GVSOC_CORE=$SDK_HOME/core
