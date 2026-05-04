@@ -107,8 +107,9 @@ def generate_memory_ld(
     ld_content = f"""
 MEMORY
 {{
-    L1  (rwxa) : ORIGIN = 0x{l1_base:016X}, LENGTH = 0x{l1_size:016X}
+    L1  (rwxa) : ORIGIN = 0x{(l1_base + 0x00010):016X}, LENGTH = 0x{l1_size:016X}
     L3  (rwxa) : ORIGIN = 0x{l3_base:016X}, LENGTH = 0x{l3_size:016X}
+    HBM (rwxa) : ORIGIN = 0x{hbm_west_base:016X}, LENGTH = 0x{hbm_west_size:016X}
     HBM_WEST  (rwxa) : ORIGIN = 0x{hbm_west_base:016X}, LENGTH = 0x{hbm_west_size:016X}
     HBM_NORTH (rwxa) : ORIGIN = 0x{hbm_north_base:016X}, LENGTH = 0x{hbm_north_size:016X}
     HBM_EAST  (rwxa) : ORIGIN = 0x{hbm_east_base:016X}, LENGTH = 0x{hbm_east_size:016X}

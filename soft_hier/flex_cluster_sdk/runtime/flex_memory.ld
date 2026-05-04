@@ -10,6 +10,7 @@ ENTRY(_start)
 PHDRS
 {
   l3         PT_LOAD;
+  hbm        PT_LOAD;
   hbm_west   PT_LOAD;
   hbm_north  PT_LOAD;
   hbm_east   PT_LOAD;
@@ -110,7 +111,7 @@ SECTIONS
     __DATA_BEGIN__ = .;
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
-  } >HBM_WEST :hbm_west
+  } >HBM :hbm
   _edata = .; PROVIDE (edata = .);
 
   /* small bss section */
@@ -149,14 +150,24 @@ SECTIONS
     _edram = .;
   } >L3 :l3
 
-  .hbm_west :
+  .hbm :
   {
     *(.hbm_prio)
+    . = ALIGN(1024);
+    *(.hbm)
+    *(.hbm*)
+    . = ALIGN(1024);
+    __hbm_heap_start = .;
+  } >HBM :hbm
+
+  .hbm_west :
+  {
+    *(.hbm_wset_prio)
     . = ALIGN(1024);
     *(.hbm_west)
     *(.hbm_west*)
     . = ALIGN(1024);
-    __hbm_heap_start = .;
+    __hbm_west_heap_start = .;
   } >HBM_WEST :hbm_west
 
   .hbm_north :
