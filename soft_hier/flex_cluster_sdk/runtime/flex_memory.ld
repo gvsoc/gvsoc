@@ -160,24 +160,15 @@ SECTIONS
     _edram = .;
   } >L3 :l3
 
-  .hbm :
+
+  .hbm_west :
   {
     *(.hbm_prio)
     . = ALIGN(1024);
     *(.hbm)
-    *(.hbm*)
-    . = ALIGN(1024);
-    __hbm_heap_start = .;
-  } >HBM :hbm
-
-  .hbm_west :
-  {
-    *(.hbm_wset_prio)
-    . = ALIGN(1024);
-    *(.hbm_west)
     *(.hbm_west*)
     . = ALIGN(1024);
-    __hbm_west_heap_start = .;
+    __hbm_heap_start = .;
   } >HBM_WEST :hbm_west
 
   .hbm_north :
