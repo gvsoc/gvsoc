@@ -151,12 +151,12 @@ SECTIONS
 
   .hbm_west :
   {
-    *(.hbm_west_prio)
+    *(.hbm_prio)
     . = ALIGN(1024);
     *(.hbm_west)
     *(.hbm_west*)
     . = ALIGN(1024);
-    __hbm_west_heap_start = .;
+    __hbm_heap_start = .;
   } >HBM_WEST :hbm_west
 
   .hbm_north :
