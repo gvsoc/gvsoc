@@ -104,10 +104,12 @@ def generate_memory_ld(
         hbm_east_size,
         hbm_south_base,
         hbm_south_size):
+    l1_share_size = 0x200
     ld_content = f"""
 MEMORY
 {{
-    L1  (rwxa) : ORIGIN = 0x{(l1_base + 0x00010):016X}, LENGTH = 0x{l1_size:016X}
+    L1_SHARE  (rwxa) : ORIGIN = 0x{(l1_base):016X}, LENGTH = 0x{(l1_share_size):016X}
+    L1  (rwxa) : ORIGIN = 0x{(l1_base + l1_share_size):016X}, LENGTH = 0x{(l1_size - l1_share_size):016X}
     L3  (rwxa) : ORIGIN = 0x{l3_base:016X}, LENGTH = 0x{l3_size:016X}
     HBM (rwxa) : ORIGIN = 0x{hbm_west_base:016X}, LENGTH = 0x{hbm_west_size:016X}
     HBM_WEST  (rwxa) : ORIGIN = 0x{hbm_west_base:016X}, LENGTH = 0x{hbm_west_size:016X}

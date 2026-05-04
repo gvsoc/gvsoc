@@ -24,6 +24,16 @@ INCLUDE memory.ld
 
 SECTIONS
 {
+  .l1_share (NOLOAD) :
+  {
+    __l1_share_data_start = .;
+    *(.l1_share_prio)
+    *(.l1_share)
+    . = ALIGN(4);
+    __l1_share_heap_start = .;
+    __l1_share_end = .;
+  } >L1_SHARE 
+
   .l1 (NOLOAD) :
   {
     __l1_data_start = .;
