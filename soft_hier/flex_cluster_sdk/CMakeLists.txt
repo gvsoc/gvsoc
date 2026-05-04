@@ -24,7 +24,7 @@ if (NOT INCLUDE_DIRS)
 endif()
 
 # Set the linker script
-set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/runtime/flex_memory.ld)
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/runtime/flex_memory.ld -L${CMAKE_SOURCE_DIR}/runtime/)
 
 
 add_custom_command(
