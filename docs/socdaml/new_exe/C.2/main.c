@@ -142,8 +142,6 @@ int main()
         //RedMule Pattern
         if (core_id == 0 && i >= (start_iter + 1) && i < (stop_iter + 1))
         {
-            if (i > start_iter + 1) flex_redmule_wait();
-
             // Configure RedMule for matrix multiplication
             flex_redmule_config(TILE_M, TILE_N, TILE_K);
 
@@ -154,7 +152,7 @@ int main()
                 (uint32_t)L1_C_addess,
                 REDMULE_UINT_16);
 
-            if (i == stop_iter) flex_redmule_wait();
+            flex_redmule_wait();
         }
 
         flex_global_barrier();

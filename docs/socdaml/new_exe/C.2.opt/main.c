@@ -100,6 +100,15 @@ int main()
         int iter = i - start_iter;
         uint32_t n = iter * TILE_N;
 
+        /***********************************************/
+        /* Interesting! why this improves performance ?*/
+        /***********************************************/
+        if (i > start_iter + 1)
+        {
+            if (core_id == 0) flex_redmule_wait();
+            flex_intra_cluster_sync();
+        }
+
         // DMA Pattern
         if (core_id == 1 && i >= start_iter && i < stop_iter)
         {
@@ -151,11 +160,18 @@ int main()
                 (iter%2 == 1)? (uint32_t)L1_B1_addess : (uint32_t)L1_B2_addess,
                 (uint32_t)L1_C_addess,
                 REDMULE_UINT_16);
-
-            flex_redmule_wait();
         }
 
         flex_global_barrier();
+
+        /***********************************************/
+        /* Interesting! why this improves performance ?*/
+        /***********************************************/
+        if (i == stop_iter)
+        {
+            if (core_id == 0) flex_redmule_wait();
+            flex_intra_cluster_sync();
+        }
     }
 
 
