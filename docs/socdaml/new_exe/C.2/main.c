@@ -72,7 +72,7 @@ int main()
     flex_intra_cluster_sync();
     uint32_t m                  = cluster_id_y * TILE_M;
     uint32_t k                  = cluster_id_x * TILE_K;
-    uint32_t start_iter         = cluster_id_x + cluster_id_y;
+    uint32_t start_iter         = cluster_id_x + cluster_id_y; // Interesting! think about it, why we need this?
     uint32_t stop_iter          = start_iter + N/TILE_N;
     uint32_t west_cluster_id    = cluster_id_y * 4 + (cluster_id_x - 1);
     uint32_t south_cluster_id   = (cluster_id_y - 1) * 4 + cluster_id_x;
