@@ -69,12 +69,15 @@ int main()
         L1_C_addess = (uint16_t *)flex_l1_malloc(C_TILE_SIZE_BYTES);
     }
 
-    // Synchronize to ensure memory allocation is done before other core accesses the L1 addresses
     flex_intra_cluster_sync();
-    uint32_t m = cluster_id_y * TILE_M;
-    uint32_t k = cluster_id_x * TILE_K;
-
-
+    uint32_t m                  = cluster_id_y * TILE_M;
+    uint32_t k                  = cluster_id_x * TILE_K;
+    uint32_t start_iter         = cluster_id_x + cluster_id_y;
+    uint32_t stop_iter          = start_iter + N/TILE_N;
+    uint32_t west_cluster_id    = cluster_id_y * 4 + (cluster_id_x - 1);
+    uint32_t south_cluster_id   = (cluster_id_y - 1) * 4 + cluster_id_x;
+    uint32_t is_on_west_edge    = (cluster_id_x == 0);
+    uint32_t is_on_south_dege   = (cluster_id_y == 0);
 
     //load C tile from HBM to L1
     if(core_id == 1){
@@ -89,43 +92,58 @@ int main()
         // Wait for DMA transfer to complete
         flex_dma_async_wait_all();
     }
-    flex_intra_cluster_sync();
+    flex_global_barrier();
 
-    int iter = 0;
-    //Iterate over tiles of A and B for the current C tile, compute C += A*B in L1
-    for(int n = 0; n < N; n += TILE_N) {
-        /*******************/
-        /* Your Code Here */
-        /*******************/
+    
+    for (int i = 0; i < (N/TILE_N + 7); ++i)
+    {
+        int iter = i - start_iter;
+        uint32_t n = iter * TILE_N;
 
-
-        //1. load A & B tiles
-        if (core_id == 1)
+        // DMA Pattern
+        if (core_id == 1 && i >= start_iter && i < stop_iter)
         {
-            flex_dma_async_2d(
-            (iter%2 == 0)? (uint32_t)L1_A1_addess : (uint32_t)L1_A2_addess, // destination address in L1
-            (uint32_t)A_in_HBM + (m * N + n) * sizeof(uint16_t), // source address in HBM
-            TILE_N * sizeof(uint16_t), // size of each tiled row
-            TILE_N * sizeof(uint16_t), // dest stride (row stride in L1)
-            N * sizeof(uint16_t), // source stride (row stride in HBM)
-            TILE_M);// number of rows
+            if (is_on_west_edge)
+            {
+                flex_dma_async_2d(
+                    (iter%2 == 0)? (uint32_t)L1_A1_addess : (uint32_t)L1_A2_addess, // destination address in L1
+                    (uint32_t)A_in_HBM + (m * N + n) * sizeof(uint16_t), // source address in HBM
+                    TILE_N * sizeof(uint16_t), // size of each tiled row
+                    TILE_N * sizeof(uint16_t), // dest stride (row stride in L1)
+                    N * sizeof(uint16_t), // source stride (row stride in HBM)
+                    TILE_M);// number of rows
+            } else {
+                flex_dma_async_1d(
+                    (iter%2 == 0)? (uint32_t)L1_A1_addess : (uint32_t)L1_A2_addess, // destination address in L1
+                    (iter%2 == 0)? remote_cid(west_cluster_id,(uint32_t)L1_A1_addess) : remote_cid(west_cluster_id,(uint32_t)L1_A2_addess), // source address in remote cluster L1
+                    A_TILE_SIZE_BYTES); // size of data to transfer
+            }
 
-            flex_dma_async_2d(
-            (iter%2 == 0)? (uint32_t)L1_B1_addess : (uint32_t)L1_B2_addess, // destination address in L1
-            (uint32_t)B_in_HBM + (n * K + k) * sizeof(uint16_t), // source address in HBM
-            TILE_K * sizeof(uint16_t), // size of each tiled row
-            TILE_K * sizeof(uint16_t), // dest stride (row stride in L1)
-            K * sizeof(uint16_t), // source stride (row stride in HBM)
-            TILE_N);// number of rows
-        
+            if (is_on_south_dege)
+            {
+                flex_dma_async_2d(
+                    (iter%2 == 0)? (uint32_t)L1_B1_addess : (uint32_t)L1_B2_addess, // destination address in L1
+                    (uint32_t)B_in_HBM + (n * K + k) * sizeof(uint16_t), // source address in HBM
+                    TILE_K * sizeof(uint16_t), // size of each tiled row
+                    TILE_K * sizeof(uint16_t), // dest stride (row stride in L1)
+                    K * sizeof(uint16_t), // source stride (row stride in HBM)
+                    TILE_N);// number of rows
+            } else {
+                flex_dma_async_1d(
+                    (iter%2 == 0)? (uint32_t)L1_B1_addess : (uint32_t)L1_B2_addess, // destination address in L1
+                    (iter%2 == 0)? remote_cid(south_cluster_id,(uint32_t)L1_B1_addess) : remote_cid(south_cluster_id,(uint32_t)L1_B2_addess), // source address in remote cluster L1
+                    B_TILE_SIZE_BYTES); // size of data to transfer
+            }
+
             // Wait for DMA transfer to complete
             flex_dma_async_wait_all();
         }
 
-
-        //2. compute tiled C += A*B on L1
-        if (core_id == 0 && iter != 0)
+        //RedMule Pattern
+        if (core_id == 0 && i >= (start_iter + 1) && i < (stop_iter + 1))
         {
+            if (i > start_iter + 1) flex_redmule_wait();
+
             // Configure RedMule for matrix multiplication
             flex_redmule_config(TILE_M, TILE_N, TILE_K);
 
@@ -136,31 +154,11 @@ int main()
                 (uint32_t)L1_C_addess,
                 REDMULE_UINT_16);
 
-            // Wait for RedMule computation to complete
-            flex_redmule_wait();
+            if (i == stop_iter) flex_redmule_wait();
         }
 
-        flex_intra_cluster_sync();
-        iter +=1;
+        flex_global_barrier();
     }
-
-    //3. Don't forget about the last RedMule computation
-    if (core_id == 0)
-    {
-        // Configure RedMule for matrix multiplication
-        flex_redmule_config(TILE_M, TILE_N, TILE_K);
-
-        // Trigger RedMule for matrix multiplication with FP16 format
-        flex_redmule_trigger(
-            (iter%2 == 1)? (uint32_t)L1_A1_addess : (uint32_t)L1_A2_addess,
-            (iter%2 == 1)? (uint32_t)L1_B1_addess : (uint32_t)L1_B2_addess,
-            (uint32_t)L1_C_addess,
-            REDMULE_UINT_16);
-
-        // Wait for RedMule computation to complete
-        flex_redmule_wait();
-    }
-    flex_intra_cluster_sync();
 
 
     //store the computed C tile back to HBM
@@ -176,8 +174,6 @@ int main()
         // Wait for DMA transfer to complete
         flex_dma_async_wait_all();
     }
-    flex_intra_cluster_sync();
-
 
 
     // Check the result

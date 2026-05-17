@@ -48,6 +48,7 @@ int main()
     flex_barrier_init();
     flex_alloc_init();
     flex_global_barrier();
+    performance_counter_start();
     /**************************************/
     /*  Program Execution Region -- Start */
     /**************************************/
@@ -112,8 +113,9 @@ int main()
         }
     }
 
-    // Check the result after DMA transfer
+    // Check the result
     flex_global_barrier();
+    performance_counter_stop();
     if(cluster_id == 0 && core_id == 0) { // Only core 0 in cluster 0 will print the result
         printf("Matrix C in HBM:\n");
         print_array_uint16(C_in_HBM, M, K);
