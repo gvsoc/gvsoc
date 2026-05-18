@@ -147,6 +147,8 @@ config:
 hw:
 	make config
 	make TARGETS=pulp.chips.flex_cluster.flex_cluster all
+	make TARGETS=pulp.chips.flex_cluster.flex_cluster_DoL_1ds all
+	make TARGETS=pulp.chips.flex_cluster.flex_cluster_DoL_multids all
 
 # bowwang: Deeploy-related
 hw-deeploy:
