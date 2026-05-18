@@ -54,8 +54,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
         arch            = FlexClusterArch()
         num_clusters    = arch.num_cluster_x * arch.num_cluster_y
         noc_outstanding = (arch.num_cluster_x + arch.num_cluster_y) + arch.noc_outstanding
-        num_hbm_ctrl_x  = arch.num_cluster_x // arch.num_node_per_ctrl
-        num_hbm_ctrl_y  = arch.num_cluster_y // arch.num_node_per_ctrl
+        num_hbm_ctrl_x  = arch.num_cluster_x // arch.num_node_per_ctrl  # Number of hbm_ctrl on x direction
+        num_hbm_ctrl_y  = arch.num_cluster_y // arch.num_node_per_ctrl  # Number of hbm_ctrl on y direction
 
         # Get Binary
         binary = None
@@ -99,6 +99,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         assert ((arch.hbm_chan_placement[3] >= num_hbm_ctrl_x) or (arch.hbm_chan_placement[3] == 0)), f"arch.hbm_chan_placement[3] ({arch.hbm_chan_placement[3]}) is smaller than hbm controller on x direction ({num_hbm_ctrl_x})"
         assert (arch.hbm_node_aliase <= arch.num_node_per_ctrl), f"arch.hbm_node_aliase ({arch.hbm_node_aliase}) is larger than arch.num_node_per_ctrl ({arch.num_node_per_ctrl})"
 
+        # Calculate the number of HBM channels for each hbm_ctrl
         ctrl_chan_west  = arch.hbm_chan_placement[0] // num_hbm_ctrl_y
         ctrl_chan_north = arch.hbm_chan_placement[1] // num_hbm_ctrl_x
         ctrl_chan_east  = arch.hbm_chan_placement[2] // num_hbm_ctrl_y
@@ -160,7 +161,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
                 nb_x_clusters=arch.num_cluster_x, nb_y_clusters=arch.num_cluster_y,
                 ni_outstanding_reqs=noc_outstanding, router_input_queue_size=noc_outstanding * num_clusters, atomics=1, collective=1)
 
-        #HBM channels
+        #HBM channels (one DRAMSys per channel)
         hbm_chan_list_west = []
         for hbm_ch in range(arch.hbm_chan_placement[0]):
             hbm_chan_list_west.append(memory.dramsys.Dramsys(self, f'west_hbm_chan_{hbm_ch}', dram_type=arch.hbm_type))
@@ -271,11 +272,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
             base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
             node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
             data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=0, y=node_id+1)
-            self.bind(itf_router, 'output', hbm_ctrl_list_west[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
+            self.bind(itf_router, 'output', hbm_ctrl_list_west[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')  # Bind the router output to the corresponding hbm_ctrl 
             pass
         for chan_id in range(arch.hbm_chan_placement[0]):
             ctrl_id = chan_id // ctrl_chan_west
-            self.bind(hbm_ctrl_list_west[ctrl_id], f'out_{chan_id % ctrl_chan_west}', hbm_chan_list_west[chan_id], 'input')
+            self.bind(hbm_ctrl_list_west[ctrl_id], f'out_{chan_id % ctrl_chan_west}', hbm_chan_list_west[chan_id], 'input') # Bind the hbm_ctrl output to the hbm channel(s)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_addr_space
 
@@ -288,11 +289,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
             base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
             node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
             data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=node_id+1, y=arch.num_cluster_y+1)
-            self.bind(itf_router, 'output', hbm_ctrl_list_north[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
+            self.bind(itf_router, 'output', hbm_ctrl_list_north[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}') # Bind the router output to the corresponding hbm_ctrl
             pass
         for chan_id in range(arch.hbm_chan_placement[1]):
             ctrl_id = chan_id // ctrl_chan_north
-            self.bind(hbm_ctrl_list_north[ctrl_id], f'out_{chan_id % ctrl_chan_north}', hbm_chan_list_north[chan_id], 'input')
+            self.bind(hbm_ctrl_list_north[ctrl_id], f'out_{chan_id % ctrl_chan_north}', hbm_chan_list_north[chan_id], 'input')  # Bind the hbm_ctrl output to the hbm channel(s)
             pass
         hbm_edge_start_base += arch.num_cluster_x*arch.hbm_node_addr_space
 
@@ -305,11 +306,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
             base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
             node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
             data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=arch.num_cluster_x+1, y=node_id+1)
-            self.bind(itf_router, 'output', hbm_ctrl_list_east[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
+            self.bind(itf_router, 'output', hbm_ctrl_list_east[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')  # Bind the router output to the corresponding hbm_ctrl
             pass
         for chan_id in range(arch.hbm_chan_placement[2]):
             ctrl_id = chan_id // ctrl_chan_east
-            self.bind(hbm_ctrl_list_east[ctrl_id], f'out_{chan_id % ctrl_chan_east}', hbm_chan_list_east[chan_id], 'input')
+            self.bind(hbm_ctrl_list_east[ctrl_id], f'out_{chan_id % ctrl_chan_east}', hbm_chan_list_east[chan_id], 'input')  # Bind the hbm_ctrl output to the hbm channel(s)
             pass
         hbm_edge_start_base += arch.num_cluster_y*arch.hbm_node_addr_space
 
@@ -322,11 +323,11 @@ class FlexClusterSystem(gvsoc.systree.Component):
             base_addr = hbm_edge_start_base + (node_id // arch.hbm_node_aliase) * (arch.hbm_node_addr_space * arch.hbm_node_aliase) + aliase_offset * (node_id % arch.hbm_node_aliase)
             node_size = arch.hbm_node_addr_space * arch.hbm_node_aliase
             data_noc.o_MAP(itf_router.i_INPUT(), base=base_addr, size=node_size, x=node_id+1, y=0)
-            self.bind(itf_router, 'output', hbm_ctrl_list_south[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}')
+            self.bind(itf_router, 'output', hbm_ctrl_list_south[ctrl_id], f'in_{node_id % arch.num_node_per_ctrl}') # Bind the router output to the corresponding hbm_ctrl
             pass
         for chan_id in range(arch.hbm_chan_placement[3]):
             ctrl_id = chan_id // ctrl_chan_south
-            self.bind(hbm_ctrl_list_south[ctrl_id], f'out_{chan_id % ctrl_chan_south}', hbm_chan_list_south[chan_id], 'input')
+            self.bind(hbm_ctrl_list_south[ctrl_id], f'out_{chan_id % ctrl_chan_south}', hbm_chan_list_south[chan_id], 'input')  # Bind the hbm_ctrl output to the hbm channel(s)
             pass
 
 

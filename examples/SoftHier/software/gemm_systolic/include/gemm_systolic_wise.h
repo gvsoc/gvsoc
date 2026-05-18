@@ -45,13 +45,13 @@ typedef struct GemmSystolicInfo
 
     //Recorded Actions
     uint32_t use_dma1;
-    uint32_t dma1_src;
-    uint32_t dma1_dst;
+    uint64_t dma1_src;
+    uint64_t dma1_dst;
     uint32_t dma1_size;
 
     uint32_t use_dma2;
-    uint32_t dma2_src;
-    uint32_t dma2_dst;
+    uint64_t dma2_src;
+    uint64_t dma2_dst;
     uint32_t dma2_size;
 
     uint32_t use_sync_dma;
@@ -78,10 +78,10 @@ GemmSystolicInfo gemm_systolic_wise_analysis(
     info.tile_size_byte_Y = info.tile_dimension_M * info.tile_dimension_K * elem_size;
 
     info.X_offset_1 = 0;
-    info.W_offset_1 = 1 * info.tile_size_byte_X;
-    info.X_offset_2 = 2 * info.tile_size_byte_W;
-    info.W_offset_2 = 3 * info.tile_size_byte_X;
-    info.Y_offset   = 4 * info.tile_size_byte_W;
+    info.W_offset_1 = info.tile_size_byte_X;
+    info.X_offset_2 = info.tile_size_byte_X + info.tile_size_byte_W;
+    info.W_offset_2 = 2 * info.tile_size_byte_X + info.tile_size_byte_W;
+    info.Y_offset   = 2 * (info.tile_size_byte_X + info.tile_size_byte_W);
 
     uint32_t M_tile = (M_size + info.tile_dimension_M - 1)/info.tile_dimension_M;
     uint32_t N_tile = (N_size + info.tile_dimension_N - 1)/info.tile_dimension_N;
@@ -89,19 +89,22 @@ GemmSystolicInfo gemm_systolic_wise_analysis(
 
     FlexPosition pos = get_pos(flex_get_cluster_id());
     info.Z_tile_on_row = 0;
-    while((info.Z_tile_on_row * ARCH_NUM_CLUSTER_X + pos.x) < K_tile){
-        info.Z_tile_on_row ++;
+    while ((info.Z_tile_on_row * ARCH_NUM_CLUSTER_X + pos.x) < K_tile){
+        info.Z_tile_on_row++;
     }
     info.Z_tile_on_col = 0;
     while((info.Z_tile_on_col * ARCH_NUM_CLUSTER_Y + pos.y) < M_tile){
-        info.Z_tile_on_col ++;
+        info.Z_tile_on_col++;
     }
     info.XW_tile_length = N_tile;
     info.Z_tile_all = info.Z_tile_on_row * info.Z_tile_on_col;
     info.systolic_delay = pos.x + pos.y;
-    info.total_iter = ((K_tile + ARCH_NUM_CLUSTER_X -1)/ARCH_NUM_CLUSTER_X) * ((M_tile + ARCH_NUM_CLUSTER_Y - 1)/ARCH_NUM_CLUSTER_Y) * (N_tile + 1) + ARCH_NUM_CLUSTER_X + ARCH_NUM_CLUSTER_Y;
+    info.total_iter     = ((K_tile + ARCH_NUM_CLUSTER_X - 1) / ARCH_NUM_CLUSTER_X)
+                        * ((M_tile + ARCH_NUM_CLUSTER_Y - 1) / ARCH_NUM_CLUSTER_Y)
+                        * (N_tile + 1)
+                        + ARCH_NUM_CLUSTER_X + ARCH_NUM_CLUSTER_Y;
 
-    info.dma_runing = 0;
+    info.dma_runing    = 0;
     info.redmule_runing = 0;
 
     return info;
@@ -116,12 +119,15 @@ void gemm_systolic_wise_compute_dma_access(GemmSystolicInfo * info, uint32_t ite
     info->use_sync_dma = 0;
 
     //Determine DMA actions
-    if ((iter >= info->systolic_delay) && (iter < (info->Z_tile_all * (info->XW_tile_length + 1) + info->systolic_delay)))
+    if ((iter >= info->systolic_delay) &&
+        (iter < (info->Z_tile_all * (info->XW_tile_length + 1) + info->systolic_delay)))
     {
         uint32_t eff_iter = iter - info->systolic_delay;
-        uint32_t sub_iter = eff_iter%(info->XW_tile_length + 1);
-        uint32_t st_count = eff_iter/(info->XW_tile_length + 1);
-        uint32_t xw_count = (sub_iter < 1)? st_count * info->XW_tile_length : st_count * info->XW_tile_length + sub_iter - 1;
+        uint32_t sub_iter = eff_iter % (info->XW_tile_length + 1);
+        uint32_t st_count = eff_iter / (info->XW_tile_length + 1);
+        uint32_t xw_count = (sub_iter < 1)
+                          ? st_count * info->XW_tile_length
+                          : st_count * info->XW_tile_length + sub_iter - 1;
         FlexPosition pos = get_pos(flex_get_cluster_id());
 
         if (sub_iter == 1)

@@ -65,8 +65,8 @@ hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
   in.set_req_meth(&hbm_ctrl::req);
   new_slave_port("in", &in);
 
-  nb_slaves = get_js_config()->get_child_int("nb_slaves");
-  nb_masters = get_js_config()->get_child_int("nb_masters");
+  nb_slaves = get_js_config()->get_child_int("nb_slaves");    // Number of slaves (banks) in the HBM
+  nb_masters = get_js_config()->get_child_int("nb_masters");  // Number of masters (nodes) from the NoC
   stage_bits = get_js_config()->get_child_int("stage_bits");
   interleaving_bits = get_js_config()->get_child_int("interleaving_bits");
   node_addr_offset = get_js_config()->get_child_int("node_addr_offset");
@@ -74,12 +74,12 @@ hbm_ctrl::hbm_ctrl(vp::ComponentConf &config)
   xor_scrambling = get_js_config()->get_child_int("xor_scrambling");
   red_scrambling = get_js_config()->get_child_int("red_scrambling");
 
-  if (stage_bits == 0)
+  if (stage_bits == 0 && nb_slaves > 0)
   {
     stage_bits = log2(nb_slaves);
   }
 
-  bank_mask = (1<<stage_bits) - 1;
+  bank_mask = (nb_slaves > 0) ? ((1<<stage_bits) - 1) : 0;
 
   out = new vp::IoMaster *[nb_slaves];
   for (int i=0; i<nb_slaves; i++)
