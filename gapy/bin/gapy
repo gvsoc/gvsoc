@@ -89,12 +89,50 @@ try:
     # since we need a target to handle commands
     if args.target is not None:
         # Check if the target name has target properties inlined and if so, inject them
-        # into the list of target properties
+        # into the list of target properties.
+        #
+        # The post-':' segments come in two flavours:
+        #   - Legacy gapy target properties: "KEY=VALUE" (or comma-separated).
+        #   - gvrun target qualifiers:       "<name>.KEY=VALUE", where <name>
+        #     is one of gvrun.target_qualifiers.QUALIFIER_HANDLERS (config,
+        #     attr, param, ...).  Those go through gvrun's dispatcher,
+        #     not gapy's target_properties machinery.
         target_name = args.target
-        target_properties = []
-        if target_name.find(':') != -1:
-            target_name, target_properties = target_name.split(':')
-            args.target_properties.append(target_properties)
+        if ':' in target_name:
+            segments = target_name.split(':')
+            target_name = segments[0]
+            legacy_props = []
+            qualifier_segments = []
+            try:
+                from gvrun.target_qualifiers import QUALIFIER_HANDLERS
+                known_qualifiers = set(QUALIFIER_HANDLERS)
+            except ImportError:
+                known_qualifiers = set()
+            for seg in segments[1:]:
+                head = seg.split('=', 1)[0]
+                if '.' in head and head.split('.', 1)[0] in known_qualifiers:
+                    qualifier_segments.append(seg)
+                else:
+                    legacy_props.append(seg)
+            if legacy_props:
+                args.target_properties.append(','.join(legacy_props))
+            if qualifier_segments:
+                # Apply gvrun-style qualifiers BEFORE importing the target
+                # module: the target's Config tree is built at class-load
+                # time, and Config.__post_init__ reads
+                # ``_attribute_arg_values`` to apply overrides — so the
+                # overrides must be in place first or they won't reach
+                # the BoardConfig.
+                from gvrun.target_qualifiers import (
+                    parse_target_string as _parse_target,
+                    apply_target_qualifiers as _apply_qualifiers,
+                )
+                if not hasattr(args, 'parameters'):
+                    args.parameters = []
+                _apply_qualifiers(
+                    _parse_target(':'.join([target_name] + qualifier_segments)),
+                    args,
+                )
 
         target = gapylib.target.get_target(target_name)(
             parser=parser,
