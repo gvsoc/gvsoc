@@ -9,31 +9,21 @@ ENTRY(_start)
 
 PHDRS
 {
-  l3         PT_LOAD;
-  hbm        PT_LOAD;
-  hbm_west   PT_LOAD;
-  hbm_north  PT_LOAD;
-  hbm_east   PT_LOAD;
-  hbm_south  PT_LOAD;
+  l3   PT_LOAD;
+  hbm  PT_LOAD;
 }
 
 /* Memory section should be provided in a separate, platform-specific */
 /* file. It should define at least the L1 and L3 memory blocks. */
-INCLUDE memory.ld
-
+MEMORY
+{
+    L1  (rwxa) : ORIGIN = 0x00000010, LENGTH = 0x00100000
+    L3  (rwxa) : ORIGIN = 0x80000000, LENGTH = 0x80000000
+    HBM (rwxa) : ORIGIN = 0xc0000000, LENGTH = 0x20000000
+}
 
 SECTIONS
 {
-  .l1_share (NOLOAD) :
-  {
-    __l1_share_data_start = .;
-    *(.l1_share_prio)
-    *(.l1_share)
-    . = ALIGN(4);
-    __l1_share_heap_start = .;
-    __l1_share_end = .;
-  } >L1_SHARE 
-
   .l1 (NOLOAD) :
   {
     __l1_data_start = .;
@@ -160,46 +150,14 @@ SECTIONS
     _edram = .;
   } >L3 :l3
 
-
-  .hbm_west :
+  .hbm :
   {
     *(.hbm_prio)
     . = ALIGN(1024);
     *(.hbm)
-    *(.hbm_west*)
+    *(.hbm*)
     . = ALIGN(1024);
     __hbm_heap_start = .;
-  } >HBM_WEST :hbm_west
-
-  .hbm_north :
-  {
-    *(.hbm_north_prio)
-    . = ALIGN(1024);
-    *(.hbm_north)
-    *(.hbm_north*)
-    . = ALIGN(1024);
-    __hbm_north_heap_start = .;
-  } >HBM_NORTH :hbm_north
-
-
-  .hbm_east :
-  {
-    *(.hbm_east_prio)
-    . = ALIGN(1024);
-    *(.hbm_east)
-    *(.hbm_east*)
-    . = ALIGN(1024);
-    __hbm_east_heap_start = .;
-  } >HBM_EAST :hbm_east
-
-  .hbm_south :
-  {
-    *(.hbm_south_prio)
-    . = ALIGN(1024);
-    *(.hbm_south)
-    *(.hbm_south*)
-    . = ALIGN(1024);
-    __hbm_south_heap_start = .;
-  } >HBM_SOUTH :hbm_south
+  } >HBM :hbm
 
 }
