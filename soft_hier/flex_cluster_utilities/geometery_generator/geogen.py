@@ -24,12 +24,11 @@ import math
 
 '''
 Entry Format:
-{
-    "name"      : str
+"name" : {
     "type"      : str in ["chip", "comp"]
     "shape"     : (,) unit um
     "offset"    : (,) unit um
-    "subs"      : [] list of sub entries
+    "subs"      : {} dict of sub components
 }
 '''
 
@@ -67,7 +66,7 @@ FloorPlan Assumption
 """
 
 def gen_clusters_subs(arch):
-    subs = []
+    subs = {}
     tech_node = ("5nm" if not hasattr(arch, 'tech_node') else arch.tech_node)
 
     #1. RedMule
@@ -77,13 +76,12 @@ def gen_clusters_subs(arch):
     redmule_area = redmule_kGE * kGE_to_um2[tech_node] / PnR_uti
     redmule_dim = math.sqrt(redmule_area) #unit um
     redmule_entry = {
-        "name"  : "redmule",
         "type"  : "comp",
         "shape" : (redmule_dim, redmule_dim),
         "offset": (0, 0),
-        "subs"  : [],
+        "subs"  : {},
     }
-    subs.append(redmule_entry)
+    subs['redmule'] = redmule_entry
 
     #2. other components
     snitch_kGE = 25 + 126 #core + IPU
@@ -95,44 +93,41 @@ def gen_clusters_subs(arch):
     all_other_width = redmule_dim
     all_other_height = all_other_area / all_other_width
     all_other_entry = {
-        "name"  : "others",
         "type"  : "comp",
         "shape" : (all_other_width, all_other_height),
         "offset": (0, redmule_dim),
-        "subs"  : [],
+        "subs"  : {},
     }
-    subs.append(all_other_entry)
+    subs['others'] = all_other_entry
 
     #3. L1 Memory
     L1_area = arch.cluster_tcdm_size * 8 * SRAM_bitcell_um2[tech_node]
     L1_height = all_other_height + redmule_dim
     L1_width = L1_area / L1_height
     L1_entry = {
-        "name"  : "tcdm",
         "type"  : "comp",
         "shape" : (L1_width, L1_height),
         "offset": (redmule_dim, 0),
-        "subs"  : [],
+        "subs"  : {},
     }
-    subs.append(L1_entry)
+    subs['tcdm'] = L1_entry
 
     cluster_shape = (redmule_dim + L1_width, redmule_dim + all_other_height)
     return subs, cluster_shape
     pass
 
 def gen_die(arch):
-    clusters = []
+    clusters = {}
 
     subs, shape = gen_clusters_subs(arch)
     for y in range(arch.num_cluster_y):
         for x in range(arch.num_cluster_x):
-            clusters.append({
-                "name"  : f"cluster_{x + y * arch.num_cluster_x}",
+            clusters[f"cluster_{x + y * arch.num_cluster_x}"] = {
                 "type"  : "comp",
                 "shape" : shape,
                 "offset": (x * shape[0], y * shape[1]),
                 "subs"  : subs,
-            })
+            }
             pass
     
     die_shape = (arch.num_cluster_x * shape[0], arch.num_cluster_y * shape[1])
@@ -183,12 +178,15 @@ for module_path in [arch_file]:
 arch = FlexClusterArch()
 die_subs, die_shape = gen_die(arch)
 die_info = {
-    "name"  : "chip",
     "type"  : "die",
     "shape" : die_shape,
     "offset": (0, 0),
     "subs"  : die_subs,
 }
 
+chip = {
+    "chip" : die_info
+}
+
 with open(geo_file, "w") as f:
-    json.dump(die_info, f, indent=4)
+    json.dump(chip, f, indent=4)

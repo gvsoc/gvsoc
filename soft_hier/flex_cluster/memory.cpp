@@ -219,7 +219,7 @@ Memory::Memory(vp::ComponentConf &config)
     }
 
     this->background_power.leakage_power_start();
-    // this->background_power.dynamic_power_start();
+    this->background_power.dynamic_power_start();
     this->last_access_timestamp = -1;
 }
 

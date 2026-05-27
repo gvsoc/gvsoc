@@ -79,6 +79,7 @@ class FlexClusterSystem(gvsoc.systree.Component):
         if not hasattr(arch, 'hbm_node_aliase_start_bit'): arch.hbm_node_aliase_start_bit = 48
         if not hasattr(arch, 'hbm_ctrl_xor_scrambling'): arch.hbm_ctrl_xor_scrambling = 0
         if not hasattr(arch, 'hbm_ctrl_red_scrambling'): arch.hbm_ctrl_red_scrambling = 0
+        if not hasattr(arch, 'tech_node'): arch.tech_node = "5nm"
 
         #############
         # Assertion #
@@ -144,7 +145,8 @@ class FlexClusterSystem(gvsoc.systree.Component):
                                         spatz_vlsu_bw       =   arch.spatz_vlsu_port_width,
                                         spatz_vreg_gather_eff = arch.spatz_vreg_gather_eff,
                                         data_bandwidth      =   arch.noc_link_width/8,
-                                        multi_idma_enable   =   arch.multi_idma_enable)
+                                        multi_idma_enable   =   arch.multi_idma_enable,
+                                        tech_node           =   arch.tech_node)
             cluster_list.append(ClusterUnit(self,f'cluster_{cluster_id}', cluster_arch, binary))
             pass
 

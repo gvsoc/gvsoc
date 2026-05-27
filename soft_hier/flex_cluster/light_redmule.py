@@ -22,8 +22,8 @@ def get_gemm_tile_pJ(num_tile_mac, tech_node):
     gemm_tile_pJ ={
         "22nm" : {
             "25": {
-                "0.9": {
-                    "any": 4 * num_tile_mac
+                "0.6": {
+                    "any": 1.4 * num_tile_mac
                 },
                 "1.0": {
                     "any": 4 * num_tile_mac
@@ -32,8 +32,8 @@ def get_gemm_tile_pJ(num_tile_mac, tech_node):
         },
         "12nm" : {
             "25": {
-                "0.8": {
-                    "any": 2.4 * num_tile_mac
+                "0.6": {
+                    "any": 1.1 * num_tile_mac
                 },
                 "0.9": {
                     "any": 2.4 * num_tile_mac
@@ -42,8 +42,8 @@ def get_gemm_tile_pJ(num_tile_mac, tech_node):
         },
         "7nm" : {
             "25": {
-                "0.7": {
-                    "any": 1.6 * num_tile_mac
+                "0.6": {
+                    "any": 0.9 * num_tile_mac
                 },
                 "0.8": {
                     "any": 1.6 * num_tile_mac
@@ -53,7 +53,7 @@ def get_gemm_tile_pJ(num_tile_mac, tech_node):
         "5nm" : {
             "25": {
                 "0.6": {
-                    "any": 1.2 * num_tile_mac
+                    "any": 0.8 * num_tile_mac
                 },
                 "0.7": {
                     "any": 1.2 * num_tile_mac
@@ -98,13 +98,16 @@ class LightRedmule(gvsoc.systree.Component):
         self.LOCAL_BUFFER_H    = ce_height;
         self.LOCAL_BUFFER_N    = tcdm_bank_width * tcdm_bank_number // elem_size;
         self.LOCAL_BUFFER_W    = ce_width * (ce_pipe + 1);
+        self.num_mac_per_tile  = self.LOCAL_BUFFER_H * self.LOCAL_BUFFER_W * self.LOCAL_BUFFER_N;
 
         self.add_properties({
             "gemm_tile_energy": {
                 "dynamic": {
                     "type": "linear",
                     "unit": "pJ",
-                    "values": get_gemm_tile_pJ(self.LOCAL_BUFFER_H * self.LOCAL_BUFFER_W * self.LOCAL_BUFFER_N, tech_node),
+                    "values": get_gemm_tile_pJ(
+                        self.num_mac_per_tile, 
+                        tech_node),
                 }
             }
         })

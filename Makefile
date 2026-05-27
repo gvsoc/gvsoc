@@ -268,9 +268,12 @@ c2c-run:
 	./install/bin/gvsoc --target=pulp.c2c_platform.c2c_platform run --trace=ctrl --trace=endpoint
 
 
-##############################################################################
-## 				Make Targets for Geometry Information 						##
-##############################################################################
+##################################################################
+## 				Make Targets for 3D-ICE 						##
+##################################################################
 
 geo:
 	python soft_hier/flex_cluster_utilities/geometery_generator/geogen.py $(config_file) geo.json
+
+ice: geo
+	 python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice.py $(config_file) geo.json power_report.csv

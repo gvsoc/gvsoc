@@ -19,18 +19,18 @@ import gvsoc.systree
 access_byte_pJ ={
     "22nm" : {
         "25": {
-            "0.9": {
-                "any": 0.52
+            "0.6": {
+                "any": 0.29
             },
             "1.0": {
-                "any": 0.64
+                "any": 0.80
             }
         }
     },
     "12nm" : {
         "25": {
-            "0.8": {
-                "any": 0.38
+            "0.6": {
+                "any": 0.28
             },
             "0.9": {
                 "any": 0.48
@@ -39,7 +39,7 @@ access_byte_pJ ={
     },
     "7nm" : {
         "25": {
-            "0.7": {
+            "0.6": {
                 "any": 0.25
             },
             "0.8": {
@@ -64,40 +64,40 @@ def get_leakage_byte_W(bytes, tech_node):
         "22nm" : {
             "25": {
                 "0.9": {
-                    "any": 100 * 1e-12 * bytes
+                    "any": 100 * 1e-11 * bytes
                 },
                 "1.0": {
-                    "any": 120 * 1e-12 * bytes
+                    "any": 120 * 1e-11 * bytes
                 }
             }
         },
         "12nm" : {
             "25": {
                 "0.8": {
-                    "any": 60 * 1e-12 * bytes
+                    "any": 60 * 1e-11 * bytes
                 },
                 "0.9": {
-                    "any": 80 * 1e-12 * bytes
+                    "any": 80 * 1e-11 * bytes
                 }
             }
         },
         "7nm" : {
             "25": {
-                "0.7": {
-                    "any": 40 * 1e-12 * bytes
+                "0.6": {
+                    "any": 40 * 1e-11 * bytes
                 },
                 "0.8": {
-                    "any": 50 * 1e-12 * bytes
+                    "any": 50 * 1e-11 * bytes
                 }
             }
         },
         "5nm" : {
             "25": {
                 "0.6": {
-                    "any": 45 * 1e-12 * bytes
+                    "any": 35 * 1e-11 * bytes
                 },
                 "0.7": {
-                    "any": 40 * 1e-12 * bytes
+                    "any": 40 * 1e-11 * bytes
                 }
             }
         }
@@ -178,6 +178,20 @@ class Memory(gvsoc.systree.Component):
 
         self.add_properties({
             "background": {
+                "dynamic": {
+                    "type": "linear",
+                    "unit": "W",
+                    "values": {
+                        "25": {
+                            "0.6": {
+                                "any": 0.00000
+                            },
+                            "1.0": {
+                                "any": 0.00000
+                            }
+                        }
+                    }
+                },
                 "leakage": {
                     "type": "linear",
                     "unit": "W",
