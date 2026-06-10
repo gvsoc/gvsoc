@@ -114,6 +114,29 @@ try:
                     qualifier_segments.append(seg)
                 else:
                     legacy_props.append(seg)
+            # The global 'timing' level is a gvrun-side parameter, not a
+            # gapy target property: pull it out of the bare segments and
+            # feed only the gvrun parameter registry, where
+            # gvrun.timing.get_global_level() reads it during generation —
+            # exactly like under the gvrun launcher.
+            timing_props = []
+            remaining_props = []
+            for seg in legacy_props:
+                kept = []
+                for kv in seg.split(','):
+                    if kv.split('=', 1)[0] == 'timing':
+                        timing_props.append(kv)
+                    else:
+                        kept.append(kv)
+                if kept:
+                    remaining_props.append(','.join(kept))
+            legacy_props = remaining_props
+            if timing_props:
+                try:
+                    from gvrun.parameter import set_parameters
+                    set_parameters(timing_props)
+                except ImportError:
+                    pass
             if legacy_props:
                 args.target_properties.append(','.join(legacy_props))
             if qualifier_segments:
