@@ -62,7 +62,7 @@ checkout:
 .PHONY: build gui
 
 ifdef DEBUG
-BUILD_TYPE = RelWithDebInfo
+BUILD_TYPE = Debug
 else
 BUILD_TYPE = Release
 endif
