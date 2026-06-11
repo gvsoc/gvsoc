@@ -1,2 +1,2 @@
 targets:
-  snitch_cluster_single:
+  pulp.snitch.snitch_cluster_single:
