@@ -9,7 +9,7 @@ TARGETS ?= rv64 \
     rv64_untimed \
     pulp-open \
     pulp-open-nn \
-    pulp-open:chip/cluster/redmule=True \
+    pulp-open:attr.chip/cluster/has_redmule=true \
     occamy \
     siracusa \
     snitch \
