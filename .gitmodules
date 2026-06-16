@@ -18,4 +18,4 @@
 	url = https://github.com/gvsoc/config_tree.git
 [submodule "engine"]
 	path = engine
-	url = https://github.com/gvsoc/gvsoc-engine.git
+	url = git@github.com:enthusiastic-enthusiast/gvsoc-fi-engine.git
