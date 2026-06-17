@@ -9,9 +9,7 @@ TARGETS ?= rv64 \
     rv64_untimed \
     pulp-open \
     pulp-open-nn \
-    pulp-open:chip/cluster/redmule=True \
-    pulp.spatz.spatz \
-    snitch_spatz \
+    pulp-open:attr.chip/cluster/has_redmule=true \
     occamy \
     siracusa \
     snitch \
@@ -252,6 +250,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout 30f4f9f2e149714dd0dabd3b7b65c8b9ba60c600
+	git checkout 4800fc0c6c2b75e8dbc8c0c60670310ae606cb51
 	mkdir -p $(INSTALLDIR)
 	cp -r gui-release/* $(INSTALLDIR)
