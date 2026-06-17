@@ -143,6 +143,7 @@ campaign.fault_generator = fault_generator
 
 campaign.start_workers()
 
+""" At this point, we hold all relevant data in `campaign` object """
 campaign.print_results()
 
 exit(0)

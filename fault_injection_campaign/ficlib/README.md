@@ -1,8 +1,12 @@
-- `campaign_manager`: contains the core class `CampaignManager`. It defines and contains the fault injection campaign. Having this as a class object makes it easier to pass the state of the campaign around and so the infrastructure is rather agile. In particular, the user is free to define its own `fault_generator` (or `stat_analyzer` or whatever) which can make choices depending on the previous runs.
+# `ficlib`
 
-- `*_helpers`: hold the corresponding helper functions. The ELF parser is contained within `poi_helpers`. The `fic_proxy_helpers` will probably disappear.
+`ficlib` suite is designed to ease the FCM design. It consists of several Python classes:
 
-## `CampaignManager`
+- `campaign_manager.py`: contains the core class `CampaignManager`. It defines and contains the fault injection campaign. Having this as a class object makes it easier to pass the state of the campaign around and so the infrastructure is rather agile. In particular, the user is free to define its own `fault_generator` (or `stat_analyzer` or whatever) which can make choices depending on the previous runs.
+
+- `*_helpers.py`: hold the corresponding helper functions. The ELF parser is contained within `poi_helpers`. The `fic_proxy_helpers` will probably disappear.
+
+## `CampaignManager` constructor
 
 Must supply at least the following to the constructor:
 
@@ -13,3 +17,14 @@ Must supply at least the following to the constructor:
 - `target`, `binary`, `builddir`: clear.
 
 Further, the `fault_generator` callable has to be supplied before the worker threads are started (but it can be supplied after running `do_golden_run` to account for dynamically extracted data).
+
+## Typical usage flow
+
+1. Instantiate `campaign = CampaignManager(...)` as above.
+2. Do golden run: `campaign.do_golden_run()`.
+3. Define fault generating function and point `campaign.fault_generator` to it.
+4. Run the campaign: `campaign.start_workers()`.
+
+At this point, `campaign` has all relevant information. One can display it e.g. by `campaign.print_results()`.
+
+For an example implementation, see `faulted_pulp_open/fcm.py`.
