@@ -235,8 +235,6 @@ class CampaignManager:
     def do_golden_run(self):
         cmd_line = []
 
-        # It would be more consise to do this using 
-        # proxy instead of files. But this is robust.
         for fic in self.fics:
             san_fic = self.san_fics[fic]
             ffp = f'{self.builddir}/faults/{san_fic}'
@@ -297,6 +295,7 @@ class CampaignManager:
                     self.all_devices.append(dev)
                     self.all_mems.append(dev)
 
+            """
             # Regfiles
             self.fic_to_xregs[fic] = []
             rdp = f'{self.builddir}/work_{GOLDEN_RUN_TID}/regfiles_data_{san_fic}'
@@ -363,6 +362,7 @@ class CampaignManager:
                     self.fic_to_caches[fic].append(cache)
                     self.all_caches.append(cache)
                     # Doesnt go into all_devices?
+            """
 
             # Hashes (if any)
             if fic in self.fic_to_hashcmds:
