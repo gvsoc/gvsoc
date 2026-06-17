@@ -1,6 +1,7 @@
 [submodule "core"]
 	path = core
 	url = https://github.com/enthusiastic-enthusiast/gvsoc-fi-core.git
+	branch = main
 [submodule "pulp"]
 	path = pulp
 	url = https://github.com/gvsoc/gvsoc-pulp.git
@@ -19,3 +20,4 @@
 [submodule "engine"]
 	path = engine
 	url = git@github.com:enthusiastic-enthusiast/gvsoc-fi-engine.git
+	branch = fault-injection
