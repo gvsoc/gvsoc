@@ -1,22 +1,40 @@
 diff --git a/engine/CMakeLists.txt b/engine/CMakeLists.txt
-index 2ca54d5c..9254aafb 100644
+index 2ca54d5c..7cd22b40 100644
 --- a/engine/CMakeLists.txt
 +++ b/engine/CMakeLists.txt
-@@ -44,6 +44,13 @@ set(GVSOC_ENGINE_C_SRCS
+@@ -44,6 +44,31 @@ set(GVSOC_ENGINE_C_SRCS
      )
  
  set(GVSOC_ENGINE_INC_DIRS "include")
 +set(PWR_INTERVAL_PS "100000000" CACHE STRING "Power report capture interval in picoseconds")
++set(SOFTHIER_CONFIG_FILE "soft_hier/flex_cluster/flex_cluster_arch.py" CACHE STRING "SoftHier architecture configuration file used for power post-processing")
++set(SOFTHIER_ICE_GEO_FILE "geo.json" CACHE STRING "SoftHier geometry file used for power post-processing")
++set(SOFTHIER_ICE_POWER_TRACE_FILE "ice_power_trace.txt" CACHE STRING "SoftHier power trace output file")
 +
 +if(NOT PWR_INTERVAL_PS MATCHES "^[1-9][0-9]*$")
 +    message(FATAL_ERROR "PWR_INTERVAL_PS must be a positive integer in picoseconds")
 +endif()
 +
-+set(GVSOC_POWER_COMPILE_DEFINITIONS "PWR_INTERVAL_PS=${PWR_INTERVAL_PS}LL")
++function(gvsoc_escape_compile_string OUTPUT INPUT)
++    string(REPLACE "\\" "\\\\" ESCAPED "${INPUT}")
++    string(REPLACE "\"" "\\\"" ESCAPED "${ESCAPED}")
++    set(${OUTPUT} "\"${ESCAPED}\"" PARENT_SCOPE)
++endfunction()
++
++gvsoc_escape_compile_string(SOFTHIER_CONFIG_FILE_DEFINE "${SOFTHIER_CONFIG_FILE}")
++gvsoc_escape_compile_string(SOFTHIER_ICE_GEO_FILE_DEFINE "${SOFTHIER_ICE_GEO_FILE}")
++gvsoc_escape_compile_string(SOFTHIER_ICE_POWER_TRACE_FILE_DEFINE "${SOFTHIER_ICE_POWER_TRACE_FILE}")
++
++set(GVSOC_POWER_COMPILE_DEFINITIONS
++    PWR_INTERVAL_PS=${PWR_INTERVAL_PS}LL
++    SOFTHIER_CONFIG_FILE=${SOFTHIER_CONFIG_FILE_DEFINE}
++    SOFTHIER_ICE_GEO_FILE=${SOFTHIER_ICE_GEO_FILE_DEFINE}
++    SOFTHIER_ICE_POWER_TRACE_FILE=${SOFTHIER_ICE_POWER_TRACE_FILE_DEFINE}
++    )
  
  # ==================
  # Optimized launcher
-@@ -51,6 +58,7 @@ set(GVSOC_ENGINE_INC_DIRS "include")
+@@ -51,6 +76,7 @@ set(GVSOC_ENGINE_INC_DIRS "include")
  
  if(${BUILD_OPTIMIZED})
      add_library(gvsoc SHARED ${GVSOC_ENGINE_CXX_SRCS} ${GVSOC_ENGINE_C_SRCS})
@@ -24,7 +42,7 @@ index 2ca54d5c..9254aafb 100644
      target_compile_options(gvsoc PRIVATE -fno-stack-protector)
      target_include_directories(gvsoc PUBLIC ${GVSOC_ENGINE_INC_DIRS})
      target_link_libraries(gvsoc PUBLIC z pthread ${CMAKE_DL_LIBS})
-@@ -85,6 +93,7 @@ endif()
+@@ -85,6 +111,7 @@ endif()
  
  if(${BUILD_OPTIMIZED_M32})
      add_library(gvsoc_m32 SHARED ${GVSOC_ENGINE_CXX_SRCS} ${GVSOC_ENGINE_C_SRCS})
@@ -32,7 +50,7 @@ index 2ca54d5c..9254aafb 100644
      target_include_directories(gvsoc_m32 PUBLIC ${GVSOC_ENGINE_INC_DIRS})
      target_link_libraries(gvsoc_m32 PUBLIC z pthread ${CMAKE_DL_LIBS})
      set_target_properties(gvsoc_m32 PROPERTIES OUTPUT_NAME "pulpvp-m32")
-@@ -112,7 +121,7 @@ if(${BUILD_DEBUG})
+@@ -112,7 +139,7 @@ if(${BUILD_DEBUG})
          RUNTIME DESTINATION bin
          INCLUDES DESTINATION include
          )
@@ -41,7 +59,7 @@ index 2ca54d5c..9254aafb 100644
  
      add_executable(gvsoc_launcher_debug "src/main.cpp")
  
-@@ -144,7 +153,7 @@ if(${BUILD_DEBUG_M32})
+@@ -144,7 +171,7 @@ if(${BUILD_DEBUG_M32})
          ARCHIVE DESTINATION lib
          INCLUDES DESTINATION include
          )
@@ -84,10 +102,10 @@ index 28272e15..987630ee 100644
  
  inline int64_t vp::TimeEngine::get_next_event_time()
 diff --git a/engine/include/vp/time/time_engine.hpp b/engine/include/vp/time/time_engine.hpp
-index dfaaca10..c4c27b4f 100644
+index dfaaca10..9659fce5 100644
 --- a/engine/include/vp/time/time_engine.hpp
 +++ b/engine/include/vp/time/time_engine.hpp
-@@ -23,6 +23,10 @@
+@@ -23,6 +23,22 @@
  
  #include "vp/json.hpp"
  
@@ -95,10 +113,22 @@ index dfaaca10..c4c27b4f 100644
 +#define PWR_INTERVAL_PS 100000000LL
 +#endif
 +
++#ifndef SOFTHIER_CONFIG_FILE
++#define SOFTHIER_CONFIG_FILE "soft_hier/flex_cluster/flex_cluster_arch.py"
++#endif
++
++#ifndef SOFTHIER_ICE_GEO_FILE
++#define SOFTHIER_ICE_GEO_FILE "geo.json"
++#endif
++
++#ifndef SOFTHIER_ICE_POWER_TRACE_FILE
++#define SOFTHIER_ICE_POWER_TRACE_FILE "ice_power_trace.txt"
++#endif
++
  namespace vp
  {
      class BlockTime;
-@@ -100,6 +104,8 @@ namespace vp
+@@ -100,6 +116,8 @@ namespace vp
      private:
          void step_register(int64_t time);
  
@@ -107,7 +137,7 @@ index dfaaca10..c4c27b4f 100644
          int64_t run();
          int64_t run_until(int64_t end_time);
  
-@@ -189,5 +195,10 @@ namespace vp
+@@ -189,5 +207,10 @@ namespace vp
          // In synchronous mode, since several threads can control the time, there is a retain
          // mechanism which makes sure time is progressing only if all threads ask for it.
          int retain = 0;
@@ -147,18 +177,48 @@ index 7f56b6a6..25cf1182 100644
  double vp::PowerEngine::get_average_power(double &dynamic_power, double &static_power)
  {
 diff --git a/engine/src/time/time_engine.cpp b/engine/src/time/time_engine.cpp
-index 7b40a98f..65c24ed6 100644
+index 7b40a98f..8ac0c4b6 100644
 --- a/engine/src/time/time_engine.cpp
 +++ b/engine/src/time/time_engine.cpp
-@@ -22,6 +22,7 @@
+@@ -22,7 +22,37 @@
  #include <vp/vp.hpp>
  #include "vp/time/time_engine.hpp"
  #include <vp/time/time_event.hpp>
++#include <cstdio>
 +#include <cstdlib>
++#include <string>
  
++namespace
++{
++    std::string shell_quote(const char *value)
++    {
++        std::string quoted = "'";
++
++        for (const char *ptr = value; *ptr != '\0'; ++ptr)
++        {
++            if (*ptr == '\'')
++            {
++                quoted += "'\"'\"'";
++            }
++            else
++            {
++                quoted += *ptr;
++            }
++        }
++
++        quoted += "'";
++        return quoted;
++    }
++
++    std::string make_variable_arg(const char *name, const char *value)
++    {
++        return std::string(" ") + name + "=" + shell_quote(value);
++    }
++}
  
  namespace vp
-@@ -52,6 +53,26 @@ void vp::TimeEngine::init(vp::Component *top)
+ {
+@@ -52,6 +82,34 @@ void vp::TimeEngine::init(vp::Component *top)
  {
      this->top = top;
      this->stop_event = new vp::Time_engine_stop_event(this->top);
@@ -177,7 +237,15 @@ index 7b40a98f..65c24ed6 100644
 +    {
 +        this->time = this->next_power_capture_timestamp;
 +        this->top->power.get_engine()->stop_capture();
-+        std::system("make ice_power");
++        std::string command = "make ice_power";
++        command += make_variable_arg("config_file", SOFTHIER_CONFIG_FILE);
++        command += make_variable_arg("ice_geo_file", SOFTHIER_ICE_GEO_FILE);
++        command += make_variable_arg("ice_power_trace_file", SOFTHIER_ICE_POWER_TRACE_FILE);
++        int status = std::system(command.c_str());
++        if (status != 0)
++        {
++            std::fprintf(stderr, "Warning: failed to run '%s' (status: %d)\n", command.c_str(), status);
++        }
 +        this->top->power.get_engine()->refresh_power_file();
 +        this->top->power.get_engine()->start_capture();
 +        this->next_power_capture_timestamp += this->pwr_interval_ps;
@@ -185,7 +253,7 @@ index 7b40a98f..65c24ed6 100644
  }
  
  int64_t vp::TimeEngine::exec()
-@@ -64,6 +85,7 @@ int64_t vp::TimeEngine::exec()
+@@ -64,6 +122,7 @@ int64_t vp::TimeEngine::exec()
          current->time.is_enqueued = false;
  
          // Update the global engine time with the current event time
@@ -193,7 +261,7 @@ index 7b40a98f..65c24ed6 100644
          this->time = current->time.next_event_time;
  
          while (1)
-@@ -82,6 +104,7 @@ int64_t vp::TimeEngine::exec()
+@@ -82,6 +141,7 @@ int64_t vp::TimeEngine::exec()
                  {
                      if (likely(!this->stop_req))
                      {
@@ -201,7 +269,7 @@ index 7b40a98f..65c24ed6 100644
                          this->time = time;
                          continue;
                      }
-@@ -134,6 +157,7 @@ int64_t vp::TimeEngine::exec()
+@@ -134,6 +194,7 @@ int64_t vp::TimeEngine::exec()
              current->time.is_enqueued = false;
  
              // Update the global engine time with the current event time
@@ -209,7 +277,7 @@ index 7b40a98f..65c24ed6 100644
              this->time = current->time.next_event_time;
          }
      }
-@@ -302,6 +326,7 @@ bool vp::TimeEngine::enqueue(vp::Block *client, int64_t full_time)
+@@ -302,6 +363,7 @@ bool vp::TimeEngine::enqueue(vp::Block *client, int64_t full_time)
  {
      bool update = false;
  
@@ -217,7 +285,7 @@ index 7b40a98f..65c24ed6 100644
      vp_assert(full_time >= get_time(), NULL, "Time must be higher than current time\n");
  
      if (client->time.is_running())
-@@ -424,4 +449,4 @@ void vp::TimeEngine::retain_inc(int inc)
+@@ -424,4 +486,4 @@ void vp::TimeEngine::retain_inc(int inc)
  void vp::TimeEngine::flush_all()
  {
      this->top->flush_all();

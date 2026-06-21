@@ -2,6 +2,10 @@ CMAKE_FLAGS ?= -j 6
 CMAKE ?= cmake
 # Power report capture interval for the simulator, in picoseconds.
 pwr_interval_ps ?= 100000000
+ice_geo_file ?= geo.json
+ice_floorplan_file ?= floorplan_nopower.flp
+ice_stk_file ?= ice.stk
+ice_power_trace_file ?= ice_power_trace.txt
 
 TARGETS ?= rv32;rv64
 INSTALLDIR ?= install
@@ -24,6 +28,9 @@ build:
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DPWR_INTERVAL_PS=$(pwr_interval_ps) \
+		-DSOFTHIER_CONFIG_FILE="$(config_file)" \
+		-DSOFTHIER_ICE_GEO_FILE="$(ice_geo_file)" \
+		-DSOFTHIER_ICE_POWER_TRACE_FILE="$(ice_power_trace_file)" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
@@ -37,6 +44,9 @@ build-deeploy:
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DPWR_INTERVAL_PS=$(pwr_interval_ps) \
+		-DSOFTHIER_CONFIG_FILE="$(config_file)" \
+		-DSOFTHIER_ICE_GEO_FILE="$(ice_geo_file)" \
+		-DSOFTHIER_ICE_POWER_TRACE_FILE="$(ice_power_trace_file)" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
@@ -137,16 +147,16 @@ clean_preparation:
 ## 				Make Targets for SoftHier Simulator 				##
 ######################################################################
 
-config_file ?= "soft_hier/flex_cluster/flex_cluster_arch.py"
+config_file ?= soft_hier/flex_cluster/flex_cluster_arch.py
 ifdef cfg
-	config_file = "$(cfg)"
+	config_file = $(cfg)
 endif
 
 config:
 	rm -rf pulp/pulp/chips/flex_cluster
 	cp -rf soft_hier/flex_cluster pulp/pulp/chips/flex_cluster
-	cp $(config_file) pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
-	python3 soft_hier/flex_cluster_utilities/config.py $(config_file)
+	cp "$(config_file)" pulp/pulp/chips/flex_cluster/flex_cluster_arch.py
+	python3 soft_hier/flex_cluster_utilities/config.py "$(config_file)"
 
 hw:
 	make config
@@ -167,7 +177,7 @@ ifdef app
 	sw_cmake_arg = "-DSRC_DIR=$(app_path)"
 endif
 
-arch_cmake_arg := $(shell if grep "spatz_attaced_core_list" $(config_file) | grep "\[\]" > /dev/null 2>&1; then echo "-DRISCV_ARCH=rv32imafd_zfh"; else echo "-DRISCV_ARCH=rv32imafdv_zfh"; fi)
+arch_cmake_arg := $(shell if grep "spatz_attaced_core_list" "$(config_file)" | grep "\[\]" > /dev/null 2>&1; then echo "-DRISCV_ARCH=rv32imafd_zfh"; else echo "-DRISCV_ARCH=rv32imafdv_zfh"; fi)
 
 sw:
 	rm -rf sw_build && mkdir sw_build
@@ -276,17 +286,23 @@ c2c-run:
 ## 				Make Targets for 3D-ICE 						##
 ##################################################################
 
-geo.json:
-	python soft_hier/flex_cluster_utilities/geometery_generator/geogen.py $(config_file) geo.json
+$(ice_geo_file):
+	mkdir -p "$(dir $(ice_geo_file))"
+	python soft_hier/flex_cluster_utilities/geometery_generator/geogen.py "$(config_file)" "$(ice_geo_file)"
 
-geo: geo.json
+geo: $(ice_geo_file)
 
 ice_prepare: geo
-	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_floorplan_no_power.py $(config_file) geo.json .
-	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_stk.py floorplan_nopower.flp ice.stk
+	mkdir -p "$(dir $(ice_floorplan_file))" "$(dir $(ice_stk_file))"
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_floorplan_no_power.py "$(config_file)" "$(ice_geo_file)" "$(dir $(ice_floorplan_file))"
+	@if [ "$(abspath $(dir $(ice_floorplan_file))floorplan_nopower.flp)" != "$(abspath $(ice_floorplan_file))" ]; then \
+		mv "$(dir $(ice_floorplan_file))floorplan_nopower.flp" "$(ice_floorplan_file)"; \
+	fi
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_stk.py "$(ice_floorplan_file)" "$(ice_stk_file)"
 
 ice_power: geo
-	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_power.py $(config_file) geo.json power_report.csv >> ice_power_trace.txt
+	mkdir -p "$(dir $(ice_power_trace_file))"
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_power.py "$(config_file)" "$(ice_geo_file)" power_report.csv >> "$(ice_power_trace_file)"
 
 ice_clean:
-	rm -rf geo.json ice_power_trace.txt
+	rm -rf "$(ice_geo_file)" "$(ice_floorplan_file)" "$(ice_stk_file)" "$(ice_power_trace_file)"
