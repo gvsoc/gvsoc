@@ -34,7 +34,7 @@ DRAMSys/build/lib/libDRAMSys_Simulator.so: $(CMAKE) DRAMSys/src/simulator/simula
 	-DCMAKE_CXX_FLAGS=-fPIC \
 	-DCMAKE_C_FLAGS=-fPIC \
 	-D DRAMSYS_WITH_DRAMPOWER=ON .. && \
-	make
+	make -j4
 
 build: DRAMSys/build/lib/libDRAMSys_Simulator.so
 

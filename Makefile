@@ -52,7 +52,7 @@ SYSTEMC_INSTALL_DIR := $(PWD)/third_party/systemc_install
 
 update:
 	cd pulp && git diff > ../soft_hier/gvsoc_pulp.patch
-	cd core && git add models/cpu && git diff --cached > ../soft_hier/gvsoc_core.patch
+	cd core && git add models/cpu engine && git diff --cached > ../soft_hier/gvsoc_core.patch
 
 drmasys_apply_patch:
 	git submodule update --init --recursive
@@ -272,8 +272,17 @@ c2c-run:
 ## 				Make Targets for 3D-ICE 						##
 ##################################################################
 
-geo:
+geo.json:
 	python soft_hier/flex_cluster_utilities/geometery_generator/geogen.py $(config_file) geo.json
 
-ice: geo
-	 python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice.py $(config_file) geo.json power_report.csv
+geo: geo.json
+
+ice_prepare: geo
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_floorplan_no_power.py $(config_file) geo.json .
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_stk.py floorplan_nopower.flp ice.stk
+
+ice_power: geo
+	python soft_hier/flex_cluster_utilities/geometery_generator/roi2ice_power.py $(config_file) geo.json power_report.csv >> ice_power_trace.txt
+
+ice_clean:
+	rm -rf geo.json ice_power_trace.txt

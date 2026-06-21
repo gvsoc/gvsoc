@@ -7,12 +7,12 @@
 #include "flex_cluster_arch.h"
 #include "flex_dma_pattern.h"
 
-// GEMM M-N-K           : 1024-1024-1024
+// GEMM M-N-K           : 4096-4096-4096
 // Elem Size            : FP16
 // Assumption           : Data are already tiled in HBM
 
 #define ELEM_SIZE      2
-#define GEMM_DIMENSION 1024
+#define GEMM_DIMENSION 4096
 #define GEMM_SIZE_BYTE (GEMM_DIMENSION * GEMM_DIMENSION * ELEM_SIZE)
 #define TILE_DIMENSION 256
 #define TILE_SIZE_BYTE (TILE_DIMENSION * TILE_DIMENSION * ELEM_SIZE)
