@@ -1,5 +1,7 @@
 CMAKE_FLAGS ?= -j 6
 CMAKE ?= cmake
+# Power report capture interval for the simulator, in picoseconds.
+pwr_interval_ps ?= 100000000
 
 TARGETS ?= rv32;rv64
 INSTALLDIR ?= install
@@ -21,6 +23,7 @@ build:
 		-DCMAKE_INSTALL_PREFIX=install \
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
+		-DPWR_INTERVAL_PS=$(pwr_interval_ps) \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)
@@ -33,6 +36,7 @@ build-deeploy:
 		-DCMAKE_INSTALL_PREFIX=${INSTALLDIR} \
 		-DGVSOC_MODULES="$(CURDIR)/core/models;$(CURDIR)/pulp;$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
+		-DPWR_INTERVAL_PS=$(pwr_interval_ps) \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
 	cd $(CURDIR) && $(CMAKE) --build build $(CMAKE_FLAGS)

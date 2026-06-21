@@ -1,3 +1,55 @@
+diff --git a/engine/CMakeLists.txt b/engine/CMakeLists.txt
+index 2ca54d5c..9254aafb 100644
+--- a/engine/CMakeLists.txt
++++ b/engine/CMakeLists.txt
+@@ -44,6 +44,13 @@ set(GVSOC_ENGINE_C_SRCS
+     )
+ 
+ set(GVSOC_ENGINE_INC_DIRS "include")
++set(PWR_INTERVAL_PS "100000000" CACHE STRING "Power report capture interval in picoseconds")
++
++if(NOT PWR_INTERVAL_PS MATCHES "^[1-9][0-9]*$")
++    message(FATAL_ERROR "PWR_INTERVAL_PS must be a positive integer in picoseconds")
++endif()
++
++set(GVSOC_POWER_COMPILE_DEFINITIONS "PWR_INTERVAL_PS=${PWR_INTERVAL_PS}LL")
+ 
+ # ==================
+ # Optimized launcher
+@@ -51,6 +58,7 @@ set(GVSOC_ENGINE_INC_DIRS "include")
+ 
+ if(${BUILD_OPTIMIZED})
+     add_library(gvsoc SHARED ${GVSOC_ENGINE_CXX_SRCS} ${GVSOC_ENGINE_C_SRCS})
++    target_compile_definitions(gvsoc PRIVATE ${GVSOC_POWER_COMPILE_DEFINITIONS})
+     target_compile_options(gvsoc PRIVATE -fno-stack-protector)
+     target_include_directories(gvsoc PUBLIC ${GVSOC_ENGINE_INC_DIRS})
+     target_link_libraries(gvsoc PUBLIC z pthread ${CMAKE_DL_LIBS})
+@@ -85,6 +93,7 @@ endif()
+ 
+ if(${BUILD_OPTIMIZED_M32})
+     add_library(gvsoc_m32 SHARED ${GVSOC_ENGINE_CXX_SRCS} ${GVSOC_ENGINE_C_SRCS})
++    target_compile_definitions(gvsoc_m32 PRIVATE ${GVSOC_POWER_COMPILE_DEFINITIONS})
+     target_include_directories(gvsoc_m32 PUBLIC ${GVSOC_ENGINE_INC_DIRS})
+     target_link_libraries(gvsoc_m32 PUBLIC z pthread ${CMAKE_DL_LIBS})
+     set_target_properties(gvsoc_m32 PROPERTIES OUTPUT_NAME "pulpvp-m32")
+@@ -112,7 +121,7 @@ if(${BUILD_DEBUG})
+         RUNTIME DESTINATION bin
+         INCLUDES DESTINATION include
+         )
+-    target_compile_definitions(gvsoc_debug PRIVATE -DVP_TRACE_ACTIVE=1 -DVP_MEMCHECK_ACTIVE=1)
++    target_compile_definitions(gvsoc_debug PRIVATE ${GVSOC_POWER_COMPILE_DEFINITIONS} -DVP_TRACE_ACTIVE=1 -DVP_MEMCHECK_ACTIVE=1)
+ 
+     add_executable(gvsoc_launcher_debug "src/main.cpp")
+ 
+@@ -144,7 +153,7 @@ if(${BUILD_DEBUG_M32})
+         ARCHIVE DESTINATION lib
+         INCLUDES DESTINATION include
+         )
+-    target_compile_definitions(gvsoc_debug_m32 PRIVATE -DVP_TRACE_ACTIVE=1 -DVP_MEMCHECK_ACTIVE=1)
++    target_compile_definitions(gvsoc_debug_m32 PRIVATE ${GVSOC_POWER_COMPILE_DEFINITIONS} -DVP_TRACE_ACTIVE=1 -DVP_MEMCHECK_ACTIVE=1)
+     target_compile_options(gvsoc_debug_m32 PRIVATE -m32 -D__M32_MODE__)
+     target_link_options(gvsoc_debug_m32 PRIVATE "-m32")
+ endif()
 diff --git a/engine/include/vp/time/implementation.hpp b/engine/include/vp/time/implementation.hpp
 index 28272e15..987630ee 100644
 --- a/engine/include/vp/time/implementation.hpp
@@ -14,10 +66,21 @@ index 28272e15..987630ee 100644
  
  inline int64_t vp::TimeEngine::get_next_event_time()
 diff --git a/engine/include/vp/time/time_engine.hpp b/engine/include/vp/time/time_engine.hpp
-index dfaaca10..3d3e4396 100644
+index dfaaca10..c4c27b4f 100644
 --- a/engine/include/vp/time/time_engine.hpp
 +++ b/engine/include/vp/time/time_engine.hpp
-@@ -100,6 +100,8 @@ namespace vp
+@@ -23,6 +23,10 @@
+ 
+ #include "vp/json.hpp"
+ 
++#ifndef PWR_INTERVAL_PS
++#define PWR_INTERVAL_PS 100000000LL
++#endif
++
+ namespace vp
+ {
+     class BlockTime;
+@@ -100,6 +104,8 @@ namespace vp
      private:
          void step_register(int64_t time);
  
@@ -26,15 +89,15 @@ index dfaaca10..3d3e4396 100644
          int64_t run();
          int64_t run_until(int64_t end_time);
  
-@@ -189,5 +191,10 @@ namespace vp
+@@ -189,5 +195,10 @@ namespace vp
          // In synchronous mode, since several threads can control the time, there is a retain
          // mechanism which makes sure time is progressing only if all threads ask for it.
          int retain = 0;
 +
-+        // Power report generation window. GVSOC timestamps are in picoseconds, so 1ms is 1e9ps.
++        // Power report generation window. GVSOC timestamps are in picoseconds.
 +        bool power_capture_started = false;
-+        int64_t power_capture_period = 1000000000;
-+        int64_t next_power_capture_timestamp = 1000000000;
++        int64_t pwr_interval_ps = PWR_INTERVAL_PS;
++        int64_t next_power_capture_timestamp = PWR_INTERVAL_PS;
      };
  };
 diff --git a/engine/src/power/power_engine.cpp b/engine/src/power/power_engine.cpp
@@ -50,10 +113,18 @@ index 7f56b6a6..1af06cfb 100644
          fprintf(file, "\n");
          this->top->power.dump_traces_recursive(file);
 diff --git a/engine/src/time/time_engine.cpp b/engine/src/time/time_engine.cpp
-index 7b40a98f..37c14c9d 100644
+index 7b40a98f..65c24ed6 100644
 --- a/engine/src/time/time_engine.cpp
 +++ b/engine/src/time/time_engine.cpp
-@@ -52,6 +52,24 @@ void vp::TimeEngine::init(vp::Component *top)
+@@ -22,6 +22,7 @@
+ #include <vp/vp.hpp>
+ #include "vp/time/time_engine.hpp"
+ #include <vp/time/time_event.hpp>
++#include <cstdlib>
+ 
+ 
+ namespace vp
+@@ -52,6 +53,26 @@ void vp::TimeEngine::init(vp::Component *top)
  {
      this->top = top;
      this->stop_event = new vp::Time_engine_stop_event(this->top);
@@ -72,13 +143,15 @@ index 7b40a98f..37c14c9d 100644
 +    {
 +        this->time = this->next_power_capture_timestamp;
 +        this->top->power.get_engine()->stop_capture();
++        std::system("make ice_power");
++        this->top->power.get_engine()->refresh_power_file();
 +        this->top->power.get_engine()->start_capture();
-+        this->next_power_capture_timestamp += this->power_capture_period;
++        this->next_power_capture_timestamp += this->pwr_interval_ps;
 +    }
  }
  
  int64_t vp::TimeEngine::exec()
-@@ -64,6 +82,7 @@ int64_t vp::TimeEngine::exec()
+@@ -64,6 +85,7 @@ int64_t vp::TimeEngine::exec()
          current->time.is_enqueued = false;
  
          // Update the global engine time with the current event time
@@ -86,7 +159,7 @@ index 7b40a98f..37c14c9d 100644
          this->time = current->time.next_event_time;
  
          while (1)
-@@ -82,6 +101,7 @@ int64_t vp::TimeEngine::exec()
+@@ -82,6 +104,7 @@ int64_t vp::TimeEngine::exec()
                  {
                      if (likely(!this->stop_req))
                      {
@@ -94,7 +167,7 @@ index 7b40a98f..37c14c9d 100644
                          this->time = time;
                          continue;
                      }
-@@ -134,6 +154,7 @@ int64_t vp::TimeEngine::exec()
+@@ -134,6 +157,7 @@ int64_t vp::TimeEngine::exec()
              current->time.is_enqueued = false;
  
              // Update the global engine time with the current event time
@@ -102,7 +175,7 @@ index 7b40a98f..37c14c9d 100644
              this->time = current->time.next_event_time;
          }
      }
-@@ -302,6 +323,7 @@ bool vp::TimeEngine::enqueue(vp::Block *client, int64_t full_time)
+@@ -302,6 +326,7 @@ bool vp::TimeEngine::enqueue(vp::Block *client, int64_t full_time)
  {
      bool update = false;
  
