@@ -50,6 +50,24 @@ index 2ca54d5c..9254aafb 100644
      target_compile_options(gvsoc_debug_m32 PRIVATE -m32 -D__M32_MODE__)
      target_link_options(gvsoc_debug_m32 PRIVATE "-m32")
  endif()
+diff --git a/engine/include/vp/power/power.hpp b/engine/include/vp/power/power.hpp
+index a8a1b003..c079b381 100644
+--- a/engine/include/vp/power/power.hpp
++++ b/engine/include/vp/power/power.hpp
+@@ -485,6 +485,13 @@ namespace vp
+          */
+         void stop_capture();
+ 
++        /**
++         * @brief Refresh power report file
++         * 
++         * This can be used to dump intermediate power reports during the simulation.
++         */
++        void refresh_power_file();
++
+         double get_average_power(double &dynamic_power, double &static_power);
+ 
+     protected:
 diff --git a/engine/include/vp/time/implementation.hpp b/engine/include/vp/time/implementation.hpp
 index 28272e15..987630ee 100644
 --- a/engine/include/vp/time/implementation.hpp
@@ -101,7 +119,7 @@ index dfaaca10..c4c27b4f 100644
      };
  };
 diff --git a/engine/src/power/power_engine.cpp b/engine/src/power/power_engine.cpp
-index 7f56b6a6..1af06cfb 100644
+index 7f56b6a6..25cf1182 100644
 --- a/engine/src/power/power_engine.cpp
 +++ b/engine/src/power/power_engine.cpp
 @@ -50,6 +50,7 @@ void vp::PowerEngine::stop_capture()
@@ -112,6 +130,22 @@ index 7f56b6a6..1af06cfb 100644
          fprintf(file, "------------------\n");
          fprintf(file, "\n");
          this->top->power.dump_traces_recursive(file);
+@@ -57,7 +58,14 @@ void vp::PowerEngine::stop_capture()
+     }
+ }
+ 
+-
++void vp::PowerEngine::refresh_power_file()
++{
++    if (this->file)
++    {
++        fclose(this->file);
++        this->file = fopen("power_report.csv", "w");
++    }
++}
+ 
+ double vp::PowerEngine::get_average_power(double &dynamic_power, double &static_power)
+ {
 diff --git a/engine/src/time/time_engine.cpp b/engine/src/time/time_engine.cpp
 index 7b40a98f..65c24ed6 100644
 --- a/engine/src/time/time_engine.cpp
@@ -183,6 +217,13 @@ index 7b40a98f..65c24ed6 100644
      vp_assert(full_time >= get_time(), NULL, "Time must be higher than current time\n");
  
      if (client->time.is_running())
+@@ -424,4 +449,4 @@ void vp::TimeEngine::retain_inc(int inc)
+ void vp::TimeEngine::flush_all()
+ {
+     this->top->flush_all();
+-}
+\ No newline at end of file
++}
 diff --git a/models/cpu/iss/flexfloat/flexfloat.c b/models/cpu/iss/flexfloat/flexfloat.c
 index c26426a1..1e10e63a 100644
 --- a/models/cpu/iss/flexfloat/flexfloat.c
