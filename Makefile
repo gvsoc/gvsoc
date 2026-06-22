@@ -55,6 +55,11 @@ INSTALLDIR_ABS := $(abspath $(INSTALLDIR))
 
 export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 
+# Module roots passed to CMake at build time and to the doc build, where
+# each module's docs/ tree gets embedded into the manual. Keep build and
+# doc in sync by sharing this list.
+GVSOC_MODULES = $(CURDIR)/engine/python;$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/pulp/targets;$(CURDIR)/gvrun/python;$(CURDIR)/config_tree
+
 all: checkout build
 
 checkout:
@@ -90,7 +95,7 @@ build: gvrun.build
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
 		-DCMAKE_BUILD_RPATH=$(INSTALLDIR_ABS)/lib \
-		-DGVSOC_MODULES="$(CURDIR)/engine/python;$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/pulp/targets;$(CURDIR)/gvrun/python;$(CURDIR)/config_tree;$(MODULES)" \
+		-DGVSOC_MODULES="$(GVSOC_MODULES);$(MODULES)" \
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
@@ -165,12 +170,17 @@ riscv:
 test.withbuild: riscv
 	PATH=$(CURDIR)/riscv/bin:$(PATH) && gvtest --testset testset_withbuild.cfg  --thread 1 --no-fail run table junit
 
+# Build the manuals from the engine docs. Exporting GVSOC_MODULES lets the
+# Sphinx conf.py walk each module root and embed its docs/ tree (target
+# pages in the user manual, component pages in the developer manual), the
+# documentation counterpart of CMake pulling in each module's CMakeLists.
+doc: export GVSOC_MODULES := $(GVSOC_MODULES)
 doc:
-	cd core/docs/user_manual && make html
-	cd core/docs/developer_manual && make html
+	cd engine/docs/user_manual && $(MAKE) html
+	cd engine/docs/developer_manual && $(MAKE) html
 	@echo
-	@echo "User documentation: core/docs/user_manual/_build/html/index.html"
-	@echo "Developper documentation: core/docs/developer_manual/_build/html/index.html"
+	@echo "User documentation: engine/docs/user_manual/_build/html/index.html"
+	@echo "Developper documentation: engine/docs/developer_manual/_build/html/index.html"
 
 
 ######################################################################
@@ -250,6 +260,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout 4800fc0c6c2b75e8dbc8c0c60670310ae606cb51
+	git checkout f845120d34ec7916d9f93d9ddfb624747ad39c60
 	mkdir -p $(INSTALLDIR)
 	cp -r gui-release/* $(INSTALLDIR)
