@@ -21,37 +21,38 @@ These instructions were developed using a fresh Ubuntu 22.04 (Jammy Jellyfish).
 The following packages needed to be installed:
 
 ~~~~~shell
-sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev wget sphinx-build doxygen libdw-dev
+sudo apt-get install -y build-essential git doxygen python3-pip libsdl2-dev curl cmake gtkwave libsndfile1-dev rsync autoconf automake texinfo libtool pkg-config libsdl2-ttf-dev wget sphinx-build doxygen libdwarf-dev
 ~~~~~
 
 These are the packages neded on a Fedora:
 
 ~~~~~shell
-sudo dnf install -y make gcc cmake ninja-build.x86_64 g++ pip lz4-devel ccache glibc-devel.i686 zlib-ng-compat-devel.i686 SDL2 SDL2-devel SDL2_ttf-devel.x86_64 SDL2_image-devel.x86_64 wget2 sphinx-build doxygen elfutils-libs
+sudo dnf install -y make gcc cmake ninja-build.x86_64 g++ pip lz4-devel ccache glibc-devel.i686 zlib-ng-compat-devel.i686 SDL2 SDL2-devel SDL2_ttf-devel.x86_64 SDL2_image-devel.x86_64 wget2 sphinx-build doxygen libdwarf-devel
 ~~~~~
 
 Please also check any README.md in the submodules for target-specific requirements, like for example pulp/README.md.
 
-### libdw (elfutils)
+### libdwarf
 
-GVSoC needs `libdw` (from elfutils) at build and run time. It is available by
-default on most machines (on Ubuntu it is provided by `libdw-dev`, on Fedora by
-`elfutils-devel`), so usually nothing special is required.
+GVSoC needs `libdwarf` at build and run time (the ISS and GUI resolve trace
+symbols through it). It is available by default on most machines (on Ubuntu it
+is provided by `libdwarf-dev`, on Fedora by `libdwarf-devel`), so usually
+nothing special is required.
 
-On hosts where `libdw` is missing and cannot be installed system-wide (for
+On hosts where `libdwarf` is missing and cannot be installed system-wide (for
 example shared compute clusters where you have no root access), run the `deps`
-target once. It downloads and builds `libdw` from source and installs it into
+target once. It downloads and builds `libdwarf` from source and installs it into
 the SDK install folder:
 
 ~~~~~shell
 make deps
 ~~~~~
 
-The build automatically adds the install folder's `include`/`lib` to the
-compiler search paths (after the regular ones), so once `make deps` has run this
-private copy is picked up at build time; otherwise the build uses the system
-`libdw`. The install folder's `lib` is also baked into the binaries' RPATH, so
-the private copy is found at run time without any extra setup (no need to export
+The build adds the install folder's `lib/pkgconfig` to `PKG_CONFIG_PATH` (after
+the regular dirs), so once `make deps` has run this private copy is discovered
+at build time; otherwise the build uses the system `libdwarf`. The install
+folder's `lib` is also baked into the binaries' RPATH, so the private copy is
+found at run time without any extra setup (no need to export
 `LD_LIBRARY_PATH`). You only need to run `make deps` once (or after `make
 clean`), before building.
 
@@ -81,9 +82,9 @@ On ETH network, please use this command to get the proper version of gcc and cma
 CXX=g++-14.2.0 CC=gcc-14.2.0 CMAKE=cmake-3.18.1 make all TARGETS=pulp-open
 ~~~~~
 
-The ETH machines do not ship `libdw`, and it cannot be installed system-wide, so
-you must build it into the SDK install folder once with the `deps` target before
-building (see the [libdw (elfutils)](#libdw-elfutils) section above):
+The ETH machines do not ship `libdwarf`, and it cannot be installed
+system-wide, so you must build it into the SDK install folder once with the
+`deps` target before building (see the [libdwarf](#libdwarf) section above):
 
 ~~~~~shell
 CXX=g++-14.2.0 CC=gcc-14.2.0 CMAKE=cmake-3.18.1 make deps
