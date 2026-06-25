@@ -65,7 +65,7 @@ all: checkout build
 checkout:
 	git submodule update --recursive --init
 
-.PHONY: build gui deps
+.PHONY: build gui
 
 ifdef DEBUG
 BUILD_TYPE = RelWithDebInfo
@@ -87,11 +87,10 @@ gvrun.build:
 	cmake --install $(BUILDDIR)/config_tree
 
 build: gvrun.build
-	# Change directory to curdir to avoid issue with symbolic links
-	# Bake install/lib into the build RPATH. The generated model .so files are
-	# installed as plain files (no install-time RPATH rewrite), so they keep
-	# their build RPATH; adding install/lib there lets a privately-built libdw
-	# (see the `deps` target) be found at run time without LD_LIBRARY_PATH.
+	# Change directory to curdir to avoid issue with symbolic links.
+	# Bake install/lib into the build RPATH so the generated model .so files
+	# (installed as plain files, keeping their build RPATH) find the GVSoC
+	# shared libraries at run time without LD_LIBRARY_PATH.
 	cd $(CURDIR) && $(CMAKE) -S . -B $(BUILDDIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALLDIR) \
 		-DCMAKE_BUILD_RPATH=$(INSTALLDIR_ABS)/lib \
@@ -99,13 +98,7 @@ build: gvrun.build
 		-DGVSOC_TARGETS="${TARGETS}" \
 		-DCMAKE_SKIP_INSTALL_RPATH=false
 
-	# CPATH/LIBRARY_PATH let the compiler find the privately-built libdw at
-	# build time. The dirs are searched after the regular ones, so this is a
-	# no-op when they don't exist or when the system already provides libdw.
-	cd $(CURDIR) && \
-		CPATH="$(INSTALLDIR_ABS)/include:$$CPATH" \
-		LIBRARY_PATH="$(INSTALLDIR_ABS)/lib:$$LIBRARY_PATH" \
-		$(CMAKE) --build $(BUILDDIR) $(CMAKE_FLAGS)
+	cd $(CURDIR) && $(CMAKE) --build $(BUILDDIR) $(CMAKE_FLAGS)
 	cd $(CURDIR) && $(CMAKE) --install $(BUILDDIR)
 
 
@@ -113,52 +106,6 @@ clean:
 	rm -rf $(BUILDDIR) $(INSTALLDIR)
 
 
-######################################################################
-## 				Third-party dependencies						 				##
-######################################################################
-#
-# libdw (provided by elfutils) is needed by gvsoc at build/link and run
-# time. It is installed on most machines, so this is NOT wired into the
-# build. On the (few) hosts that lack it, run `make deps` once: it builds
-# libdw (and the libelf it depends on) from source and installs them into
-# the SDK install folder. The build passes -DCMAKE_PREFIX_PATH=$(INSTALLDIR),
-# so once present this private copy is picked up automatically; otherwise
-# the build falls back to the system libdw.
-
-ELFUTILS_VERSION := 0.191
-ELFUTILS_URL := https://sourceware.org/elfutils/ftp/$(ELFUTILS_VERSION)/elfutils-$(ELFUTILS_VERSION).tar.bz2
-ELFUTILS_SRC := $(CURDIR)/third_party/elfutils-$(ELFUTILS_VERSION)
-
-# libdw.so is installed by elfutils; use it as the build stamp so deps is
-# only run once.
-deps: $(INSTALLDIR_ABS)/lib/libdw.so
-
-$(INSTALLDIR_ABS)/lib/libdw.so:
-	mkdir -p $(INSTALLDIR_ABS) third_party
-	# Download if missing (ignore wget's exit code; some wget builds return
-	# non-zero even on a complete download) and let tar be the integrity gate.
-	cd third_party && \
-		if [ ! -f elfutils-$(ELFUTILS_VERSION).tar.bz2 ]; then \
-			wget -q $(ELFUTILS_URL) || true; \
-		fi && \
-		if [ ! -d elfutils-$(ELFUTILS_VERSION) ]; then \
-			tar xf elfutils-$(ELFUTILS_VERSION).tar.bz2; \
-		fi
-	# -Wno-error keeps newer compilers from failing elfutils' -Werror build;
-	# debuginfod is disabled to avoid pulling in libcurl.
-	cd $(ELFUTILS_SRC) && \
-		./configure --prefix=$(INSTALLDIR_ABS) \
-			--disable-debuginfod --disable-libdebuginfod \
-			CFLAGS="-g -O2 -Wno-error" CXXFLAGS="-g -O2 -Wno-error"
-	# Build the whole tree so the static backends that libdw.so pulls in
-	# (libebl, libcpu, libdwelf, libdwfl, ...) are produced in the right
-	# order, then install only the libs/headers gvsoc needs (libelf, libdw
-	# and the libdwfl header used by the iss trace model) to keep the folder
-	# clean.
-	$(MAKE) -C $(ELFUTILS_SRC)
-	$(MAKE) -C $(ELFUTILS_SRC)/libelf install
-	$(MAKE) -C $(ELFUTILS_SRC)/libdw install
-	$(MAKE) -C $(ELFUTILS_SRC)/libdwfl install
 
 github.test:
 	gvtest $(GVTEST_TARGET_FLAGS) --testset testset-github.cfg --max-timeout 120 --no-fail run table junit
@@ -260,6 +207,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout f845120d34ec7916d9f93d9ddfb624747ad39c60
+	git checkout 0937a59b9156beaea9a7004dd441410506d7c4f7
 	mkdir -p $(INSTALLDIR)
 	cp -r gui-release/* $(INSTALLDIR)
