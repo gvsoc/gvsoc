@@ -1,9 +1,9 @@
 [submodule "core"]
 	path = core
-	url = https://github.com/hazellilili/gvsoc-core
+	url = https://github.com/gvsoc/gvsoc-core.git
 [submodule "pulp"]
 	path = pulp
-	url = https://github.com/hazellilili/gvsoc-pulp
+	url = https://github.com/gvsoc/gvsoc-pulp.git
 [submodule "gvtest"]
 	path = gvtest
 	url =  https://github.com/gvsoc/gvtest.git
