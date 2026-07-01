@@ -1,9 +1,9 @@
 {
     "simulation": {
-        "addressmapping": "am_hbm4_emu_16Gb_pc_brc.json",
-        "mcconfig": "fr_fcfs_hbm4.json",
-        "memspec": "HBM4-emulation-4000.json",
-        "simconfig": "example.json",
+        "addressmapping": "addressmapping/am_hbm4_emu_16Gb_pc_brc.json",
+        "mcconfig": "mcconfig/fr_fcfs_hbm4.json",
+        "memspec": "memspec/HBM4-emulation-4000.json",
+        "simconfig": "simconfig/example.json",
         "simulationid": "hbm4-emu-example",
         "tracesetup": [
             {
