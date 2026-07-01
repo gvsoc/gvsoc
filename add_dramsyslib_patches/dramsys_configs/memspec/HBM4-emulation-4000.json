@@ -2,6 +2,7 @@
     "memspec": {
         "memarchitecturespec": {
             "burstLength": 4,
+            "maxBurstLength": 4,
             "dataRate": 2,
             "nbrOfBankGroups": 8,
             "nbrOfBanks": 32,
@@ -9,15 +10,16 @@
             "nbrOfStacks": 1,
             "nbrOfPseudoChannels": 2,
             "nbrOfRows": 32768,
-            "width": 64,
+            "width": 32,
             "nbrOfDevices": 1,
             "nbrOfChannels": 1
         },
         "memoryId": "Emulation of Single Channel HBM4",
-        "memoryType": "HBM4",
+        "memoryType": "HBM2", //No HBM4 type supported in DRAMSys currently, so we use HBM2 as a placeholder
         "memtimingspec": {
             "CCDL": 4,
             "CCDS": 2,
+            "CCDR": 2,
             "CKE": 8,
             "DQSCK": 2,
             "FAW": 8,
@@ -43,7 +45,7 @@
             "WTRS": 4,
             "XP": 10,
             "XS": 200,
-            "clkMhz": 2000
+            "tCK": 2.5e-10 //Match to 8000Mbps datarate
         }
     }
 }
