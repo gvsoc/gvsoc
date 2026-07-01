@@ -7,8 +7,13 @@
         "simulationid": "hbm4-emu-example",
         "tracesetup": [
             {
-                "clkMhz": 1000,
-                "name": "example.stl"
+                "clkMhz": 2000,
+                "dataLength": 32,
+                "type": "generator",
+                "name": "gen0",
+                "numRequests": 2000,
+                "rwRatio": 0.85,
+                "addressDistribution": "sequential"
             }
         ]
     }
