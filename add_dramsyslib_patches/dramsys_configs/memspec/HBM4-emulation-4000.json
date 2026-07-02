@@ -1,8 +1,8 @@
 {
     "memspec": {
         "memarchitecturespec": {
-            "burstLength": 4,
-            "maxBurstLength": 4,
+            "burstLength": 8,
+            "maxBurstLength": 8,
             "dataRate": 2,
             "nbrOfBankGroups": 8,
             "nbrOfBanks": 32,
