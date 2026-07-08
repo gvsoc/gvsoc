@@ -207,6 +207,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout 0937a59b9156beaea9a7004dd441410506d7c4f7
+	git checkout 9ef228fee1308ca0a9877138ff0f1bafe3858fe3
 	mkdir -p $(INSTALLDIR)
-	cp -r gui-release/* $(INSTALLDIR)
+	$(MAKE) -C gui-release install INSTALLDIR=$(INSTALLDIR_ABS)
