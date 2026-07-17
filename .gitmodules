@@ -4,6 +4,7 @@
 [submodule "pulp"]
 	path = pulp
 	url = https://github.com/gvsoc/gvsoc-pulp.git
+	branch = rfamedina/flex-floonoc
 [submodule "gvtest"]
 	path = gvtest
 	url =  https://github.com/gvsoc/gvtest.git
