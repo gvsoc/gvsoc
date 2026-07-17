@@ -21,6 +21,7 @@ jobs:
           sudo pip3 install -r core/requirements.txt
           sudo pip3 install -r gapy/requirements.txt
           sudo pip3 install -r gvtest/requirements.txt
+          sudo pip3 install -r pulp/requirements.txt
 
       - name: build all targets
         run: |

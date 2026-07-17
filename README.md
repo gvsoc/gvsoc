@@ -40,6 +40,7 @@ Additional Python packages are needed and can be installed with the following co
 git submodule update --init --recursive -j8
 pip3 install -r core/requirements.txt
 pip3 install -r gapy/requirements.txt
+pip3 install -r pulp/requirements.txt
 ```
 
 ## Installation
