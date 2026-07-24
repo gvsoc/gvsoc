@@ -210,3 +210,7 @@ gui:
 	git checkout 9ef228fee1308ca0a9877138ff0f1bafe3858fe3
 	mkdir -p $(INSTALLDIR)
 	$(MAKE) -C gui-release install INSTALLDIR=$(INSTALLDIR_ABS)
+
+# The co-simulation provider pins and clones this SDK separately. Keeping the
+# include optional leaves the base GVSoC repository usable without it.
+-include soft_hier_sdk/softhier_old.mk

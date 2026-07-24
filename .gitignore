@@ -23,3 +23,10 @@ tests/magia-sdk/
 tests/rv64/riscv-tests/
 tests/siracusa/pulp-sdk-siracusa/
 tests/pulp-nn/
+
+# Provider-managed SoftHier SDK and run-local build products.
+/.power_interface/
+/soft_hier_sdk/
+/pyenv_softhier/
+/soft_hier/
+/sw_build/
