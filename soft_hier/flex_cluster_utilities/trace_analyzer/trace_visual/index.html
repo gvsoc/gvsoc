@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoftHier Trace Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to SoftHier Trace Analyzer</h1>
+        <p>Please select your trace</p>
+        <input type="file" id="fileInput" accept=".txt" hidden>
+        <button id="selectFileButton">Choose Trace File</button>
+        <div id="fileInfo"></div>
+        <div id="timeline-container">
+            <div id="timeline"></div> <!-- Timeline container -->
+        </div>
+        <div id="tooltip" class="tooltip" style="opacity: 0;"></div> <!-- Tooltip container -->
+    </div>
+    <script src="https://d3js.org/d3.v7.min.js"></script> <!-- D3.js for timeline -->
+    <script src="script.js"></script>
+</body>
+</html>

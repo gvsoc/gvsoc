@@ -1,0 +1,441 @@
+diff --git a/models/cpu/iss/include/cores/snitch/class.hpp b/models/cpu/iss/include/cores/snitch/class.hpp
+index f767246b..280f6b26 100644
+--- a/models/cpu/iss/include/cores/snitch/class.hpp
++++ b/models/cpu/iss/include/cores/snitch/class.hpp
+@@ -98,6 +98,12 @@ public:
+     bool snitch;
+     bool fp_ss;
+ 
++    // -----------USE IO PORT TO HANDLE REDMULE------------------
++    vp::IoMaster redmule_itf;
++    vp::IoReq*   redmule_req;
++    uint16_t     redmule_mnk_reg [4];
++    uint32_t     redmule_xwy_reg [4];
++
+ 
+     // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
+ 
+@@ -193,6 +199,7 @@ private:
+ #include "cpu/iss/include/isa/rv32Xfaux.hpp"
+ #include "cpu/iss/include/isa/priv.hpp"
+ #include <cpu/iss/include/isa/xdma.hpp>
++#include <cpu/iss/include/isa/redmule.hpp>
+ #include "cpu/iss/include/isa/rv32frep.hpp"
+ #include "cpu/iss/include/isa/rv32ssr.hpp"
+ 
+diff --git a/models/cpu/iss/include/cores/snitch_fp_ss/class.hpp b/models/cpu/iss/include/cores/snitch_fp_ss/class.hpp
+index 354a1e51..c640eeb8 100644
+--- a/models/cpu/iss/include/cores/snitch_fp_ss/class.hpp
++++ b/models/cpu/iss/include/cores/snitch_fp_ss/class.hpp
+@@ -96,7 +96,12 @@ public:
+     
+     bool snitch;
+     bool fp_ss;
+-    
++
++    // -----------USE IO PORT TO HANDLE REDMULE------------------
++    vp::IoMaster redmule_itf;
++    vp::IoReq*   redmule_req;
++    uint16_t     redmule_mnk_reg [4];
++    uint32_t     redmule_xwy_reg [4];
+ 
+     // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
+ 
+@@ -200,6 +205,7 @@ private:
+ #include "cpu/iss/include/isa/rv32Xfaux.hpp"
+ #include "cpu/iss/include/isa/priv.hpp"
+ #include <cpu/iss/include/isa/xdma.hpp>
++#include <cpu/iss/include/isa/redmule.hpp>
+ #include "cpu/iss/include/isa/rv32frep.hpp"
+ #include "cpu/iss/include/isa/rv32ssr.hpp"
+ 
+diff --git a/models/cpu/iss/include/isa/redmule.hpp b/models/cpu/iss/include/isa/redmule.hpp
+new file mode 100644
+index 00000000..fde9d634
+--- /dev/null
++++ b/models/cpu/iss/include/isa/redmule.hpp
+@@ -0,0 +1,63 @@
++/*
++ * Copyright (C) 2020 GreenWaves Technologies, SAS, ETH Zurich and
++ *                    University of Bologna
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include "cpu/iss/include/iss_core.hpp"
++#include "cpu/iss/include/isa_lib/int.h"
++#include "cpu/iss/include/isa_lib/macros.h"
++
++static inline iss_reg_t mcnfig_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
++{
++    uint16_t m_size = REG_GET(0);
++    uint16_t n_size = REG_GET(1);
++    uint16_t k_size = (REG_GET(0) >> 16);
++
++    iss->redmule_mnk_reg[0] = m_size;
++    iss->redmule_mnk_reg[1] = n_size;
++    iss->redmule_mnk_reg[2] = k_size;
++
++    iss->redmule_req->init();
++    iss->redmule_req->set_addr(0);
++    iss->redmule_req->set_data((uint8_t*)iss->redmule_mnk_reg);
++    iss->redmule_req->set_size(8);
++    iss->redmule_itf.req(iss->redmule_req);
++
++    return iss_insn_next(iss, insn, pc);
++}
++
++
++static inline iss_reg_t marith_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
++{
++    uint32_t x_addr = REG_GET(0);
++    uint32_t w_addr = REG_GET(1);
++    uint32_t y_addr = REG_GET(2);
++    uint32_t config = UIM_GET(0);
++
++    iss->redmule_xwy_reg[0] = x_addr;
++    iss->redmule_xwy_reg[1] = w_addr;
++    iss->redmule_xwy_reg[2] = y_addr;
++    iss->redmule_xwy_reg[3] = config;
++
++    iss->redmule_req->init();
++    iss->redmule_req->set_addr(4);
++    iss->redmule_req->set_data((uint8_t*)iss->redmule_xwy_reg);
++    iss->redmule_req->set_size(16);
++    iss->redmule_itf.req(iss->redmule_req);
++
++    return iss_insn_next(iss, insn, pc);
++}
+diff --git a/models/cpu/iss/include/isa/rv32v.hpp b/models/cpu/iss/include/isa/rv32v.hpp
+index 188f2877..fec7666b 100644
+--- a/models/cpu/iss/include/isa/rv32v.hpp
++++ b/models/cpu/iss/include/isa/rv32v.hpp
+@@ -20,6 +20,11 @@
+ //#include "spatz.hpp"
+ #include "cpu/iss/include/isa_lib/vint.h"
+ 
++static inline iss_reg_t vsll_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_SLLVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
++
+ static inline iss_reg_t vadd_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_ADDVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+     return iss_insn_next(iss, insn, pc);
+@@ -728,6 +733,15 @@ static inline iss_reg_t vfmax_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     return iss_insn_next(iss, insn, pc);
+ }
+ 
++static inline iss_reg_t vfdiv_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FDIVVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
++static inline iss_reg_t vfdiv_vf_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
++    LIB_CALL4(lib_FDIVVF , REG_IN(1), FREG_GET(0), REG_OUT(0), UIM_GET(0));
++    return iss_insn_next(iss, insn, pc);
++}
++
+ static inline iss_reg_t vfmul_vv_exec(Iss *iss, iss_insn_t *insn, iss_reg_t pc){
+     LIB_CALL4(lib_FMULVV , REG_IN(0), REG_IN(1) , REG_OUT(0), UIM_GET(0));
+     return iss_insn_next(iss, insn, pc);
+diff --git a/models/cpu/iss/include/isa_lib/vint.h b/models/cpu/iss/include/isa_lib/vint.h
+index 26cb748e..429b658e 100644
+--- a/models/cpu/iss/include/isa_lib/vint.h
++++ b/models/cpu/iss/include/isa_lib/vint.h
+@@ -584,7 +584,30 @@ INLINE void ff_sgnj(flexfloat_t *dest, const flexfloat_t *a,const flexfloat_t *b
+ /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+ 
++static inline void lib_SLLVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
++    int64_t data1, data2, res;
++    bool bin[8];
++    bool resBin[64];
+ 
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++
++        myAbs(iss, SEW, vs1, i, &data1);
++        myAbs(iss, SEW, vs2, i, &data2);
++        res = data2 << data1;
++
++        intToBin(SEW, abs(res), resBin);
++        if(res < 0){
++            twosComplement(SEW, resBin);
++        }
++
++        if(!mask(vm,bin)){
++            writeToVReg(iss, SEW, vd, i, resBin);
++        }
++    }
++}
+ 
+ 
+ static inline void lib_ADDVV    (Iss *iss, int vs1, int vs2    , int vd, bool vm){
+@@ -3591,6 +3614,55 @@ static inline void lib_FMAXVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm
+     }
+ }
+ 
++static inline void lib_FDIVVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++
++        myAbsU(iss, SEW, vs1, i, &data1);
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++        if(!mask(vm,bin)){
++            int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++            FLOAT_EXEC_2(ff_div, data2, data1, e, m, res);
++
++            restoreFFRoundingMode(old);
++            intToBinU(SEW, res, resBin);
++            writeToVReg(iss, SEW, vd, i, resBin);
++        }
++    }
++}
++
++static inline void lib_FDIVVF   (Iss *iss, int vs2, int64_t rs1, int vd, bool vm){
++    bool bin[8];
++    unsigned long int res, data1, data2;
++    uint8_t e, m;
++    bool resBin[64];
++    data1 = rs1;
++    for (int i = VSTART; i < VL; i++){
++        if(!(i%8)){
++            intToBin(8,(int64_t) iss->spatz.vregfile.vregs[0][i/8],bin);
++        }
++
++        myAbsU(iss, SEW, vs2, i, &data2);
++        EMCase(SEW, &m, &e);
++
++        if(!mask(vm,bin)){
++            int old = setFFRoundingMode(iss, iss->csr.fcsr.frm);
++            FLOAT_EXEC_2(ff_div, data2, data1, e, m, res);
++            restoreFFRoundingMode(old);
++            intToBinU(SEW, res, resBin);
++            writeToVReg(iss, SEW, vd, i, resBin);
++        }
++    }
++}
++
+ static inline void lib_FMULVV   (Iss *iss, int vs1,     int vs2, int vd, bool vm){
+     bool bin[8];
+     unsigned long int res, data1, data2;
+@@ -5584,8 +5656,6 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+         uint32_t addr = this->io_pending_addr;        
+         uint32_t addr_aligned = addr & ~(4 - 1);
+         int size = addr_aligned + 4 - addr;
+-        // printf("size = %d\n" , size);
+-        // printf("io_pending_size = %d\n" , this->io_pending_size);        
+         if (size > this->io_pending_size){
+             size = this->io_pending_size;
+         }
+@@ -5600,9 +5670,10 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+         this->io_pending_size -= size;
+         this->io_pending_addr += size;
+ 
+-        int err = this->io_itf[0].req(req);
++        int err = this->io_itf[this->next_io].req(req);
+         if (err == vp::IO_REQ_OK){
+-            // this->event->enqueue(this->io_req.get_latency() + 1);
++            // printf("[Spatz IO] port = %d, latency = %d\n", this->next_io, this->io_req.get_latency());
++            iss->exec.stall_cycles = (iss->exec.stall_cycles > this->io_req.get_latency())? iss->exec.stall_cycles : this->io_req.get_latency();
+         }
+         else if (err == vp::IO_REQ_INVALID){
+             this->waiting_io_response = false;
+@@ -5611,6 +5682,9 @@ inline void Vlsu::handle_pending_io_access(Iss *iss)
+         else{
+ 
+         }
++
++        //Update next io port
++        this->next_io = (this->next_io + 1) % CONFIG_GVSOC_ISS_SPATZ_VLSU;
+     }
+     else{
+         this->waiting_io_response = false;
+diff --git a/models/cpu/iss/include/spatz.hpp b/models/cpu/iss/include/spatz.hpp
+index 8b348cd0..f7a09d40 100644
+--- a/models/cpu/iss/include/spatz.hpp
++++ b/models/cpu/iss/include/spatz.hpp
+@@ -86,7 +86,7 @@ public:
+     Vlsu(Iss &iss);
+     void build();
+ 
+-    vp::IoMaster io_itf[4];
++    vp::IoMaster io_itf[CONFIG_GVSOC_ISS_SPATZ_VLSU];
+     vp::IoReq io_req;
+     vp::ClockEvent *event;
+     int io_retval;
+@@ -95,6 +95,7 @@ public:
+     uint8_t *io_pending_data;
+     bool io_pending_is_write;
+     bool waiting_io_response;
++    uint64_t next_io;
+ 
+ private:
+     Iss &iss;
+diff --git a/models/cpu/iss/isa_gen/isa_rvv.py b/models/cpu/iss/isa_gen/isa_rvv.py
+index 3c39da9e..8c4cf5e7 100644
+--- a/models/cpu/iss/isa_gen/isa_rvv.py
++++ b/models/cpu/iss/isa_gen/isa_rvv.py
+@@ -81,6 +81,8 @@ class Rv32v(IsaSubset):
+ 
+     def __init__(self):
+         super().__init__(name='v', instrs=[
++            Instr('vsll.vv'       ,   Format_OPV  ,    '100101 - ----- ----- 000 ----- 1010111'),
++
+             Instr('vadd.vv'       ,   Format_OPV  ,    '000000 - ----- ----- 000 ----- 1010111'),#inst[25] = VM , VM = 0 mask enable
+             Instr('vadd.vi'       ,   Format_OPIVI,    '000000 - ----- ----- 011 ----- 1010111'),
+             Instr('vadd.vx'       ,   Format_OPV  ,    '000000 - ----- ----- 100 ----- 1010111'),
+@@ -205,7 +207,7 @@ class Rv32v(IsaSubset):
+             Instr('vfadd.vf'      ,   Format_OPVF ,    '000000 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+             Instr('vfsub.vv'      ,   Format_OPV  ,    '000010 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfsub.vf'      ,   Format_OPVF ,    '000010 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfsub.vf'      ,   Format_OPVF ,    '000010 - ----- ----- 101 ----- 1010111'),
+ 
+             Instr('vfrsub.vf'     ,   Format_OPVF  ,    '100111 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+@@ -215,11 +217,14 @@ class Rv32v(IsaSubset):
+             Instr('vfmax.vv'      ,   Format_OPV  ,    '000110 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+             Instr('vfmax.vf'      ,   Format_OPVF ,    '000110 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+-            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
++            Instr('vfdiv.vv'      ,   Format_OPV  ,    '100000 - ----- ----- 001 ----- 1010111'),
++            Instr('vfdiv.vf'      ,   Format_OPVF ,    '100000 - ----- ----- 101 ----- 1010111'),
++
++            Instr('vfmul.vv'      ,   Format_OPV  ,    '100100 - ----- ----- 001 ----- 1010111'),
+             Instr('vfmul.vf'      ,   Format_OPVF ,    '100100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+             Instr('vfmacc.vv'     ,   Format_OPV  ,    '101100 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+-            Instr('vfmacc.vf'     ,   Format_OPVF ,    '101100 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
++            Instr('vfmacc.vf'     ,   Format_OPVF ,    '101100 - ----- ----- 101 ----- 1010111'),
+ 
+             Instr('vfnmacc.vv'    ,   Format_OPV  ,    '101101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+             Instr('vfnmacc.vf'    ,   Format_OPVF ,    '101101 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+@@ -242,11 +247,11 @@ class Rv32v(IsaSubset):
+             Instr('vfnmsub.vv'    ,   Format_OPV  ,    '101011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+             Instr('vfnmsub.vf'    ,   Format_OPVF ,    '101011 - ----- ----- 101 ----- 1010111', tags=['fp_op']),
+ 
+-            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
++            Instr('vfredmax.vs'      ,   Format_OPV  ,    '000111 - ----- ----- 001 ----- 1010111'),
+ 
+             Instr('vfredmin.vs'      ,   Format_OPV  ,    '000101 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+ 
+-            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
++            Instr('vfredsum.vs'      ,   Format_OPV  ,    '000001 - ----- ----- 001 ----- 1010111'),
+             Instr('vfredosum.vs'     ,   Format_OPV  ,    '000011 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+ 
+             Instr('vfwadd.vv'        ,   Format_OPV  ,    '110000 - ----- ----- 001 ----- 1010111', tags=['fp_op']),
+diff --git a/models/cpu/iss/src/snitch/decode.cpp b/models/cpu/iss/src/snitch/decode.cpp
+index 6bf10c9b..a6efa5a0 100644
+--- a/models/cpu/iss/src/snitch/decode.cpp
++++ b/models/cpu/iss/src/snitch/decode.cpp
+@@ -530,7 +530,7 @@ int Decode::decode_opcode(iss_insn_t *insn, iss_reg_t pc, iss_opcode_t opcode)
+ 
+ static iss_reg_t iss_exec_insn_illegal(Iss *iss, iss_insn_t *insn, iss_reg_t pc)
+ {
+-    iss->decode.trace.msg("Executing illegal instruction\n");
++    iss->decode.trace.fatal("Executing illegal instruction (pc: 0x%lx, opcode: 0x%lx)\n", pc, insn->opcode);
+     iss->exception.raise(pc, ISS_EXCEPT_ILLEGAL);
+     return pc;
+ }
+diff --git a/models/cpu/iss/src/snitch/iss.cpp b/models/cpu/iss/src/snitch/iss.cpp
+index aaea7e92..7491d6e6 100644
+--- a/models/cpu/iss/src/snitch/iss.cpp
++++ b/models/cpu/iss/src/snitch/iss.cpp
+@@ -58,6 +58,9 @@ void IssWrapper::reset(bool active)
+     this->iss.gdbserver.reset(active);
+     this->iss.syscalls.reset(active);
+     this->iss.ssr.reset(active);
++#if defined(CONFIG_GVSOC_ISS_INC_SPATZ)
++    this->iss.spatz.reset(active);
++#endif
+ }
+ 
+ IssWrapper::IssWrapper(vp::ComponentConf &config)
+@@ -80,6 +83,9 @@ IssWrapper::IssWrapper(vp::ComponentConf &config)
+     this->iss.exception.build();
+     this->iss.prefetcher.build();
+     this->iss.ssr.build();
++#if defined(CONFIG_GVSOC_ISS_INC_SPATZ)
++    this->iss.spatz.build();
++#endif
+ 
+     traces.new_trace("wrapper", &this->trace, vp::DEBUG);
+ }
+diff --git a/models/cpu/iss/src/snitch/snitch.cpp b/models/cpu/iss/src/snitch/snitch.cpp
+index c7b46b87..d4cb9adb 100644
+--- a/models/cpu/iss/src/snitch/snitch.cpp
++++ b/models/cpu/iss/src/snitch/snitch.cpp
+@@ -50,6 +50,9 @@ Iss::Iss(IssWrapper &top)
+     this->fp_ss = false;
+     this->top.traces.new_trace("offload", &this->trace_iss, vp::DEBUG);
+ 
++    // -----------USE IO PORT TO HANDLE REDMULE------------------
++    this->top.new_master_port("redmule_itf", &this->redmule_itf);
++    this->redmule_req = this->redmule_itf.req_new(0, 0, 0, 0);
+ 
+     // -----------USE MASTER AND SLAVE PORT TO HANDLE OFFLOAD REQUEST------------------
+     this->event = this->top.event_new((vp::Block *)this, handle_event);
+diff --git a/models/cpu/iss/src/spatz.cpp b/models/cpu/iss/src/spatz.cpp
+index e4cb6c51..d9bb7764 100644
+--- a/models/cpu/iss/src/spatz.cpp
++++ b/models/cpu/iss/src/spatz.cpp
+@@ -34,17 +34,17 @@ void Vlsu::data_response(vp::Block *__this, vp::IoReq *req)
+ 
+ Vlsu::Vlsu(Iss &iss) : iss(iss)
+ {
++    this->next_io = 0;
+ }
+ 
+ void Vlsu::build()
+ {
+-    for (int i=0; i<4; i++)
++    for (int i=0; i<CONFIG_GVSOC_ISS_SPATZ_VLSU; i++)
+     {
+         this->io_itf[i].set_resp_meth(&Vlsu::data_response);
+         this->iss.top.new_master_port("vlsu_" + std::to_string(i), &this->io_itf[i], (vp::Block *)this);
+     }
+-
+-
++    this->next_io = 0;
+ }
+ inline void VRegfile::reset(bool active){
+     if (active){
+@@ -56,9 +56,9 @@ inline void VRegfile::reset(bool active){
+     }
+ }
+ 
+-Iss::Iss(IssWrapper &top)
+-    : prefetcher(*this), exec(top, *this), insn_cache(*this), decode(*this), timing(*this), core(*this), irq(*this),
+-      gdbserver(*this), lsu(*this), dbgunit(*this), syscalls(top, *this), trace(*this), csr(*this),
+-      regfile(top, *this), mmu(*this), pmp(*this), exception(*this), spatz(*this), memcheck(top, *this), top(top)
+-{
+-}
++// Iss::Iss(IssWrapper &top)
++//     : prefetcher(*this), exec(top, *this), insn_cache(*this), decode(*this), timing(*this), core(*this), irq(*this),
++//       gdbserver(*this), lsu(*this), dbgunit(*this), syscalls(top, *this), trace(*this), csr(*this),
++//       regfile(top, *this), mmu(*this), pmp(*this), exception(*this), spatz(*this), memcheck(top, *this), top(top)
++// {
++// }
