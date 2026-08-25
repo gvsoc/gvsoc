@@ -58,7 +58,7 @@ export PATH:=$(CURDIR)/gapy/bin:$(PATH)
 # Module roots passed to CMake at build time and to the doc build, where
 # each module's docs/ tree gets embedded into the manual. Keep build and
 # doc in sync by sharing this list.
-GVSOC_MODULES = $(CURDIR)/engine/python;$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/pulp/targets;$(CURDIR)/gvrun/python;$(CURDIR)/config_tree
+GVSOC_MODULES = $(CURDIR)/engine/python;$(CURDIR)/core/models;$(CURDIR)/pulp;$(CURDIR)/pulp/models;$(CURDIR)/pulp/targets;$(CURDIR)/gvrun/python;$(CURDIR)/config_tree
 
 all: checkout build
 
@@ -207,6 +207,6 @@ gui:
 	fi
 	cd "gui-release" && \
 	git fetch --all && \
-	git checkout 9ef228fee1308ca0a9877138ff0f1bafe3858fe3
+	git checkout febd263c103ea1ce0de4a36caf057ac30d91cac8
 	mkdir -p $(INSTALLDIR)
 	$(MAKE) -C gui-release install INSTALLDIR=$(INSTALLDIR_ABS)
