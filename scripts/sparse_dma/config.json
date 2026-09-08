@@ -1,0 +1,13 @@
+{
+  "axi_latency": 4,
+  "axi_bandwidth": 0,
+  "core_request_latency": 1,
+  "tcdm_latency": 1,
+  "index_path_latency": 0,
+  "icache_refill_latency": 2,
+  "jump_stall_cycles": 0,
+  "l0_sets_bits": 0,
+  "l0_ways_bits": 3,
+  "transfer_queue_size": 64,
+  "burst_queue_size": 64
+}
