@@ -25,6 +25,36 @@ case "${1:-}" in
     build-test)
         make TARGETS=sparse_dma_test CMAKE_FLAGS='-j 8' build > build/sparse_dma/logs/build-test.log 2>&1
         ;;
+    soft-hier-build)
+        mkdir -p build/sparse_dma/soft_hier_old
+        make TARGETS='sparse_dma_test;soft_hier_old_dma_test;soft_hier_old_dma_isa_test' CMAKE_FLAGS='-j 8' build \
+            > build/sparse_dma/soft_hier_old/build.log 2>&1
+        ;;
+    soft-hier-test)
+        SPARSE_DMA_TEST_MODE="${2:-legacy}"
+        case "$SPARSE_DMA_TEST_MODE" in legacy|legacy-enabled|gather-sync|gather-async|isa) ;; *) exit 2 ;; esac
+        SPARSE_DMA_TEST_LABEL="${3:-$SPARSE_DMA_TEST_MODE}"
+        case "$SPARSE_DMA_TEST_LABEL" in *[!a-zA-Z0-9_-]*|'') exit 2 ;; esac
+        SPARSE_DMA_TEST_RUN="$SPARSE_DMA_REPO/build/sparse_dma/soft_hier_old/$SPARSE_DMA_TEST_LABEL"
+        mkdir -p "$SPARSE_DMA_TEST_RUN"
+        cd "$SPARSE_DMA_TEST_RUN"
+        SPARSE_DMA_TEST_ARGS=(--target=soft_hier_old_dma_test --test-mode="$SPARSE_DMA_TEST_MODE")
+        if test "$SPARSE_DMA_TEST_MODE" = isa; then
+            SPARSE_DMA_TEST_ARGS=(--target=soft_hier_old_dma_isa_test)
+        fi
+        set +e
+        timeout 120 "$SPARSE_DMA_REPO/install/bin/gvsoc" --target-dir="$SPARSE_DMA_REPO/pulp/targets" \
+            "${SPARSE_DMA_TEST_ARGS[@]}" \
+            run --trace=idma --trace-level=trace > simulation.log 2>&1
+        SPARSE_DMA_STATUS=$?
+        set -e
+        printf '%s\n' "$SPARSE_DMA_STATUS" > exit-status.txt
+        tail -n 8 simulation.log
+        test "$SPARSE_DMA_STATUS" -eq 0
+        ;;
+    soft-hier-report)
+        python3 scripts/sparse_dma/check_soft_hier.py
+        ;;
     test)
         timeout 120 ./install/bin/gvsoc --target-dir=install/targets --target=sparse_dma_test run > build/sparse_dma/logs/model-test.log 2>&1
         tail -n 12 build/sparse_dma/logs/model-test.log
@@ -75,5 +105,5 @@ case "${1:-}" in
         tail -n 18 simulation.log
         test "$SPARSE_DMA_STATUS" -eq 0
         ;;
-    *) echo "Usage: $0 {prepare|build-dram|build-test|test|build|analyze|calibrate|build-validation|validate rtl|validate gvsoc|profile CASE [VARIANT]|run [gather|gather-opt|gather-hw]}" >&2; exit 2 ;;
+    *) echo "Usage: $0 {prepare|build-dram|build-test|test|soft-hier-build|soft-hier-test MODE [LABEL]|soft-hier-report|build|analyze|calibrate|build-validation|validate rtl|validate gvsoc|profile CASE [VARIANT]|run [gather|gather-opt|gather-hw]}" >&2; exit 2 ;;
 esac
