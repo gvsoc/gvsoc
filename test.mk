@@ -121,7 +121,7 @@ test.checkout.spatz:
 	fi
 	cd "tests/spatz/spatz-rtl" && \
 	git fetch --all && \
-	git checkout b6ebc48d845b3304e5dad94e7eb24ab3c84e997b
+	git checkout 03e7d5d6a191f160785f90c1b96c8fccd2bdb529
 	# This was committed by mistake and prevents from generating rom
 	rm -f tests/spatz/spatz-rtl/hw/system/spatz_cluster/src/generated/spatz_cluster_wrapper.sv
 
