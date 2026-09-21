@@ -19,3 +19,7 @@
 [submodule "engine"]
 	path = engine
 	url = https://github.com/gvsoc/gvsoc-engine.git
+[submodule "soft_hier_sdk"]
+	path = soft_hier_sdk
+	url = git@github.com:pulp-platform/softhier-sdk.git
+	branch = qs3d_dev

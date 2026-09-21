@@ -200,6 +200,9 @@ snitch_cluster.test:
 
 snitch_cluster: snitch_cluster.checkout snitch_cluster.build snitch_cluster.test
 
+# SDK integration for the legacy SoftHier chip, when the submodule is initialized.
+-include soft_hier_sdk/softhier_old.mk
+
 
 gui:
 	@if [ ! -d "gui-release" ]; then \
