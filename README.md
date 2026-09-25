@@ -66,6 +66,13 @@ The following example can be launched on pulp-open:
 ./install/bin/gvsoc --target=pulp-open --binary examples/pulp-open/hello image flash run
 ~~~~~
 
+## Using the SoftHier SDK
+
+Follow the [SoftHier SDK guide](SoftHierSDK.md) to initialize `soft_hier_sdk`,
+build and run the `soft_hier_old` chip model, configure applications, and run
+the sparse DMA and sparse attention benchmarks. The guide also covers the
+FlooNoC v2 option, reports, and trace visualization.
+
 ## Citing
 
 If you intend to use or reference GVSoC for an academic publication, please consider citing it:
