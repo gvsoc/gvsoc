@@ -201,30 +201,30 @@ test.build.pulp-nn: test.checkout.pulp-nn
 #
 
 test.clean.mempool:
-	rm -rf tests/mempool
+	rm -rf tests/mempool/apps-llvm-mempool tests/mempool/work
 
+# Take the binaries of the newest MemPool CI run, which needs the GitHub CLI (gh auth login)
 test.checkout.mempool:
-	@if [ ! -d "tests/mempool" ]; then \
-		git clone "git@github.com:pulp-platform/mempool.git" "tests/mempool"; \
-	fi
-	cd "tests/mempool" && \
-	git fetch --all && \
-	git checkout 84ab19ca74a421dc1c4fedbb88fd839ba9d25ffc && \
-	git submodule update --recursive --init
+	rm -rf tests/mempool/apps-llvm-mempool
+	gh run download -R pulp-platform/mempool -n apps-llvm-mempool -D tests/mempool/apps-llvm-mempool \
+		$$(gh run list -R pulp-platform/mempool -w ci.yml -b main -s success -L 1 --json databaseId -q '.[0].databaseId')
+	tar --use-compress-program zstd -xf tests/mempool/apps-llvm-mempool/apps-llvm.tzst -C tests/mempool/apps-llvm-mempool
 
 test.build.mempool: test.checkout.mempool
 
 
 
 test.clean: test.clean.riscv-tests test.clean.pulp-sdk test.clean.chimera-sdk test.clean.snitch \
-	test.clean.spatz test.clean.ara test.clean.magia test.clean.pulp-nn test.clean.pulp-sdk-siracusa
+	test.clean.spatz test.clean.ara test.clean.magia test.clean.pulp-nn test.clean.pulp-sdk-siracusa \
+	test.clean.mempool
 
 test.checkout: test.checkout.riscv-tests test.checkout.pulp-sdk test.checkout.chimera-sdk \
 	test.checkout.snitch test.checkout.spatz test.checkout.ara test.checkout.magia \
-	test.checkout.pulp-nn test.checkout.pulp-sdk-siracusa
+	test.checkout.pulp-nn test.checkout.pulp-sdk-siracusa test.checkout.mempool
 
 test.build: test.build.riscv-tests test.build.pulp-sdk test.build.chimera-sdk test.build.snitch \
-	test.build.spatz test.build.ara test.build.magia test.build.pulp-nn test.build.pulp-sdk-siracusa
+	test.build.spatz test.build.ara test.build.magia test.build.pulp-nn test.build.pulp-sdk-siracusa \
+	test.build.mempool
 
 test.run:
 	$(GVTEST_CMD)
