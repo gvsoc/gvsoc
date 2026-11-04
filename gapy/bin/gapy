@@ -30,8 +30,40 @@ Just the application compiling is left outside for now.
 
 import argparse
 import logging
+import os
 import sys
 import gapylib.target
+
+
+def forward_to_gvrun(target_class):
+    """Run the command line with gvrun instead, for a GVSoC target which only
+    runs with it (a target class with gvrun_only set).
+
+    The binary becomes the gvrun parameter of the target loading it
+    (gvrun_binary_parameter, chip/soc/binary by default). The commands and the
+    other options, which gvrun has too, are given as they are.
+    """
+    binary_param = getattr(target_class, 'gvrun_binary_parameter', 'chip/soc/binary')
+    argv = ['gvrun']
+    args_in = sys.argv[1:]
+    index = 0
+    while index < len(args_in):
+        arg = args_in[index]
+        name, has_value, value = arg.partition('=')
+        if name == '--binary':
+            if not has_value:
+                index += 1
+                value = args_in[index] if index < len(args_in) else None
+            if value is not None:
+                argv.append(f'--parameter={binary_param}={value}')
+        else:
+            argv.append(arg)
+        index += 1
+
+    logging.info('Forwarding to gvrun: %s', ' '.join(argv))
+    sys.stdout.flush()
+    os.execvp(argv[0], argv)
+
 
 # Generic gapy options, all for specifying the target and its options
 parser = argparse.ArgumentParser(description='Execute commands on the target',
@@ -134,7 +166,11 @@ try:
                     args,
                 )
 
-        target = gapylib.target.get_target(target_name)(
+        target_class = gapylib.target.get_target(target_name)
+        if args.platform == 'gvsoc' and getattr(target_class, 'gvrun_only', False):
+            forward_to_gvrun(target_class)
+
+        target = target_class(
             parser=parser,
             options=args.config_opt + args.target_opt
         )
